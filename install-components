@@ -1,0 +1,281 @@
+#!/bin/bash
+#
+# Run this script as root; make sure Adept package manager is not running.
+#
+# The whole purpose of this script is to manage the package list
+# to be passed to apt-get install.  I typically run this with no
+# parameters on any new install.  Whenever I apt-get install
+# something that I need, I add the package to some category in this
+# script.  This insures that I have every package I will need later, 
+# so that I do not find myself without something critical when I'm not 
+# connected to the internet.
+#
+# The other way that I commonly use this script is to run it with the
+# --no-gui flag, to install everything commonly needed _except_ for
+# those applications that have a user interface.  There are many other
+# categories and groups also provided, just in case I want to install
+# just a couple of groups early in the process of configuring a new
+# machine.
+#
+ubuntuRevision=`grep '^#deb.*\[' /etc/apt/sources.list | sed -e 's/.*\][^ ]* *\([^ ]*\).*/\1/'`
+
+host=`uname -n`
+
+echo "Install Components for Ubuntu $ubuntuRevision on $host"
+
+#
+# We're going to list all of our available packages 
+# in an associative array called 'packages'.
+#
+# The packages to install will be placed in another
+# associative array called install_list.  This is the
+# subset of the available packages that has been selected
+# for installation.
+#
+# Finally, there is another associative array called
+# 'groups' that is essentially an alias system, where
+# a group name can be used to indicate a collection of
+# package groups.
+#
+declare -A packages
+declare -A install_list
+declare -A groups
+
+groups["apps"]="reader-editor kde-utils graphics sound"
+groups["kde"]="kde-utils"
+
+#
+# Misc useful applications that are not part of the 
+# standard install
+#
+packages[reader-editor]="nedit"
+# acroread is not part of default package sources; put in w/ codecs?
+
+packages[kde-utils]="konqueror kcalc"
+
+#
+# Graphic manipulation packages
+#
+packages["graphics"]="gimp inkscape imagemagick"
+
+#
+# Sound manipulation packages
+#
+packages["sound"]="audacity"
+
+
+groups["system"]="admin intl security network system-gui repository compress"
+# nvidia
+
+#
+# apt-file allows searching for files in packages
+# dpgk-dev is needed for certain local apt operations
+# sysv-rc-conf controls which services start at boot (like Redhat's chkconfig)
+#
+packages["admin"]="apt-file dpkg-dev sysv-rc-conf mcrypt"
+
+packages["intl"]="i8kutils"
+
+packages["security"]="uif bastille"
+
+packages["network"]="ssh rsh-client nmap davfs2 wireshark curl"
+	
+packages["system-gui"]="perl-tk"
+
+packages["repository"]="subversion cvs git git-core"
+
+packages["compress"]="sharutils zip p7zip "
+
+packages["nvidia"]="nvidia-settings"
+
+
+groups["database"]="postgres mysql"
+
+groups["programming"]="compile-build dev-docs webservices debug ide repository compress java ${groups[database]}"
+
+packages["compile-build"]="g++ autoconf automake1.9 libtool libc6 flex bison"
+
+packages["dev-docs"]="manpages-dev"
+
+packages["kernel"]="build-essential linux-headers-generic"
+# linux-kernel-devel
+
+packages["webservices"]="apache2 php5 libssl-dev php-pear libapache2-mod-php5 phpsysinfo php5-cli php5-pgsql php5-gd php5-xsl php5-tidy apache2-doc"
+
+packages["postgres"]="postgresql libdbi-perl libdbd-pg-perl"
+
+packages["mysql"]="libdbd-mysql-perl libdbd-mysql mysql-client mysql-server php5-mysql"
+# mysql-doc
+
+packages["java"]="sun-java6-jdk sun-java6-plugin ant java2html"
+
+#
+# valgrind will find memory leaks, etc.
+#
+packages["debug"]="valgrind"
+
+packages["ide"]="eclipse" # and netbeans
+
+# packages["android"]="gnupg gperf libsdl-dev libesd0-dev libwxgtk2.6-dev libncurses5-dev zlib1g-dev"
+
+groups["gui"]="system-gui ${groups[apps]} debug ide"
+
+
+
+
+
+verbose=false
+show=false
+help=false
+
+#
+# Make a first pass through all of the options and
+# find any one that is named after a group or package set.
+# These are the items that will be installed by default.
+#
+for option in $* ; do
+
+	case "$option" in
+		-v | --verbose )
+			verbose=true
+			show=true
+			;;
+		
+		--show )
+			show=true
+			;;
+		
+		-h | --help )
+			help=true
+			;;
+			
+		-* )
+			;;
+		
+		*)
+			if [ "x${packages[$option]}" != "x" ] ; then
+				$verbose && echo "Select $option: ${packages[$option]}" >&2
+				install_list[$option]=${packages[$option]}
+			fi
+
+			if [ "x${groups[$option]}" != "x" ] ; then
+				$verbose && echo "Group $option=${groups[$option]}" >&2
+				for i in ${groups[$option]} ; do
+					if [ "x${packages[$i]}" != "x" ] ; then
+						$verbose && echo "Select $i: ${packages[$i]}" >&2
+						install_list[$i]=${packages[$i]}
+					fi
+				done
+			fi
+			;;
+	esac
+
+done
+
+#
+# If no packages and no groups were selected, then
+# default to everything.
+#
+install_sections="${!install_list[@]}"
+if [ "x$install_sections" == "x" ] ; then
+	for i in ${!packages[@]} ; do
+		if [ "x${packages[$i]}" != "x" ] ; then
+			install_list[$i]=${packages[$i]}
+		fi
+	done
+fi
+
+if $help ; then
+	program=$0
+	echo "Usage: ${program##*/} [OPTION]... [CATAGORY]..."
+	echo "Installs packages from specified catagories using apt-get."
+	echo "If no catagories are provided, then all available packages"
+	echo "are installed."
+	echo
+	echo "  --verbose         Show extended output"
+	echo "  --show            Show descriptions of all selected packages"
+	echo "  --no-[CATAGORY]   Do not install anything from the deselected catagory"
+	echo "  --yes-[CATAGORY]  Install the selected catagory"
+	echo
+	echo "Available catagories:"
+	echo
+	for p in ${!packages[@]} ; do
+		echo "  $p: ${packages[$p]}"
+	done
+	echo
+	echo "Catagories may also be selected / deselected using the following group aliases:"
+	echo
+	for g in ${!groups[@]} ; do
+		echo "  $g=${groups[$g]}"
+	done
+	echo
+	echo "Note that in general, [CATAGORY] and --yes-[CATAGORY] are"
+	echo "roughly equivalent, except that --yes-[CATAGORY] takes"
+	echo "precidence over --no-[CATAGORY].  This allows you to select"
+	echo "packages from a deselected group; e.g.:"
+	echo
+	echo "  ${program##*/} --no-programming --yes-java"
+	echo
+	echo "See also the apt-get(8), apt-cache(8) manual pages."
+	exit 0
+fi
+
+#
+# Make a consuming pass through $options to
+# handle the rest of the options
+#
+while [ $# -gt 0 ] ; do
+
+	option=$1
+	shift
+	
+	# echo "Process $option"
+	
+	case "$option" in
+	
+		--no-* )
+			remove=${option:5}
+			if [ "x${install_list[$remove]}" != "x" ] ; then
+				$verbose && echo "Deselect $remove: ${install_list[$remove]}" >&2
+				unset install_list[$remove]
+			fi
+			
+			if [ "x${groups[$remove]}" != "x" ] ; then
+				$verbose && echo "Deselect group $remove=${groups[$remove]}" >&2
+				for i in ${groups[$remove]} ; do
+					$verbose && echo "Deselect $i: ${install_list[$i]}"
+					unset install_list[$i]
+				done
+			fi
+
+			;;
+		
+		--yes-* )
+			add=${option:6}
+			yes_list="$yes_list $add"
+			;;
+
+	esac
+done
+
+#
+# Add the --yes items back in after all of the --no items
+# have been removed.
+#
+for add in $yes_list ; do
+	if [ "x${packages[$add]}" != "x" ] ; then
+		$verbose && echo "Select $add: ${packages[$add]}" >&2
+		install_list[$add]=${packages[$add]}
+	fi
+done
+
+echo "Package sets selected for installation: ${!install_list[@]}"
+echo ${install_list[@]}
+
+$show && apt-cache show ${install_list[@]} | grep '^\(Package:\|Description:\| \)'
+
+#
+# Call apt-get install
+#
+apt-get install ${install_list[@]}
+

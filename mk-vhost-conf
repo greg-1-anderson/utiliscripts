@@ -1,0 +1,1238 @@
+#!/bin/bash
+
+#
+# Here are some common default values.
+# We set more default values after the
+# command line args are processed
+#
+server_root=/etc/apache2
+documentroot_base=/srv/www
+cgi_bin_dir=/var/lib/cgi-dirs
+log_dir=/var/log/apache2
+admin_email=webmaster
+http_port=80
+https_port=443
+needed_mods="rewrite ssl"
+
+#
+# List of simple unary flags (set var with --flag, clear it with --no-flag)
+#
+flag_list="
+	allow-override 
+	auth-required 
+	auth-cram-md5 
+	auth-dbm
+	custom-auth
+	separate-error-log 
+	separate-access-log 
+	separate-cgi-bin 
+	use-dns
+	set-hosts 
+	clear-hosts 
+	network-available
+"
+
+#
+# Some default variable values
+#
+allow_override=false
+auth_required=false
+auth_cram_md5=false
+custom_auth=false
+auth_dbm=false
+separate_error_log=false
+separate_access_log=true
+separate_cgi_bin=true
+use_dns=false
+set_hosts=false
+clear_hosts=false
+network_available=true
+configure_http=false
+configure_https=false
+http_documentroot_postfix=
+https_documentroot_postfix=
+output_to_stdout=false
+certificate_life=3650
+prefix=
+proxy=false
+drupal=false
+
+#
+# Used in certificate creation
+#
+server_location_country=US
+server_location_state="California"
+server_location_city="San Francisco"
+organization="Self-signed"
+			
+#
+# Parse options
+#
+while [ $# -gt 0 ] ; do
+
+	option=$1
+	shift
+
+	#
+	# For the many unary flags that just set a boolean value when encountered,
+	# we maintain this list of flags that we can check all at once.
+	#
+	option_handled=false
+	for unaryflag in $flag_list; do
+		if [ "x--$unaryflag" == "x$option" ]; then
+			variablename=`echo $unaryflag | tr - _`
+			eval "$variablename=true"
+			option_handled=true
+		fi
+		if [ "x--no-$unaryflag" == "x$option" ]; then
+			variablename=`echo $unaryflag | tr - _`
+			eval "$variablename=false"
+			option_handled=true
+		fi
+	done
+
+	if ! $option_handled ; then case "$option" in
+		
+		#
+		# Default options for a drupal site
+		#
+		--drupal )
+                	drupal=true
+			allow_override=true
+			configure_http=true
+			configure_https=true
+			;;
+		
+		#
+		# Specify the site
+		#
+		--site|--fqdn|--site-fqdn )
+			site_fqdn=$1
+			shift
+			;;
+		
+		#
+		# To have multiple sites with the same
+		# configuration, call this script multiple
+		# times with different --site-alias parameters.
+		#
+		# ex:
+		#
+		#	mk-vhost-conf [options] mysite.com
+		#	mk-vhost-conf [options] --site_alias www.mysite.com mysite.com
+		#
+		--site-alias )
+			site_alias=$1
+			shift
+			;;
+		
+		#
+		# Use --prefix "zzz-" to make a site load later, or
+		# --prefix "001-" to make it just after default, or
+		# --prefix "0000-" to make it load just before default.
+		#
+		--prefix )
+			prefix=$1
+			shift
+			;;
+		
+		#
+		# Use --proxy "site.com" to make this site proxy
+		# to the specified target site.
+		#
+		--proxy )
+			proxy=true
+			proxy_target=$1
+			shift
+			;;
+			
+		#
+		# Specify --static-ip if this site has
+		# a single static IP reserved solely for
+		# its use.  Without --static-ip, NameVirtualHost
+		# will be used.
+		#
+		# If there is no interface on this machine
+		# configured for the specified address, then
+		# we will also revert to NameVirtualHost.
+		# This allows us to run the same script on
+		# a test machine as on the actual server
+		# without modifying the --static-ip parameters.
+		#
+		--static-ip )
+			static_ip=$1
+			;;
+		
+		#
+		# Specify the webmaster's email address
+		#
+		--admin-email )
+			admin_email=$1
+			shift
+			;;
+		
+		#
+		# Specify the full path to the server root
+		#
+		--server-root )
+			server_root=$1
+			shift
+			;;
+		
+		#
+		# Specify the full path to the document root
+		#
+		--documentroot )
+			documentroot=$1
+			shift
+			;;
+		
+		#
+		# If you know you need certain modules enabled,
+		# you can pass --needed-mods on the command line.
+		# This doesn't actually change the configuration
+		# file, so you could also just call a2enmod directly.
+		#
+		--needed-mods )
+			needed_mods="$needed_mods $1"
+			shift
+			;;
+			
+		
+		#
+		# Documentroot base is the directory
+		# where the document roots for the 
+		# various vhosts are stored
+		#
+		--documentroot-base )
+			documentroot_base=$1
+			shift
+			;;
+			
+		--http-port )
+			http_port=$1
+			shift
+			;;
+		
+		--https-port )
+			https_port=$1
+			shift
+			;;
+		
+		#
+		# Specify where the conf file will be written
+		#
+		--vhost-conf-dir )
+			$output_to_stdout && echo "Can't set vhost conf dir when outputing to stdout" && exit 1
+			vhost_conf_dir=$1
+			shift
+			;;
+		
+		#
+		# Specify the full path to the vhost conf file
+		#
+		--vhost-conf )
+			vhost_conf=$1
+			shift
+			;;
+			
+		--log-dir )
+			log_dir=$1
+			shift
+			;;
+		
+		#
+		# There are four SSL modes:
+		#
+		#	--no-ssl:	https disabled
+		#	--ssl-shared:	http and https share the same DOCUMENTROOT
+		#	--ssl-secure:	separate documentroots for http and https
+		#	--ssl-only:	http redirects to https
+		#
+		--no-ssl )
+			configure_http=true
+			configure_https=false
+			;;
+			
+		--ssl|--ssl-shared )
+			configure_http=true
+			configure_https=true
+			;;
+		
+		--ssl-secure )
+			https_documentroot_postfix='-secure'
+			cgi_bin_ssl_prefix='secure-'
+			configure_http=false
+			configure_https=true
+			;;
+		
+		--ssl-only )
+			configure_http=false
+			configure_https=true
+			;;
+		
+		--certificate-life )
+			certificate_life=$1
+			shift
+			;;
+		
+		--auth-file )
+			auth_required=true
+			auth_file=$1
+			shift
+			;;
+		
+		#
+		# Specifying users and passwords on the command line
+		# is not exactly "best practices", but in low-security
+		# situations, if you want to do it:
+		#
+		#	--auth-users "joe:pw jack:pw jane:pw"
+		#
+		--auth-users )
+			auth_required=true
+			auth_users=$1
+			shift
+			;;
+		
+		--auth-message )
+			auth_required=true
+			auth_message=$1
+			shift
+			;;
+		
+		#
+		# Path to file that contains additional
+		# configuration directives that go inside
+		# the <VirtualHost> ... </VirtualHost> element.
+		#
+		--additional-configuration )
+			additional_configuration=$1
+			shift
+			;;
+					
+		- )
+			output_to_stdout=true
+			use_dns=true
+			vhost_conf_dir=`mktemp -dt`
+			vhost_conf=
+			mkdir -p $vhost_conf_dir
+			;;
+
+		-* )
+			echo "Unknown flag $option"
+			exit 1
+			;;
+		
+		* )
+			site_fqdn=$option
+			;;
+	esac fi
+
+done
+
+
+#
+# If no site_fqdn was specified, then we will by default
+# assume that the site_fqdn is either the site_alias with
+# the first part removed (www.example.com => example.com,
+# edit.somesite.com => somesite.com, etc.) or, if the
+# site alias was not specified either, then we will take
+# the hostname from `hostname --fqdn`.
+#
+# (n.b. the script 'install-vps' can insure that the
+# hostname and domain are set correctly)
+#
+if [ "x$site_fqdn" == "x" ] ; then
+	if [ "x$site_alias" == "x" ] ; then
+		site_fqdn=`hostname --fqdn`
+	else
+		site_fqdn=`echo $site_alias | sed -e 's|[^.]*\.||'`
+	fi
+fi
+
+#
+# If no site alias was specified, then use the site fqdn.
+#
+if [ "x$site_alias" == "x" ] ; then
+	site_alias=$site_fqdn
+fi
+
+#
+# If the document root was not set explicitly, then
+# we will set it to the site fqdn
+#
+if [ "x$documentroot" = "x" ] ; then
+	documentroot=$documentroot_base/$site_fqdn
+fi
+
+# Drupal we often put the document root inside the project folder, so that
+# we can collect files not served by the webserver with the drupal root.
+# Detect this situation automatically.
+if $drupal && [ -f $documentroot/drupal/includes/bootstrap.inc ] ; then
+	documentroot=$documentroot/drupal
+fi
+
+if [ "x$vhost_conf_dir" == "x" ] ; then
+	if [ -d $server_root/sites-available ] ; then
+		vhost_conf_dir=$server_root/sites-available
+	elif [ -d $server_root/conf/vhosts.d ] ; then
+		vhost_conf_dir=$server_root/conf/vhosts.d
+	else
+		vhost_conf_dir=$server_root/vhosts.d
+	fi
+fi
+
+if [ "x$vhost_conf" = "x" ] ; then
+	vhost_conf=$vhost_conf_dir/$prefix$site_alias
+	if [ "x`echo $vhost_conf_dir | grep "sites-available" 2>/dev/null`" == "x" ] ; then
+		vhost_conf=$vhost_conf".conf"
+	fi
+fi
+
+if [ "x$log_dir" == "x" ] ; then
+	log_dir=/var/log/apache2
+fi
+
+if [ "x`echo $admin_email | grep "@" 2>/dev/null`" == "x" ] ; then
+	admin_email=$admin_email"@$site_fqdn"
+fi
+
+#
+# If a specific ssl mode was not specified with a command-line
+# parameter, then we will presume http-only by default, and
+# https-only if authentication is required for this site
+# (to avoid transmitting plaintext passwords over http).
+#
+if ! $configure_http && ! $configure_https ; then
+	if $auth_required || $auth_cram_md5 ; then
+		configure_https=true
+	else
+		configure_http=true
+	fi
+fi
+
+#
+# If authentication is required, but no auth
+# file was specified, then set a default path.
+#
+if $auth_required || $auth_cram_md5 && [ "x$auth_file" == "x" ] ; then
+	auth_file=$server_root/${site_fqdn}-auth-file
+fi
+
+if [ "x$auth_message" == "x" ] ; then
+	auth_message="Authentication required to access ${site_alias}"
+fi
+
+if $separate_error_log ; then
+	err_prefix=$site_fqdn"_"
+fi
+
+if $separate_access_log ; then
+	access_prefix=$site_fqdn"_"
+fi
+
+if $separate_cgi_bin ; then
+	cgi_bin_prefix=$site_fqdn"_"
+fi
+
+http_documentroot=$documentroot$http_documentroot_postfix
+https_documentroot=$documentroot$https_documentroot_postfix
+
+
+#
+# Create a sed script that will create replacement
+# patterns for each of the specified variable names 
+# passed to this function.
+#
+# For every variable name in the provided list, we will generate
+# a line in the sed script the looks like this:
+#
+#	s|__VARIABLE_NAME__|$variable_name|g
+#
+# These replacements are then made to the file that
+# the sed script operates on.
+#
+#
+createReplacementScript()
+{
+	sed_script=$1
+	variable_list=$2
+	(
+		for x in  $variable_list ; do
+			var_pattern="__"`echo $x | tr '[:lower:]' '[:upper:]'`"__"
+			var_value=`eval echo "\"\\$$x"\"`
+			sep="|"
+			if [ "x`echo "$var_value" | grep "|" 2>/dev/null`" != "x" ] ; then
+				sep="#"
+				if [ "x`echo "$var_value" | grep "#" 2>/dev/null`" != "x" ] ; then
+					sep="/"
+				fi
+			fi
+			echo "s$sep$var_pattern$sep$var_value$sep"
+		done
+	) >> $sed_script
+}
+
+
+
+#
+# Return the IP address associated with the NameVirtualHost
+# for the specified port number.
+#
+getNameVirtualHostIP()
+{
+	if [ "x$1" == "x" ] ; then
+		ip="[^:]*"
+	else
+		ip="\(\*\|$1\)"
+	fi
+	port=$2
+	nvh=`grep -i "NameVirtualHost *$ip\(\|:$port\) *$" $server_root/*.conf | head -n 1`
+	if [ "x$nvh" != "x" ] ; then
+		# echo "nvh is $nvh" >&2
+		echo "$nvh" | tr '[:upper:]' '[:lower:]' | sed -e 's|.*namevirtualhost *\([^:]*\):.*|\1|g'
+	fi
+}
+
+#
+# If the static IP address was not passed in on
+# the command line, then we'll use some heuristics
+# to determine what IP address we should use.
+#
+# If the IP address was specified on the command line,
+# then we'll always use it, even if that means that
+# we won't be able to resolve the website on this machine
+#
+if [ "x$static_ip" == "x" ] ; then
+	#
+	# First see if we can get the static IP address from DNS.
+	#
+	if $network_available ; then
+		site_alias_ip=`host $site_alias | grep " has address" | head -n 1 | sed -e 's|.*has address *||g'`
+		#
+		# We must have a configured interface with
+		# the specified IP address; otherwise we
+		# will ignore the information from DNS.
+		#
+		if $use_dns || [ "x`/sbin/ifconfig | grep 'inet addr:$site_alias_ip '`" != "x" ] ; then
+			static_ip=$site_alias_ip
+			clear_hosts=true
+			echo "DNS for $site_alias resolves to this machine; using $static_ip (from DNS) for address"
+		fi
+	fi
+	#
+	# If the static IP address is still unknown, then
+	# assume localhost and force "set hosts".
+	#
+	if [ "x$static_ip" == "x" ] ; then
+		static_ip="127.0.0.1"
+		echo "assume localhost; clear_hosts is $clear_hosts"
+		if ! $clear_hosts ; then
+			set_hosts=true
+			echo "Simulating $site_alias at $static_ip by adding an entry to /etc/hosts (use --clear-hosts to remove)"
+			if [ "x$site_alias_ip" != "x" ] ; then
+				echo "WARNING:  Masking real site $site_alias at $site_alias_ip"
+			fi
+		fi
+	fi
+fi
+http_ip=$static_ip
+https_ip=$static_ip
+
+#
+# If we are operating in simulation mode ($set_hosts true), then we'll
+# try to fix up ports.conf if there are no NameVirtualHost directives
+# in it.
+#
+if [ -f /etc/apache2/ports.conf ] && [ "x$static_ip" == "x127.0.0.1" ] && $set_hosts ; then
+	for port in "80" `cat /etc/apache2/ports.conf | grep '^ *Listen' | sed -e 's|[^0-9]||g'` ; do
+		if [ "x`grep -i "NameVirtualHost.*:$port" /etc/apache2/ports.conf`" = "x" ] ; then
+			echo "Adding a NameVirtualHost for port $port to /etc/apache2/ports.conf"
+			sed -ie "/Listen *$port/iNameVirtualHost *:$port" /etc/apache2/ports.conf
+		fi
+	done
+fi
+
+#
+# If we can find a "NameVirtualHost *:[port]" or a
+# "NameVirtualHost [ip]:[port]" line in one of Apache's
+# configuration files, then we will use name-based
+# virtual hosting.  Otherwise, we will assume that the
+# static ip address specified is unique to this site,
+# and we will use it for a VirtualHost directive.
+#
+http_nvh=`getNameVirtualHostIP $static_ip $http_port`
+if [ "x$http_nvh" != "x" ] ; then
+	http_namev="Name"
+	http_ip="$http_nvh"
+fi
+if $configure_https ; then
+	https_nvh=`getNameVirtualHostIP $static_ip $https_port`
+	if [ "x$https_nvh" != "x" ] ; then
+		https_namev="Name"
+		https_ip="$https_nvh"
+	fi
+fi
+
+#
+# Set certificate parameters
+#
+private_key_dir=$server_root/ssl.key
+certificate_dir=$server_root/ssl.crt
+signing_request_dir=$server_root/ssl.csr
+
+server_private_key=$private_key_dir/${site_fqdn}-server.key
+server_certificate=$certificate_dir/${site_fqdn}-server.crt
+signing_request=$signing_request_dir/${site_fqdn}-server.csr
+
+# Set this to -des3 to password-protect certificate
+certificate_password_option=
+
+
+
+#
+# Next we'll write all of our variables into a sed script
+# for later use with...  sed.
+#
+sed_script=`mktemp`
+
+#
+# If the caller provided additional configuration directives,
+# then write a sed command to insert them into the configuration
+# file at the appropriate location.
+#
+# To do:  if we had a list of configuration directives and
+# the module that provided them, then we could search through
+# the additional configuration directives and add modules
+# for anyhthing that is used (just a thought).
+#
+if [ "x$additional_configuration" != "x" ] ; then
+additional_configuration_tmp=`mktemp`
+cat << __END__ >> $sed_script
+/Additional configuration directives/r$additional_configuration_tmp
+__END__
+fi
+
+createReplacementScript $sed_script "
+	site_fqdn
+	site_alias
+	admin_email 
+	http_ip
+	https_ip
+	http_port
+	https_port
+	http_namev
+	https_namev
+	http_documentroot
+	https_documentroot
+	server_private_key
+	server_certificate
+	signing_request
+	auth_message
+	auth_file
+	access_prefix
+	err_prefix
+	cgi_bin_prefix
+	cgi_bin_ssl_prefix
+	cgi_bin_dir
+	log_dir
+	proxy_target
+"
+
+if [ "x$additional_configuration_tmp" != "x" ] ; then
+cat $additional_configuration | sed -f $sed_script > $additional_configuration_tmp
+fi
+
+#
+# In addition to the simple variable replacements
+# created by the replacement script function,
+# we will also write in some additional scripts
+# as stipulated by other command line options.
+#
+# If overrides are not to be allowed, then remove
+# the access filename and AllowOverride directives.
+#
+if ! $allow_override ; then
+cat << "__END__" >> $sed_script
+/AccessFileName/d
+s|AllowOverride *All|AllowOverride None|
+__END__
+fi
+
+#
+# If authentication is not required, then
+# remove the authentication directives from
+# the configuration template
+#
+if $custom_auth || [ "x$auth_file" == "x" ] ; then
+cat << "__END__" >> $sed_script
+/AuthType/d
+/AuthName/d
+/AuthUserFile/d
+/Require valid-user/d	
+__END__
+fi
+
+if $proxy ; then
+needed_mods="$needed_mods proxy proxy_http"
+else
+cat << "__END__" >> $sed_script
+/SSLProxyEngine/d
+/ProxyPass/d
+/ProxyPreserveHost/d
+__END__
+fi
+
+#
+# Next we will write either the standard http configuration
+# file or a configuration file that redirects all requests
+# to the https site
+#
+if $configure_http ; then
+
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#
+# Template for standard HTTP configuration file
+#
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+cat << "__END__" | sed -f $sed_script > $vhost_conf
+<VirtualHost __HTTP_IP__:__HTTP_PORT__>
+	ServerAdmin __ADMIN_EMAIL__
+	ServerName __SITE_ALIAS__
+
+	HostnameLookups Off
+	UseCanonicalName Off
+	ServerSignature Off
+	AccessFileName .htaccess
+	
+	DocumentRoot __HTTP_DOCUMENTROOT__
+	<Directory />
+		Options FollowSymLinks
+		AllowOverride None
+	</Directory>
+	<Directory __HTTP_DOCUMENTROOT__>
+		Options Indexes FollowSymLinks MultiViews
+		AllowOverride All
+		Order allow,deny
+		allow from all
+
+		AuthType Basic
+		AuthName "__AUTH_MESSAGE__"
+		AuthUserFile __AUTH_FILE__
+		Require valid-user
+		
+	</Directory>
+
+	ScriptAlias /cgi-bin/ __CGI_BIN_DIR__/__CGI_BIN_PREFIX__cgi-bin/
+	<Directory "__CGI_BIN_DIR__/__CGI_BIN_PREFIX__cgi-bin">
+		AllowOverride None
+		Options +ExecCGI -MultiViews +SymLinksIfOwnerMatch
+		Order allow,deny
+		Allow from all
+	</Directory>
+
+	ErrorLog __LOG_DIR__/__ERR_PREFIX__error.log
+
+	# Possible values include: debug, info, notice, warn, error, crit,
+	# alert, emerg.
+	LogLevel warn
+
+	CustomLog __LOG_DIR__/__ACCESS_PREFIX__access.log combined
+
+	# ProxyPass configuration:  (deleted for non-proxy configurations)
+	ProxyPass / http://__PROXY_TARGET__:__HTTP_PORT__/
+	ProxyPassReverse / http://__PROXY_TARGET__:__HTTP_PORT__/
+	ProxyPreserveHost Off 
+
+	# Additional configuration directives
+
+</VirtualHost>
+__END__
+
+else
+
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#
+# Template for HTTP redirecting configuration file.
+#
+# This template is used to send requests for 
+# "http://www.site-domain.com" to "https://site-domain.com"
+# for websites that are configures --ssl-only.
+#
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+cat << "__END__" | sed -f $sed_script > $vhost_conf
+<VirtualHost __HTTP_IP__:__HTTP_PORT__>
+	ServerAdmin __ADMIN_EMAIL__
+	ServerName __SITE_ALIAS__
+
+	HostnameLookups Off
+	UseCanonicalName Off
+	ServerSignature Off
+
+	RewriteEngine on
+	RewriteRule ^$ https://__SITE_FQDN__
+	RewriteRule (.*) https://__SITE_FQDN__/$1
+	
+	DocumentRoot __HTTP_DOCUMENTROOT__
+	<Directory />
+		Options None
+		AllowOverride None
+		deny from all
+	</Directory>
+	<Directory __HTTP_DOCUMENTROOT__>
+		Options None
+		AllowOverride None
+		Order allow,deny
+		deny from all
+	</Directory>
+
+	ErrorLog __LOG_DIR__/__ERR_PREFIX__error.log
+
+	# Possible values include: debug, info, notice, warn, error, crit,
+	# alert, emerg.
+	LogLevel warn
+
+	CustomLog __LOG_DIR__/__ACCESS_PREFIX__access.log combined
+</VirtualHost>
+__END__
+
+fi
+
+if $configure_https ; then
+
+if [ "x$site_alias" != "x$site_fqdn" ] ; then
+
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#
+# Template for HTTPS redirecting configuration file.
+#
+# This template is used to send requests for 
+# "https://www.site-domain.com" to "https://site-domain.com".
+# We do this because we can only have one certificate per IP address,
+# and we write "site-domain.com" into the certificate.  If we served
+# this certificate from "www.site-domain.com", it would result in an
+# unpleasant warning message.
+#
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+cat << "__END__" | sed -f $sed_script >> $vhost_conf
+<IfModule mod_ssl.c>
+<VirtualHost __HTTPS_IP__:__HTTPS_PORT__>
+	ServerAdmin __ADMIN_EMAIL__
+	ServerName __SITE_ALIAS__
+
+	HostnameLookups Off
+	UseCanonicalName Off
+	ServerSignature Off
+
+	RewriteEngine on
+	RewriteRule ^$ https://__SITE_FQDN__
+	RewriteRule (.*) https://__SITE_FQDN__/$1
+	
+	DocumentRoot __HTTP_DOCUMENTROOT__
+	<Directory />
+		Options None
+		AllowOverride None
+		deny from all
+	</Directory>
+	<Directory __HTTP_DOCUMENTROOT__>
+		Options None
+		AllowOverride None
+		Order allow,deny
+		deny from all
+	</Directory>
+
+	ErrorLog __LOG_DIR__/__ERR_PREFIX__error.log
+
+	# Possible values include: debug, info, notice, warn, error, crit,
+	# alert, emerg.
+	LogLevel warn
+
+	CustomLog __LOG_DIR__/__ACCESS_PREFIX__access.log combined
+
+</VirtualHost>
+</IfModule>
+__END__
+
+else
+
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#
+# Template for standard HTTPS configuration file
+#
+#::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+cat << "__END__" | sed -f $sed_script >> $vhost_conf
+<IfModule mod_ssl.c>
+<VirtualHost __HTTPS_IP__:__HTTPS_PORT__>
+	ServerAdmin __ADMIN_EMAIL__
+	ServerName __SITE_ALIAS__
+
+	HostnameLookups Off
+	UseCanonicalName Off
+	ServerSignature Off
+	AccessFileName .htaccess
+	
+	DocumentRoot __HTTPS_DOCUMENTROOT__
+	<Directory />
+		Options FollowSymLinks
+		AllowOverride None
+	</Directory>
+	<Directory __HTTPS_DOCUMENTROOT__>
+		Options Indexes FollowSymLinks MultiViews
+		AllowOverride All
+		Order allow,deny
+		allow from all
+		
+		AuthType Basic
+		AuthName "__AUTH_MESSAGE__"
+		AuthUserFile __AUTH_FILE__
+		Require valid-user		
+	</Directory>
+
+	ScriptAlias /cgi-bin/ __CGI_BIN_DIR__/__CGI_BIN_PREFIX____CGI_BIN_SSL_PREFIX__cgi-bin/
+	<Directory "__CGI_BIN_DIR__/__CGI_BIN_PREFIX____CGI_BIN_SSL_PREFIX__cgi-bin">
+		AllowOverride None
+		Options +ExecCGI -MultiViews +SymLinksIfOwnerMatch
+		Order allow,deny
+		Allow from all
+	</Directory>
+
+	ErrorLog __LOG_DIR__/__ERR_PREFIX__error.log
+
+	# Possible values include: debug, info, notice, warn, error, crit,
+	# alert, emerg.
+	LogLevel warn
+
+	CustomLog __LOG_DIR__/__ACCESS_PREFIX__access.log combined
+
+	#   SSL Engine Switch:
+	#   Enable/Disable SSL for this virtual host.
+	SSLEngine on
+
+	#   If both key and certificate are stored in the same (.pem) file, only the
+	#   SSLCertificateFile directive is needed.
+	SSLCertificateFile __SERVER_CERTIFICATE__
+	SSLCertificateKeyFile __SERVER_PRIVATE_KEY__
+
+	#   Server Certificate Chain:
+	#   Point SSLCertificateChainFile at a file containing the
+	#   concatenation of PEM encoded CA certificates which form the
+	#   certificate chain for the server certificate. Alternatively
+	#   the referenced file can be the same as SSLCertificateFile
+	#   when the CA certificates are directly appended to the server
+	#   certificate for convinience.
+	#SSLCertificateChainFile /etc/apache2/ssl.crt/server-ca.crt
+
+	#   Certificate Authority (CA):
+	#   Set the CA certificate verification path where to find CA
+	#   certificates for client authentication or alternatively one
+	#   huge file containing all of them (file must be PEM encoded)
+	#   Note: Inside SSLCACertificatePath you need hash symlinks
+	#         to point to the certificate files. Use the provided
+	#         Makefile to update the hash symlinks after changes.
+	#SSLCACertificatePath /etc/ssl/certs/
+	#SSLCACertificateFile /etc/apache2/ssl.crt/ca-bundle.crt
+
+	#   Certificate Revocation Lists (CRL):
+	#   Set the CA revocation path where to find CA CRLs for client
+	#   authentication or alternatively one huge file containing all
+	#   of them (file must be PEM encoded)
+	#   Note: Inside SSLCARevocationPath you need hash symlinks
+	#         to point to the certificate files. Use the provided
+	#         Makefile to update the hash symlinks after changes.
+	#SSLCARevocationPath /etc/apache2/ssl.crl/
+	#SSLCARevocationFile /etc/apache2/ssl.crl/ca-bundle.crl
+
+	#   Client Authentication (Type):
+	#   Client certificate verification type and depth.  Types are
+	#   none, optional, require and optional_no_ca.  Depth is a
+	#   number which specifies how deeply to verify the certificate
+	#   issuer chain before deciding the certificate is not valid.
+	#SSLVerifyClient require
+	#SSLVerifyDepth  10
+
+	#   Access Control:
+	#   With SSLRequire you can do per-directory access control based
+	#   on arbitrary complex boolean expressions containing server
+	#   variable checks and other lookup directives.  The syntax is a
+	#   mixture between C and Perl.  See the mod_ssl documentation
+	#   for more details.
+	#<Location />
+	#SSLRequire (    %{SSL_CIPHER} !~ m/^(EXP|NULL)/ \
+	#            and %{SSL_CLIENT_S_DN_O} eq "Snake Oil, Ltd." \
+	#            and %{SSL_CLIENT_S_DN_OU} in {"Staff", "CA", "Dev"} \
+	#            and %{TIME_WDAY} >= 1 and %{TIME_WDAY} <= 5 \
+	#            and %{TIME_HOUR} >= 8 and %{TIME_HOUR} <= 20       ) \
+	#           or %{REMOTE_ADDR} =~ m/^192\.76\.162\.[0-9]+$/
+	#</Location>
+
+	#   SSL Engine Options:
+	#   Set various options for the SSL engine.
+	#   o FakeBasicAuth:
+	#     Translate the client X.509 into a Basic Authorisation.  This means that
+	#     the standard Auth/DBMAuth methods can be used for access control.  The
+	#     user name is the `one line' version of the client's X.509 certificate.
+	#     Note that no password is obtained from the user. Every entry in the user
+	#     file needs this password: `xxj31ZMTZzkVA'.
+	#   o ExportCertData:
+	#     This exports two additional environment variables: SSL_CLIENT_CERT and
+	#     SSL_SERVER_CERT. These contain the PEM-encoded certificates of the
+	#     server (always existing) and the client (only existing when client
+	#     authentication is used). This can be used to import the certificates
+	#     into CGI scripts.
+	#   o StdEnvVars:
+	#     This exports the standard SSL/TLS related `SSL_*' environment variables.
+	#     Per default this exportation is switched off for performance reasons,
+	#     because the extraction step is an expensive operation and is usually
+	#     useless for serving static content. So one usually enables the
+	#     exportation for CGI and SSI requests only.
+	#   o StrictRequire:
+	#     This denies access when "SSLRequireSSL" or "SSLRequire" applied even
+	#     under a "Satisfy any" situation, i.e. when it applies access is denied
+	#     and no other module can change it.
+	#   o OptRenegotiate:
+	#     This enables optimized SSL connection renegotiation handling when SSL
+	#     directives are used in per-directory context.
+	#SSLOptions +FakeBasicAuth +ExportCertData +StrictRequire
+	<FilesMatch "\.(cgi|shtml|phtml|php)$">
+		SSLOptions +StdEnvVars
+	</FilesMatch>
+	<Directory __CGI_BIN_DIR__/__CGI_BIN_PREFIX____CGI_BIN_SSL_PREFIX__cgi-bin>
+		SSLOptions +StdEnvVars
+	</Directory>
+
+	#   SSL Protocol Adjustments:
+	#   The safe and default but still SSL/TLS standard compliant shutdown
+	#   approach is that mod_ssl sends the close notify alert but doesn't wait for
+	#   the close notify alert from client. When you need a different shutdown
+	#   approach you can use one of the following variables:
+	#   o ssl-unclean-shutdown:
+	#     This forces an unclean shutdown when the connection is closed, i.e. no
+	#     SSL close notify alert is send or allowed to received.  This violates
+	#     the SSL/TLS standard but is needed for some brain-dead browsers. Use
+	#     this when you receive I/O errors because of the standard approach where
+	#     mod_ssl sends the close notify alert.
+	#   o ssl-accurate-shutdown:
+	#     This forces an accurate shutdown when the connection is closed, i.e. a
+	#     SSL close notify alert is send and mod_ssl waits for the close notify
+	#     alert of the client. This is 100% SSL/TLS standard compliant, but in
+	#     practice often causes hanging connections with brain-dead browsers. Use
+	#     this only for browsers where you know that their SSL implementation
+	#     works correctly.
+	#   Notice: Most problems of broken clients are also related to the HTTP
+	#   keep-alive facility, so you usually additionally want to disable
+	#   keep-alive for those clients, too. Use variable "nokeepalive" for this.
+	#   Similarly, one has to force some clients to use HTTP/1.0 to workaround
+	#   their broken HTTP/1.1 implementation. Use variables "downgrade-1.0" and
+	#   "force-response-1.0" for this.
+	BrowserMatch ".*MSIE.*" \
+		nokeepalive ssl-unclean-shutdown \
+		downgrade-1.0 force-response-1.0
+
+	# ProxyPass configuration:  (deleted for non-proxy configurations)
+	SSLProxyEngine on
+	ProxyPass / https://__PROXY_TARGET__:__HTTPS_PORT__/
+	ProxyPassReverse / https://__PROXY_TARGET__:__HTTPS_PORT__/
+	ProxyPreserveHost Off 
+
+	# Additional configuration directives
+
+</VirtualHost>
+</IfModule>
+__END__
+fi
+
+fi
+
+
+#
+# If outputting to stdout, then cat the output file,
+# and then remove the temporary directory that it is stored in
+#
+if $output_to_stdout ; then
+	cat $vhost_conf
+	rm -rf $vhost_conf_dir
+#
+# If not outputting to stdout, then fix up some
+# extra stuff on the filesystem (make directories,
+# symlinks, certificate files and so on)
+#
+else
+	#
+	# Create some necessary directories
+	#
+	mkdir -p $http_documentroot"/"
+	mkdir -p $https_documentroot"/"
+	mkdir -p $cgi_bin_dir/$cgi_bin_prefix"cgi-bin""/"
+	mkdir -p $cgi_bin_dir/$cgi_bin_prefix$cgi_bin_ssl_prefix"cgi-bin""/"
+	
+	#
+	# If $vhost_conf is inside a folder called
+	# "sites-available", then call a2ensite to
+	# insure that the site is enabled.
+	#
+	if [ "x`echo $vhost_conf_dir | grep "sites-available" 2>/dev/null`" != "x" ] ; then
+		vhost_conf_file=`echo $vhost_conf | sed -e 's|.*/||'`
+		a2ensite $vhost_conf_file
+	fi
+	
+	#
+	# If the 'clear hosts' flag is set, then get rid of any
+	# entry to this site in /etc/hosts.  If 'set hosts' is set,
+	# then write "127.0.0.1 $site_alias" into /etc/hosts 
+	# so that we can test the site without setting up DNS
+	#
+	if $clear_hosts ; then
+		sed -i -e '/ $site_alias\$/d' /etc/hosts
+	elif $set_hosts && [ "x`grep "^127.0.0.1[ \t]*$site_alias$" /etc/hosts`" == "x" ] ; then
+		echo "127.0.0.1 $site_alias" >> /etc/hosts
+	fi
+	
+	#
+	# If apache has mods-availalbe and mods-enabled folders,
+	# then make sure that the mods we need are enabled
+	#
+	if [ -d $server_root/mods-available ] ; then
+	(
+		for mod in $needed_mods ; do
+			if [ ! -f $server_root/mods-enabled/$mod ] ; then
+				a2enmod $mod
+			fi
+		done
+	)
+	fi
+
+	#
+	# Make a certificate if necessary
+	#
+	if $configure_https ; then
+
+		if [ ! -f $server_private_key ] ; then
+
+			mkdir -p $private_key_dir
+			mkdir -p $certificate_dir
+			mkdir -p $signing_request_dir
+
+			#
+			# Make a serial number from the date.
+			# Rather than cache a sequence number,
+			# we will instead use the HOUR * 4 plus
+			# the minute divided by 15 (don't make
+			# two certificates for the same site within
+			# fifteen minutes of each other and you'll
+			# be okay...)
+			#
+			h=`date "+%k"`
+			m=`date "+%M" | sed -e 's|0\([0-9]\)|\1|'`
+                        echo "h is $h and m is $m"
+			s="$(((h*4)+(m/15)))"
+			z=0
+			if [ ${#s} = 2 ] ; then
+				z=
+			fi
+			certificate_serial=`date "+%Y%m%d"`"$z$s"
+			echo "certificate serial is $certificate_serial"
+                        
+			#
+			# Create the Certificate Authority [CA] key
+			#
+			cat <<- __END__ > $certificate_dir/${site_fqdn}-ca-params.txt
+				$server_location_country
+				$server_location_state
+				$server_location_city
+				$organization
+				$organization CA
+				$site_fqdn
+				ca@$site_fqdn
+			__END__
+			
+                        echo "ca params ($certificate_dir/${site_fqdn}-ca-params.txt) are:"
+                        cat $certificate_dir/${site_fqdn}-ca-params.txt
+                        
+                        openssl genrsa $certificate_password_option -out $certificate_dir/${site_fqdn}-ca.key 4096
+			openssl req -new -x509 -days $certificate_life -key $certificate_dir/${site_fqdn}-ca.key -out $certificate_dir/${site_fqdn}-ca.crt < $certificate_dir/${site_fqdn}-ca-params.txt
+
+			#
+			# Create the server private key
+			#
+			cat <<- __END__ > $certificate_dir/${site_fqdn}-csr-params.txt
+				$server_location_country
+				$server_location_state
+				$server_location_city
+				$organization
+				$organization WS
+				$site_fqdn
+				ca@$site_fqdn
+				challenge
+				$organization
+			__END__
+
+			
+                        echo "csr params ($certificate_dir/${site_fqdn}-csr-params.txt) are:"
+                        cat $certificate_dir/${site_fqdn}-csr-params.txt
+
+			openssl genrsa $certificate_password_option -out $server_private_key 4096
+			openssl req -new -key $server_private_key -out $signing_request < $certificate_dir/${site_fqdn}-csr-params.txt
+			openssl x509 -req -days $certificate_life -in $signing_request -CA $certificate_dir/${site_fqdn}-ca.crt -CAkey $certificate_dir/${site_fqdn}-ca.key -set_serial $certificate_serial -out $server_certificate
+		fi	
+
+	fi
+	
+	#
+	# Make an http password file if necessary
+	#
+	if [ "x$auth_file" != "x" ] ; then
+	
+		if [ ! -f $auth_file ] ; then
+			
+			if [ "x$auth_backup" != "x" ] ; then
+				cp $auth_backup $auth_file
+			else
+				touch $auth_file
+			fi
+	
+			chown root:www-data $auth_file
+			chmod 640 $auth_file	
+			
+			if $auth_cram_md5 && [ -f /etc/cram-md5.pwd ] ; then
+				auth_users=$auth_users" "`sed -e 's/\t/:/' /etc/cram-md5.pwd`
+			fi
+			
+			if [ "x$auth_users" != "x" ] ; then
+				for user_pw in $auth_users ; do
+					u=`echo $user_pw | sed -e 's|:.*||'`
+					p=`echo $user_pw | sed -e 's|[^:]*:||'`
+					if $auth_dbm ; then
+						cryptpw=`openssl passwd -crypt $p`
+						dbmmanage $auth_file add $u $auth_dbm
+					else
+						htpasswd -b $auth_file $u $p
+					fi
+				done
+			fi
+			
+			if [ ! -s $auth_file ] ; then
+				echo
+				echo "Empty authentication file for $site_fqdn created."
+				echo "Restore actual authentication from backup to:"
+				echo
+				echo "    $auth_file"
+				echo
+				echo "or add users by hand via:"
+				echo
+				echo "    htpasswd -b $auth_file USER PW"
+				echo
+			fi			
+		fi
+	fi
+
+fi
+
+rm -f $sed_script
+if [ "x$additional_configuration_tmp" != "x" ] ; then
+rm -f $additional_configuration_tmp
+fi

@@ -1,0 +1,21 @@
+#!/bin/bash
+
+#
+# This script will touch all of the .jpg files in
+# the current directory, setting their last-modified
+# date equal to the timestamp in the exif tags.
+#
+# TO DO:  Make sure that exif.py returns a date
+# befor calling 'touch'.
+#
+EXIFPY=/usr/share/apps/imagerotation/exif.py
+for x in `ls *.jpg` ; do
+	xdate=`$EXIFPY $x | grep 'DateTime:' | sed -e 's/.*ASCII=//' -e 's/\([0-9][0-9][0-9][0-9]\):\([0-9][0-9]\):\([0-9][0-9]\)/\1-\2-\3/' -e 's/ *@ [0-9]*$//' -e 's/ /_/g' -e 's/://g'`
+	if [ "x$xdate" != "x" ] ; then
+		#echo $x date is $xdate
+		mv $x $xdate
+	fi
+	#echo touch --date="`$EXIFPY $x | grep 'DateTime:' | sed -e 's/.*ASCII=//' -e 's/\([0-9][0-9][0-9][0-9]\):\([0-9][0-9]\):\([0-9][0-9]\)/\1-\2-\3/' -e 's/@ [0-9]*$//'`" $x
+	#ls -l $x
+done
+

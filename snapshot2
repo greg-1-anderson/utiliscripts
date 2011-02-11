@@ -1,0 +1,566 @@
+#!/bin/bash
+
+# ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#
+# USAGE:
+#
+#	snapshot2 user@target.tld [GATEWAYIP INTERFACE]
+#
+#		OR
+#
+#	snapshot2 target.tld
+#
+#		OR in cron:
+#
+#	0 */4 * * * /bin/snapshot2 --ssh-identity /root/.ssh/id_rsa --require-network 172.30.10.1 eth0 --user ga --backup "bin,Documents,work" greg@ftp.adc.rsv.ricoh.com:/home2/greg/archives/ga-laptop >>/var/log/snapshot.log 2>&1
+#
+#	Runs every four hours; change the "4" to a "1" to run every hour.
+#
+# FLAGS:
+#
+#	--backup BACKUP_ITEM_LIST
+#
+#	Specify the list of local folders to back up.  There are two
+#	formatting options; PICK ONE:
+#
+#		folder1,folder2,folder3		List of folders in /home/$localUser
+#
+#		/home/user/folder /etc/profile.d /srv/www
+#
+#	In other words, you can have either a comma-separated list of
+#	folders in the user's home directory, or a space-separated list
+#	of full paths.  Leading slashes are IGNORED in comma-separated
+#	lists; you'll get /home/$USER//path, which will still be relative
+#	to the user's home directory.
+#
+#	--user USERNAME
+#
+#	Use this flag to specify that the local user should  be something
+#	other than $USER.  Useful when running as root from cron.
+#
+#	Note that the user is only relevant if using the comma-separated
+#	backup target list shorthand (see below) or if there is no "user@"
+#	in the backup target.  If these notations are avoided, then the
+#	user is irrelevant.
+#
+#	--ssh-identity IDENTITY_FILE
+#
+#	Specifies where to find the identity file.  You must specify your
+#	identity file if its name does not begin with "id" or if you have
+#	more than one private key or if your identity files are not stored
+#	in /home/$USER/.ssh (e.g. when running as root).
+#
+#	--ssh-key-ok
+#
+#	This flag indicates that it is okay to run this script without first
+#	invoking ssh-agent.  In general, it is not necessary to use this flag
+#	directly, as this script will detect if you have already used ssh-add
+#	on your key, and this flag is not necessary in other situations.
+#
+#	--require-network GATEWAY_IP INTERFACE
+#
+#	If the optional --require-network option is
+#	specified, then the script will do nothing unless
+#	"route -n" reports that the gateway for the specified
+#	interface exists.  For example, if you specify:
+#
+#		--require-network 10.100.1.1 eth0
+#
+#	then this script will exit unless your laptop is connected
+#	to a network whose gateway is 10.100.1.1 on eth0.
+#
+#	--rsync-flags flag1 flag2 flag3 ;
+#
+#	Specifies additional options to pass to rsync, terminated by a ";".  
+#	These can have various different effects.  For example, if you have
+#	one machine backing up to greg@ftp.adc.rsv.ricoh.com:/home2/greg/archives/ga-laptop,
+#	and another backing up to greg@ftp.adc.rsv.ricoh.com:/home2/greg/archives/ga-desktop,
+#	and the same files exist on both machines, then you might want to 
+#	add --rsync-flags --link-dest=/home2/greg/archives/ga-desktop ; to the 
+#	laptop, and --rsync-flags --link-dest=/home2/greg/archives/ga-laptop ;
+#	to the desktop so that the files common to both machines are stored
+#	only once in the backup.  This parameter can also be used to
+#	override the default 
+#
+# SSH KEY SETUP:
+#
+#	Create id_dsa and id_dsa.pub on the client
+#	machine, and copy id_dsa.pub into authorized_keys
+#	on the target.
+#
+#	Follow the instructions at:
+#
+#		http://kimmo.suominen.com/docs/ssh/
+#
+#	For example:
+#
+#		sudo bash
+#		cd /root
+#		ssh-keygen -t rsa
+#		ls -al .ssh
+#		scp .ssh/id_rsa.pub USER@domain.com:/home/USER/.ssh/my_id_rsa.pub
+#		ssh USER@domain.com
+#		cd .ssh
+#		cat my_id_rsa.pub
+#		cat my_id_rsa.pub >> authorized_keys
+#		chmod 600 authorized_keys
+#
+#	If this program will run in cron as root, then 
+#	your id_dsa and id_dsa.pub should be in /root/.ssh,
+#	and the key should not be protected with a password.
+#	In general, identity files should always be password-protected;
+#	however, if the identity file is only readable by root,
+#	and if it is only used to access a remote user account
+#	that is only used to store backup files, then a passwordless
+#	identity file is reasonable.
+#
+# CRON SETUP:
+#
+#	It is presumed that you will want to run this script
+#	as root; running as root insures that the existance of
+#	files that you cannot read without su permissions
+#	in your home directory should not interfere with your
+#	backup process.  If you never become root (e.g if 
+#	you are unable to log in as root), then you may run
+#	this script without su priveledges.
+#
+#	Cron is configured with the crontab command, which is
+#	stateless.  To change the settings of the cron table,
+#	you must replace the whole table.  So, the first step
+#	is to determine what is currently in the crontab
+#	like so:
+#
+#		$ sudo crontab -l > tmp.crontab
+#		$ cat tmp.crontab
+#
+#		0 */1 * * * /bin/cron-snapshot2 --ssh-identity /root/.ssh/id_rsa --require-network 10.100.1.1 eth0 --user ga --backup "bin,Documents,work" reetstreet.com >>/var/log/snapshot.log 2>&1
+#		57 */1 * * * /bin/cron-snapshot2 --ssh-identity /root/.ssh/id_rsa --require-network 172.30.10.1 eth0 --user ga --backup "bin,Documents,work" greg@ftp.ricohsv.com:/home2/greg/archives/ga-laptop >>/var/log/snapshot.log 2>&1
+#
+#	Next, edit tmp.crontab, and then load it:
+#
+#		$ sudo crontab tmp.crontab
+#
+#	DO NOT FORGET to copy snapshot2 and migratehistories to
+#	/bin/cron-snapshot2 and /bin/cron-migratehistories.
+#
+#	That's it.
+#
+# STRUCTURE:
+#
+#	This program makes historic backup snapshots of
+#	directories in your home folder.  The technique is
+#	similar to rolling backup scripts, but historic
+#	backups are stored chronologically.
+#
+#	All backups are stored in the following location:
+#
+#		target:/home/USER/archives/localMachine
+#
+#	Inside this directory, the structure is as follows:
+#
+#		current			The most recent snapshot
+#		previous		The snapshot that came before
+#		history			Chronological snapshots older than most recent two
+#			hourly
+#			daily
+#			weekly
+#			monthly
+#			yearly
+#
+# CREDITS:
+#
+#	The concepts in this script are based on work
+#	referenced on this page:
+#
+#		http://www.mikerubel.org/computers/rsync_snapshots/
+#
+#	The main improvements of this script are chronological
+#	historic backups, "push" backups done to a remote
+#	machine without using a custom service on the target,
+#	and the ability to supress backup operations when on an
+#	alien network.
+#
+# TODO:
+#
+#	Some things to consider...
+#
+#	    *	With backups being taken at arbitrary intervals
+#		as work is done, it is not necessarily the case
+#		that the snapshots choosen for long-term archival
+#		will necessarily be the "best" ones.  Perhaps at
+#		the rate work progresses, this is not necessary;
+#		however, it might be nice to suppliment the cron
+#		backup task with manual 'daily' and 'monthly' scripts
+#		that take a local backup and mirror it to history/daily
+#		or history/monthly as appropriate.
+#
+# ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+unset PATH
+
+CP=/bin/cp
+MV=/bin/mv
+RM=/bin/rm
+LS=/bin/ls
+CHMOD=/bin/chmod
+ECHO=/bin/echo
+MKDIR=/bin/mkdir
+DATE=/bin/date
+UNAME=/bin/uname
+GREP=/bin/grep
+SED=/bin/sed
+TOUCH=/bin/touch
+MKTEMP=/bin/mktemp
+RSYNC=/usr/bin/rsync
+SSH=/usr/bin/ssh
+SCP=/usr/bin/scp
+SSHADD=/usr/bin/ssh-add
+SSHAGENT=/usr/bin/ssh-agent
+TEE=/usr/bin/tee
+STAT=/usr/bin/stat
+NICE="/usr/bin/env nice"
+SORT="/usr/bin/env sort"
+TAIL=/usr/bin/tail
+HEAD=/usr/bin/head
+ROUTE=/sbin/route
+
+
+
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#
+# S E T   D E F A U L T S   A N D   P A R S E   O P T I O N S
+#
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+sshKeyOk=0
+
+backupTarget=""
+requiredGateway=""
+requiredInterface=""
+sshIdentityFile=""
+sshIdentity=""
+otherOptions=""
+foldersToBackup=bin,Documents,work
+
+#
+# Use the name of the local machine in the target path
+#
+localMachine=`$UNAME -n`
+localUser=$USER
+
+#
+# Remember the original script paramters, as 'shift' destroys $*.
+#
+originalScriptParameters=$*
+
+#
+# Parse options
+#
+while [ $# -gt 0 ] ; do
+
+	option=$1
+	shift
+	
+	case "$option" in
+		--ssh-key-ok )
+			sshKeyOk=1
+			;;
+		--ssh-identity )
+			sshIdentityFile=$1
+			shift
+			;;
+		--require-network )
+			requiredGateway=$1
+			requiredInterface=$2
+			shift
+			shift
+			;;
+		--user )
+			localUser=$1
+			shift
+			;;
+		--backup )
+			foldersToBackup=$1
+			shift
+			;;
+		--rsync-flags )
+			while [ $# -gt 0 ] && [ "X$1" != "X;" ] ; do
+				otherOptions="$otherOptions $1"
+				shift
+			done
+			shift
+			;;
+		-* )
+			$ECHO "Unknown option $option" 1>&2
+			exit 1
+			;;
+		* )
+			backupTarget=$option
+			;;
+	esac
+done
+
+#
+# Force exit if user did not specify a backup target
+#
+if [ "X$backupTarget" = "X" ] ; then
+	$ECHO "Backup target not specified" 1>&2
+	$ECHO "Flags for $0 were:  $originalScriptParameters"
+	exit 1
+fi
+
+#
+# If user specified that backups should only happen on
+# a specified network, then check network and exit if
+# in an alien environment.
+#
+if [ "X$requiredGateway" != "X" ] ; then
+	routeLine=`$ROUTE -n | $GREP '^0\.0\.0\.0[ 	]*'$requiredGateway'.*'$requiredInterface'$'`
+	if [ "X$routeLine" = "X" ] ; then
+		echo "snapshot2 $backupTarget:  gatway $requiredGateway not available; exiting."
+		exit 0
+#	else
+#		echo "snapshot2 $backupTarget:  gatway is $requiredGateway as required."
+	fi
+fi
+
+#
+# Check to see if this script is already being
+# run under ssh-agent, with our id specified via
+# ssh-add.
+#
+sshIdentityPattern="/home/$USER/.ssh/id"
+if [ "X$sshIdentityFile" != "X" ] ; then
+	sshIdentityPattern=$sshIdentityFile
+fi
+if [ "X$sshKeyOk" != "X1" ] ; then
+	hasID=`$SSHADD -l | $GREP $sshIdentityPattern`
+fi
+
+#
+# Check to see if it's time to make the snapshot, or if
+# we still need to invoke ssh-agent.  We will go
+# ahead and snapshot if we have been called recursively
+# ("sync" in the second parameter), or if ssh-add -l
+# reported that we've already cached a key for this
+# system in memory.
+#
+if [ "X$sshKeyOk" = "X1" ] || [ "X$hasID" != "X" ] ; then
+
+	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	#
+	# P R E P A R E   S S H   K E Y
+	#
+	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	
+	#
+	# If we do not have a key yet, then add
+	# our identity file.  If the identity file
+	# is password-protected, this statement will
+	# prompt for the password.
+	#	
+	if [ "X$hasID" = "X" ] ; then
+		$SSHADD $sshIdentityFile
+	fi
+	
+	#
+	# Check to see if we have a username in the target
+	# or not.  If we do not, then we will use $localUser
+	#
+	if [ X`$ECHO "$backupTarget" | $GREP "@"` \!= "X" ] ; then
+		remoteuser=${backupTarget/@*/}
+		targetMachine=$backupTarget
+	else
+		remoteuser=$localUser
+		targetMachine=$localUser"@"$backupTarget
+	fi
+	#
+	# Check to see if we have a target folder in the specification.
+	# If we do, we'll split out archiveFolder from it.
+	#
+	if [ X`$ECHO "$targetMachine" | $GREP ":"` \!= "X" ] ; then
+		archiveFolder=${targetMachine/*:/}
+		targetMachine=${targetMachine/:*/}
+	else
+		archiveFolder=/home/$remoteuser/archives/$localMachine
+	fi
+
+	#
+	# If the --backup parameter is a simple comma-separated list, "a,b,c"
+	# then we will expand it to "/home/$localUser/a /home/$localUser/b /home/$localUser/c".
+	# We do this by using "echo" to invoke bash brace-expansion. 
+	#
+	if [ "X"`$ECHO $foldersToBackup | $GREP "^[a-zA-Z0-9][a-zA-Z0-9,]*[a-zA-Z0-9]$"` != "X" ] ; then
+		foldersToBackup=`eval $ECHO "/home/$localUser/{$foldersToBackup}"`
+	fi
+	
+	#
+	# Print out our welcome message
+	#
+	target=$targetMachine":"$archiveFolder
+	$ECHO ".............................................................................."
+	$ECHO
+	$ECHO "BEGIN ${0/*\//}                                " `$DATE`
+	$ECHO "Target is $target"
+	$ECHO "Running as user $USER, local user is $localUser, remote user is $remoteuser"
+	
+	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	#
+	# S E T    U P   D I R E C T O R I E S   F O R   S Y N C
+	#
+	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	
+	#
+	# First step:  make sure that the target folder exists
+	#
+	$SSH $targetMachine $MKDIR -p $archiveFolder/history
+	
+	#
+	# Next, use cp -al to copy "current" to "previous"
+	#
+	# TODO:  Don't rm the in-progress when there's no change,
+	# and skip the cp here if it already exists.
+	#
+	$SSH $targetMachine $CP -alf $archiveFolder/current $archiveFolder/previous.in-progress
+
+	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	#
+	# B A C K   U P   W I T H   R S Y N C
+	#
+	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	
+	#
+	# Push the documents in the folders to sync
+	# from this machine to the target machine.
+	#
+	# -a == -rlptgoD
+	#
+	# Flags we've selected:
+	#
+	#	-r	recursive
+	#	-l	copy symlinks as symlinks
+	#	-t	preserve times
+	#	-C	skip files the same way that CVS does
+	#	-u	skip files that are newer on the receiver
+	#	-v	verbose
+	#	-z	compress data during transfer
+	#
+	#	--out-format="::: %M ::: %f"	Print modification date and filename
+	#
+	#	For a while, we did -a with --no-o, --no-g and --no-p:
+	#
+	#	-a	archive, implies:
+	#
+	#		-r	recursive
+	#		-l	copy symlinks as symlinks
+	#		-p	preserve permissions
+	#		-t	preserve times
+	#		-g	preserve groups
+	#		-o	preserve owner
+	#		-D	preserve device files
+	#
+	#	--no-o	make all files owned by user on receiving system
+	#	--no-g	similarly, do not preserve group ownership.
+	#	--no-p	do not preserve permissions (all backups will be writable)
+	#
+	# That was a bit overdone, though; removing -a and specifying the flags
+	# we want directly was more straightforward.
+	#
+	# Normally, we might prefer to make the backups non-writable,
+	# and perhaps we should do that (-chmod=-w); however, we would then
+	# also have to explicitly chmod -R +w before removing backups during
+	# history migration (maybe a good idea....)
+	#
+	$ECHO "Backing up $foldersToBackup"
+	rsyncLog=`$MKTEMP /tmp/rsynclog.XXXXXXXX`
+	$ECHO "BEGIN ${0/*\//} at" `$DATE` > $rsyncLog
+	$RSYNC -rltCuvz \
+		--chmod=+w \
+		--exclude='~*' \
+		--delete --delete-excluded \
+		--out-format="::: %M ::: %f" \
+		-e ssh $otherOptions \
+		$foldersToBackup \
+		$target/current		| $TEE -a $rsyncLog
+	
+	#
+	# Paw through the rsync log and pull out the modification
+	# date of the most-recently-modified item from the transfer.
+	# We take only the lines in the rsync lines that begin with
+	# ":::", as those are the lines that we've specifically formatted
+	# to include modification dates.  We then reverse-sort the result
+	# and take the first item to find the most recent.
+	#
+	mostRecentModDate=`$GREP '^:::' $rsyncLog | $SORT -r | $HEAD -n 1 | $SED -e 's/^::: //' -e 's/:[0-9][0-9] :::.*//' -e 's|-| |'`
+	mostRecentModDateForTouch=`$ECHO $mostRecentModDate | $SED -e 's|[:/ ]*||g'`
+	if [ "X$mostRecentModDate" != "X" ] ; then
+		#
+		# Transfer the rsync log to the remote machine.
+		#
+		$ECHO "The most recently modified file is $mostRecentModDate"
+		$SSH $targetMachine $RM -f $archiveFolder/current/RSYNC_LOG
+		$SCP $rsyncLog $target/current/RSYNC_LOG
+		$RM -rf $rsyncLog
+	else
+		#
+		# If nothing changed, then delete the 'previous in progress'
+		# folder and the rsync log and quit.  (Note: it wouldn't
+		# be necessary to delete "previous in progress" if we
+		# also skipped the "cp -al" when "previous in progress" already
+		# exists.)
+		#
+		$ECHO "Nothing has changed; exit."
+		$SSH $targetMachine $RM -rf $archiveFolder/previous.in-progress
+		$RM -rf $rsyncLog
+		exit 0
+	fi
+	
+	#
+	# We have to use 'touch' to update the timestamp on
+	# the sync'ed folder; otherwise, it won't change its
+	# modification date from the time it is first created.
+	# We set the modification date of the folder to the 
+	# date of the newest item anywhere inside it rather than
+	# using the backup time because it is a better representation
+	# of the folder contents.
+	#
+	$SSH $targetMachine $TOUCH -t "$mostRecentModDateForTouch" $archiveFolder/current
+	currentTimestampSinceEpoc=`$DATE --date="$mostRecentModDate" "+%s"`
+	
+	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	#
+	# M A N A G E   S N A P S H O T   H I S T O R I E S
+	#
+	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	
+	/bin/migratehistories --target-machine $targetMachine --migrating $archiveFolder/previous --history-root $archiveFolder/history
+	
+	#
+	# Move previous.in-progress to previous.  At this point, previous either
+	# did not exist at all, or it was moved to one of the history folders.
+	# We will go ahead and remove it, though, just in case migratehistories
+	# failed for some reason.  (Otherwise we might end up with previous.in-progress
+	# inside of the old previous folder.)
+	#
+	$SSH $targetMachine $RM -rf $archiveFolder/previous
+	$SSH $targetMachine $MV $archiveFolder/previous.in-progress $archiveFolder/previous
+	$ECHO "Done; exiting at" `$DATE`
+	
+else
+
+	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+	#
+	# S E T   U P   S S H - A G E N T
+	#
+	#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+	#
+	# Make a recursive call to re-invoke this
+	# script using ssh-agent.  Ssh-agent will
+	# cache our keys in memory (keys are cached
+	# via calls to ssh-add), so we do not have
+	# to enter a password every time we call
+	# rsync or ssh or scp.
+	#
+	$SSHAGENT $0 --ssh-key-ok $originalScriptParameters
+fi

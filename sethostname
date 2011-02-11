@@ -1,0 +1,55 @@
+#!/bin/bash
+
+current_fqdn=`hostname --fqdn`
+server_fqdn=$current_fqdn
+
+#
+# Parse options
+#
+while [ $# -gt 0 ] ; do
+
+	option=$1
+	shift
+	
+	#echo "Process $option"
+	
+	case "$option" in
+
+	--* )
+		echo "Unknown option $option" >&2
+		exit 1
+	
+		;;
+	* )
+		server_fqdn=$option
+		;;
+	
+	esac
+done
+
+server_name=${server_fqdn%%.*}
+
+if [ "x$server_fqdn" != "x$current_fqdn" ] ; then
+	echo $server_fqdn > /etc/hostname
+	hostname -F /etc/hostname
+	
+	#
+	# We don't use server_ip at the moment...
+	#
+	if [ "x$server_ip" = "x" ] ; then
+		server_ip=`/sbin/ifconfig | grep "inet addr:" | head -n 1 | sed -e 's|.*inet addr:||'`
+	fi
+	
+	if [ "x`echo $current_fqdn | grep '\.'`" != "x" ] && [ "x`grep $current_fqdn /etc/hosts`" != "x" ] ; then
+		tmpfile=`mktemp`
+		# Remove the current fqdn from /etc/hosts
+		(
+			grep -v $current_fqdn /etc/hosts
+			echo "127.0.0.1	$server_fqdn"
+		) > $tmpfile
+		mv -f $tmpfile /etc/hosts
+		chmod 644 /etc/hosts
+	else
+		echo "127.0.0.1	$server_fqdn $server_name" >> /etc/hosts
+	fi
+fi

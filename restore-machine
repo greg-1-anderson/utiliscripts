@@ -1,0 +1,55 @@
+# run as user
+
+#
+# To do:  check the network and select the backup location
+# appropriate for the location.
+#
+archivemachine=home.reetstreet.com
+archivepath=/archive/$USER/`uname -n`-recent
+
+
+#
+# To do:  set path
+#
+
+host=`uname -n`
+
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#
+#  G E T   D O C U M E N T S   A N D   D A T A
+#
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+#
+# If there is no $HOME/bin directory, take that as
+# an indication that we need to get our  backup data
+# from an appropriate nearby source.
+#
+if [ ! -d $HOME/bin ] ; then
+	rsync -rCultvz $USER@$archivemachine:/home/$USER/bin $HOME   
+	konsole -e $HOME/bin/syncwith $USER@$archivemachine & 
+	#konsole -e rsync -rCultvz $USER@$archivemachine:$archivepath/ $HOME
+fi
+
+
+
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#
+#  I N S T A L L    O T H E R    C O M P O N E N T S
+#
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+#
+# Install additional packages
+#
+#sudo $HOME/bin/install-components
+
+
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#
+#  B A C K U P S   a n d   C R O N   a n d   w h a t n o t
+#
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+#sudo $HOME/bin/configure-backups
+

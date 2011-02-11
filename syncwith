@@ -1,0 +1,165 @@
+#!/bin/bash
+
+# ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#
+# USAGE:
+#
+#	syncme user@target.tld
+#
+#		OR
+#
+#	syncme target.tld
+#
+# SETUP:
+#
+#	Create id_dsa and id_dsa.pub on the client
+#	machine, and copy id_dsa.pub into authorized_keys
+#	on the target.
+#
+#	Follow the instructions at:
+#
+#		http://kimmo.suominen.com/docs/ssh/
+#
+# CUSTOMIZING:
+#
+#	This script is very simple.  You must read through
+#	it and customize some of the paths, as appropriate.
+#	Look for {bin,Documents,work} in the script below
+#	and fix them up.  This pattern appears twice in the
+#	script.  It could be parameterized, but you'd have
+#	to figure out the quoting rules for the second
+#	instance and get it just right.
+#
+# GETTING ORGANIZED:
+#
+#	Of course it is possible to just rsync your entire
+#	home directory, but that is slow and wasteful.
+#	If you did that, you'd end up replicating every
+#	large package you downloaded, backing up all of your
+#	temporary files, etc.   Yuck.
+#
+#	A little organization can make syncronization much
+#	more efficient.  I have my home directory organized
+#	as follows:
+#
+#		bin		my scripts
+#		Documents	non-code docs not under revision control
+#		Personal	documents that are not synced with work machines
+#		work		code not under revision control
+#		local		local checkout of everything under revision control
+#		Downloads	folder firefox saves downloads to
+#		WhatIsInstalled	installed software, usually moved from Downloads folder
+#		VirtualMachines	for vmware
+#		tmp		random trash
+#
+#	Of these folders, I sync bin, Documents and work.
+#	You might sync more or less, but you should not
+#	sync files under revision control; that is a bad idea.
+#	Use svn / cvs checkin and checkout directly to sync
+#	files under revision control.
+#
+# WARNING:
+#
+#	This script does two-way syncs between multiple machines.
+#	If you delete a file on one machine and then sync, the
+#	deleted file will come right back.  If you move a file
+#	to a new folder and then sync, then you will have two
+#	copies of that file on both machines.
+#
+#	It helps to get organized before using this script for the
+#	first time, and it is also helpful to stay organized and
+#	put things where they belong before syncing.  Only
+#	"clean house" occasionally; then, move away the target
+#	directories on all other machines to another spot,
+#	clean up the source directories, and run sync again to
+#	make a fresh copy on the other machine.
+#
+# ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+#
+# Check to see if this script is already being
+# run under ssh-agent, with our id specified via
+# ssh-add.
+#
+hasID=`ssh-add -l | grep '/home/'$USER'/.ssh/id'`
+
+#
+# Check to see if it's time to call rsync, or if
+# we still need to invoke ssh-agent.  We will go
+# ahead and call rsync if we have been called recursively
+# ("sync" in the second parameter), or if ssh-add -l
+# reported that we've already cached a key for this
+# system in memory.
+#
+if [ "X$2" = "Xsync" ] || [ "X$hasID" != "X" ] ; then
+
+	#
+	# If we do not have a key yet, then prompt
+	# for one.
+	#	
+	if [ "X$hasID" = "X" ] ; then
+		ssh-add
+	fi
+	
+	#
+	# Check to see if we have a username in the target
+	# or not.  If we do not, then we will use $USER
+	#
+	if [ X`echo "$1" | grep "@"` \!= "X" ] ; then
+		remoteuser=`echo $1 | sed -e 's/@.*//'`
+		target=$1:/home/$remoteuser
+	else
+		target=$USER"@"$1:/home/$USER
+	fi
+	
+	echo "Target is $target"
+	
+	#
+	# Push the documents in the folders to sync
+	# from this machine to the target machine.
+	#
+	# -a == -rlptgoD
+	#
+	# Flags we've selected:
+	#
+	#	-r	recursive
+	#	-l	copy symlinks as symlinks
+	#	-p	preserve permissions
+	#	-t	preserve times
+	#	-g	preserve groups
+	#	-o	preserve owner
+	#	-D	preserve device files
+	#
+	#	-C	skip files the same way that CVS does
+	#	-u	skip files that are newer on the receiver
+	#	-v	verbose
+	#	-z	compress data during transfer
+	#
+	rsync -autvz \
+		--exclude='~*' \
+		--exclude='.~*' \
+		/home/$USER/{bin,Documents,Personal,work} \
+		$target
+
+
+	#
+	# Next, pull files that have changed on the
+	# target machine back over to this machine.
+	#
+	rsync -autvz \
+		--exclude='~*' \
+		--exclude='.~*' \
+		$target/'{bin,Documents,Personal,work}' \
+		/home/$USER
+
+else
+	#
+	# Make a recursive call to re-invoke this
+	# script using ssh-agent.  Ssh-agent will
+	# cache our keys in memory (keys are cached
+	# via calls to ssh-add), so we do not have
+	# to enter a password every time we call
+	# rsync.
+	#
+	ssh-agent $0 $1 sync
+fi

@@ -1,0 +1,191 @@
+#!/bin/sh
+
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#
+#  S E T   U P   P R E F E R E N C E S   F O R    V A R I O U S    A P P L I C A T I O N S
+#
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+
+#
+# Set up nedit default preferences
+#
+mkdir -p $HOME/.nedit
+if [ -f $HOME/.nedit/nedit.rc ] ; then
+
+	sed -i $HOME/.nedit/nedit.rc \
+		-e 's/^\(nedit.autoWrap: \).*/\1 None/' \
+		-e 's/^\(nedit.openInTab: \).*/\1 False/' \
+		-e 's/^\(nedit.statisticsLine: \).*/\1 True/' \
+		-e 's/^\(nedit.tabDistance: \).*/\1 8/'
+
+
+else
+
+	cat <<- __END__ > $HOME/.nedit/nedit.rc
+	nedit.autoWrap: None
+	nedit.openInTab: False
+	nedit.statisticsLine: True
+	nedit.tabDistance: 8
+	__END__
+
+fi
+
+
+
+#
+# Customize bash settings
+#
+# To do:  analyze whether or not .bashrc already exists,
+# or whether we should use .profile or .bash_profile instead.
+#
+chkbashrc=`grep 'Bash Customizations' $HOME/.bashrc`
+if [ "X$chkbashrc" = "X" ] ; then
+	cat <<- __END__ >> $HOME/.bashrc
+	# Include Bash Customizations
+	if [ -f $HOME/.bash_customizations ]; then
+		. $HOME/.bash_customizations
+	fi
+	# End Bash Customizations
+	__END__
+fi
+
+cat << __END__ > $HOME/.bash_customizations
+alias lla='ls -A -l --si'
+alias ll='ls -l --si'
+alias la='ls -A'
+alias l='ls -CF'
+alias f='find . -name'
+alias fj='find . -name "*.java"'
+alias fppt='find . -name "*.ppt"'
+alias fxls='find . -name "*.xls"'
+alias portscan='nmap -sT -O'
+alias openports='portscan localhost'
+
+__END__
+
+exit 0
+
+
+#
+# Set up firefox default preferences
+#
+# NOTE 1:  If firefox is running, this will not work (firefox will ignore & overwrite on exit)
+#
+# NOTE 2:  What is 'ime2irqv.default'?  Might this at some point be the wrong location for prefs?
+#
+mkdir -p $HOME/Downloads
+mkdir -p $HOME/.mozilla/firefox/ime2irqv.default
+
+if [ -f $HOME/.mozilla/firefox/ime2irqv.default/prefs.js ] ; then
+
+	grep -v "\(browser.download.dir\|browser.download.downloadDir\|browser.startup.homepage\|browser.startup.page\)" $HOME/.mozilla/firefox/ime2irqv.default/prefs.js > /tmp/prefs.js
+	cp -f /tmp/prefs.js $HOME/.mozilla/firefox/ime2irqv.default/prefs.js
+
+fi
+
+cat << __END__ >> $HOME/.mozilla/firefox/ime2irqv.default/prefs.js
+user_pref("browser.download.dir", "$HOME/Downloads");
+user_pref("browser.download.downloadDir", "$HOME/Downloads");
+user_pref("browser.startup.homepage", "http://my.yahoo.com");
+user_pref("browser.startup.page", 0);
+__END__
+
+
+
+
+#
+# Customize based on host and user data
+#
+host=`uname -n`
+
+
+#
+# Set up a launcher item for the home folder
+#
+if [ ! -f $HOME/.gnome2/panel2.d/default/launchers/homefolder.desktop ] ; then
+
+	cat <<- __END__ > $HOME/.gnome2/panel2.d/default/launchers/homefolder.desktop
+	#!/usr/bin/env xdg-open
+
+	[Desktop Entry]
+	Encoding=UTF-8
+	Version=1.0
+	Name=Home Folder
+	Comment=Open '/home/$USER'
+	Icon=user-home
+	Name[en_US]=Home Folder
+	Comment[en_US]=Open '/home/$USER'
+	Icon[en_US]=user-home
+	URL=file:///home/$USER
+	Type=Link
+	__END__
+fi
+
+
+#
+# Do version-specific stuff
+#
+ubuntuRevision=`grep '^#deb.*\[' /etc/apt/sources.list | sed -e 's/.*\][^ ]* *\([^ ]*\).*/\1/'`
+
+VERSION_SPECIFIC_CONF_DIR=$HOME/Documents/Installation/InstallData/version-specific/$ubuntuRevision
+
+THEMES_DIR=$VERSION_SPECIFIC_CONF_DIR/Themes
+GCONF_DIR=$VERSION_SPECIFIC_CONF_DIR/gconf
+
+#
+# Apply preferences from InstallData/gconf if available
+#
+if [ -d $THEMES_DIR ] && [ -d $HOME/.themes ] ; then
+	for theme in `ls $THEMES_DIR/*.tar.gz` ; do
+		( cd $HOME/.themes && tar xzvf $THEMES_DIR/$theme )
+	done
+fi
+
+#
+# Apply preferences from InstallData/gconf if available.
+#
+# To update this conf file:
+#
+#	gconftool-2 --dump /desktop/gnome/sound /apps/panel | sed -e "s|$USER.desktop|homefolder.desktop|g" > gconf.xml
+#
+# Then move gconf.xml to InstallData/version-specific/karmic/gconf.xml
+# (where 'karmic' is replaced with the name of the specific ubuntu
+# revision you're using).  You may also want to add additional gconf
+# sections to the dump command above; any preference you dump will
+# be restored on move-in.
+#
+# It is also possible to hand-code setting values using --type string --set,
+# as shown below in the desktop-background selection code.  For more
+# information on available gconf paths, see:
+#
+# http://library.gnome.org/admin/system-admin-guide/stable/gconf-8.html.en
+#
+if [ -f $VERSION_SPECIFIC_CONF_DIR/gconf.xml ] ; then
+	gconftool-2 --load $VERSION_SPECIFIC_CONF_DIR/gconf.xml
+	
+	# Restart gnome-panel so that the configuration
+	# changes made above will take effect
+	# TODO:  Should we look at gconf.xml to determine if
+	# there are any additional processes that must be restarted?
+	killall -HUP gnome-panel 2>/dev/null
+fi
+
+
+#
+# Select and apply a desktop background
+#
+DESKTOP_BACKGROUND_DIR=$HOME/Documents/Installation/InstallData/DesktopBackgrounds
+DESKTOP_BACKGROUND=$DESKTOP_BACKGROUND_DIR/Ubuntu-Ubuntu_Grass_1280x1024.jpg
+
+if [ -f $DESKTOP_BACKGROUND_DIR/$host.jpg ] ; then
+	DESKTOP_BACKGROUND=$DESKTOP_BACKGROUND_DIR/$host.jpg
+fi
+
+if [ "x$host" == "xmonolith" ] ; then
+	DESKTOP_BACKGROUND=$DESKTOP_BACKGROUND_DIR/Atmospheres_by_Karezoid.jpg
+fi
+
+gconftool-2 --type string --set /desktop/gnome/background/picture_filename $DESKTOP_BACKGROUND
+gconftool-2 --type string --set /desktop/gnome/background/picture_options zoom
+

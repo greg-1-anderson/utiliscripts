@@ -1,0 +1,3 @@
+#!/bin/bash
+
+grep DocumentRoot /etc/apache2/sites-enabled/* | sed -e 's|/etc/apache2/sites-enabled/||' -e 's|^[0-9]\+-||' -e 's|DocumentRoot||' -e 's|#.*||' -e 's|/$||' | grep -v '^www' | grep '/' | sort | uniq

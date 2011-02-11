@@ -1,0 +1,21 @@
+#!/bin/bash
+
+backupdir=/data/archive
+machine=vps-reetstreet
+
+if [ $# = 1 ] ; then
+	machine=$1
+fi
+
+
+echo
+echo -n "Current backup was done at:  "
+stat -c %y $backupdir/$machine/current/RSYNC_LOG
+
+echo
+echo -n "Previous backup was done at: "
+stat -c %y $backupdir/$machine/previous/RSYNC_LOG
+
+echo
+echo "Backup history:"
+ls $backupdir/$machine/history/*

@@ -1,0 +1,171 @@
+#!/bin/bash
+
+ubuntuRevision=`grep '^#deb.*\[' /etc/apt/sources.list | sed -e 's/.*\][^ ]* *\([^ ]*\).*/\1/'`
+
+#
+# Parse command line args
+#
+while [ $# -gt 0 ] ; do
+
+	option=$1
+	shift
+
+	case "$option" in
+		
+		-* )
+			echo "$option not recognized."
+                        exit 1
+			;;
+	
+	esac
+done
+
+backports_needed=false
+
+WORK_DIR=`mktemp -t -d "repairubuntu.XXXXXX"`
+PATCH_FILE=$WORK_DIR/repair-ubuntu.patch
+(
+	echo "# ----------------------------------------------------------"
+	echo "# Patch file for ubuntu repair.  Built `date`" 
+	echo "# ----------------------------------------------------------"
+) > $PATCH_FILE
+
+REPAIR_SCRIPT=$WORK_DIR/repair-ubuntu.sh
+(
+	echo "#!/bin/sh"
+	echo "# ----------------------------------------------------------"
+	echo "# Ubuntu repair script.  Built `date`"
+	echo "# ----------------------------------------------------------"
+) > $REPAIR_SCRIPT
+chmod +x $REPAIR_SCRIPT
+
+#
+# Ubuntu likes to point /bin/sh to /bin/dash; we prefer to
+# use /bin/bash by default.
+#
+if [ "x`ls -l /bin/sh | grep dash`" != "x" ] ; then
+	(
+        	echo "# Point /bin/sh to bash rather than dash"
+        	echo "rm -f /bin/sh && ln -s /bin/bash /bin/sh"
+        ) >> $REPAIR_SCRIPT
+fi
+
+#
+# Fix "add as Podcast" error message in dolphin in Hardy Heron.
+# This is only applicable to Kubuntu.
+#
+if [ "x$ubuntuRevision" = "xhardy" ] && [ -d /usr/share/apps/konqueror/servicemenus/ ] && [ ! -f /usr/share/apps/d3lphin/servicemenus/amarok_addaspodcast.desktop ] ; then
+	(
+	        echo 'Repair "add as Podcast" error message in dolphin.'
+        	echo "cp /usr/share/apps/konqueror/servicemenus/amarok_addaspodcast.desktop /usr/share/apps/d3lphin/servicemenus/"
+	) >> $REPAIR_SCRIPT
+fi
+
+
+chktapconfig=`grep TapButton1 /etc/X11/xorg.conf`
+chksynaptics=`grep "Synaptics Touchpad" /etc/X11/xorg.conf`
+if [ "X$chktapconfig" = "X" ] && [ "X$chksynaptics" != "X" ] ; then
+
+	$tapping && echo "Doing tapping" || echo "Skipping tapping"
+
+	if $tapping ; then
+
+		#
+		# Put a TapButton1 0 directive into /etc/X11/xorg.conf to disable tapping.
+		#
+		echo add Option "TapButton1" "0" to InputDevice section of  the synaptices touchpad in xorg.conf.
+
+		xorgconf=/etc/X11/xorg.conf
+		xorgwork=$WORK_DIR/xorg.conf
+
+		sed /Identifier.*Synaptics.Touchpad/,\$d $xorgconf > ${xorgwork}-beginpart
+		grep "Identifier.*Synaptics.Touchpad" $xorgconf >> ${xorgwork}-beginpart
+		sed 1,/Identifier.*Synaptics.Touchpad/d $xorgconf > ${xorgwork}-endpart
+		sed /EndSection/,\$d ${xorgwork}-endpart > ${xorgwork}-endpart-1
+		sed 1,/EndSection/d ${xorgwork}-endpart > ${xorgwork}-endpart-2
+
+		(
+			cat ${xorgwork}-beginpart 
+			cat ${xorgwork}-endpart-1
+			echo '	# Added by the "install-components" script to disable tapping'
+			echo '	Option		"TapButton1"	"0"'
+			echo EndSection
+			cat ${xorgwork}-endpart-2
+		) > $xorgwork
+                
+                diff -Nup $xorgconf $xorgwork >> $PATCH_FILE
+
+		#
+		# This command insures that xorg.conf will be updated
+		# if necessary due to an upgrade of the xserver-xorg
+		# package.  If this happens for some reason, tapping
+		# might be re-enabled.  Just make sure that the TapButton1 0
+		# setting gets put back into /etc/X11/xorg.conf
+		#
+                (
+                	echo "# Insure that updates to xorg.conf take precedence over our modification of this file."
+			echo "dpkg-reconfigure -phigh xserver-xorg"
+		) >> $REPAIR_SCRIPT
+	fi 
+fi
+
+ALSA_ORIG=/etc/modprobe.d/alsa-base.conf
+ALSA_WORK=$WORK_DIR/alsa-base.conf
+if [ "x$ubuntuRevision" = "xkarmic" ] && [ -f $ALSA_ORIG ] && [ "x`grep snd-hda-intel $ALSA_ORIG`" != "x" ] && [ "x`grep model=dell-m6-dmic $ALSA_ORIG`" == "x" ] ; then
+
+	cp $ALSA_ORIG $ALSA_WORK
+        
+	(
+		echo "options snd-hda-intel model=dell-m6-dmic"
+		echo "options snd-hda-intel enable_msi=1"
+	) >> $ALSA_WORK
+        
+        diff -Nup $ALSA_ORIG $ALSA_WORK >> $PATCH_FILE
+        
+        KERNEL_REV=`uname -r`
+	(
+        	echo "# Install packages needed to make sound work on the Dell Studio XPS"
+        	echo "apt-get install linux-backports-modules-$KERNEL_REV linux-backports-modules-alsa-$KERNEL_REV"
+        )  >> $REPAIR_SCRIPT
+        
+        backports_needed=true
+
+fi
+
+#
+# Fix the davfs write bug on Linux
+#
+DAVFSCONF_ORIG=/etc/davfs2/davfs2.conf
+DAVFSCONF_WORK=$WORK_DIR/davsf2.conf
+if [ "x`grep '^ *if_match_bug *1' $DAVFSCONF_ORIG`" != "x" ] ; then
+  echo "if_match_bug 1" >> $DAVFSCONF_WORK
+fi
+
+cat $PATCH_FILE
+echo
+cat $REPAIR_SCRIPT
+
+read -p "Apply patch file and run script above? [y/N]? " input
+
+if [ "x$input" = "xy" ] ; then
+	
+        if [ "x`which patch`" == "x" ] ; then
+        	apt-get install patch
+        fi
+        
+	echo
+	echo "Patching..."
+	
+	(cd / && patch -Np0 < $PATCH_FILE)
+        
+        if $backports_needed ; then
+        	sed -ie 's/# *deb \(.*-backports.*\)/deb \1/' /etc/apt/sources.list
+                apt-get update
+        fi
+        
+	$REPAIR_SCRIPT
+else
+	echo "Abort."
+fi
+
+rm -rf $WORK_DIR

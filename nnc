@@ -1,0 +1,102 @@
+#!/bin/bash
+
+#
+# Usage:  nnc file.nc
+#
+# This script will decrypt the specified .nc file to
+# a temporary file, open it for editing with nedit,
+# wait for the session to end (when nedit window is
+# closed) and then will re-encrypt the result and
+# write it back to the input file.
+#
+if [ $# == 0 ] ; then
+	echo "Usage: $0 file.nc"
+	exit 1
+fi
+
+inputfile=$1
+filename=${inputfile##*/}
+basename=${filename%.*}
+path=${inputfile%/*}
+
+if [ "x$filename" != "x$basename.nc" ] ; then
+	echo "This program is only for use with .nc files (produced with mcrypt)"
+	echo 'Hint: to encrypt <file>, use "nnc <file>.nc", then remove <file> when satisfied with <file>.nc'
+	exit 1
+fi
+
+#
+# We put everything in $HOME/tmp rather than /tmp to
+# play nice on multi-user systems.  We don't want to
+# put the cleartext file in the same directory as the
+# encrypted file because we don't want the cleartext
+# file to be picked up by a scheduled backup task, etc.
+#
+mkdir -p $HOME/tmp
+clearfile=$HOME/tmp/$basename
+tmpfile=$HOME/tmp/$filename
+keyfile=`mktemp -p $HOME/tmp`
+
+#
+# Don't allow editing of the same file twice.
+#
+if [ -f $clearfile ] ; then
+	echo "$filename already open (lockfile: $clearfile)"
+	exit 0
+fi
+
+#
+# Keep asking for passphrases until the file is
+# opened successfully.  If the file does not
+# exist, then create it.
+#
+successful=false
+until $successful ; do	
+	if [ -f $inputfile ] ; then
+		read -s -p "Enter passphrase:" key
+		echo
+		cp $inputfile $tmpfile
+		echo $key > $keyfile
+		mdecrypt --keyfile $keyfile $tmpfile
+		rm -f $tmpfile
+		if [ -f $clearfile ] ; then
+			successful=true
+		fi
+		rm -f $keyfile
+	else
+		echo "$inputfile does not exist."
+		read -s -p "Enter passphrase to create it:" key
+		echo
+		read -s -p "Enter it again:" testkey
+		echo
+		
+		if [ "x$key" == "x$testkey" ] ; then
+			if [ -f $path/$basename ] ; then
+				cp $path/$basename $clearfile
+			else
+				echo "# File $filename created by nnc" > $clearfile
+			fi
+			successful=true
+		else
+			echo "Passphrases did not match."
+			echo
+		fi
+	fi
+done
+
+origfile=$clearfile".orig"
+cp -f $clearfile $origfile
+nedit $clearfile
+
+if [ "x`diff $clearfile $origfile`" != "x" ] ; then
+	echo $key > $keyfile
+	mcrypt --keyfile $keyfile $clearfile
+	rm -f $keyfile
+	rm -f $clearfile
+	mv -f $clearfile.nc $inputfile
+else
+	echo "No change to file"
+	rm -f $clearfile
+fi
+rm -f $origfile
+

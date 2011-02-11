@@ -1,0 +1,35 @@
+#!/bin/bash
+
+#
+# Copy this script to /etc/pm/sleep.d/02_sync_on_suspend
+#
+
+PATH=/bin:/sbin:/usr/bin:/home/ga/bin
+
+requiredGateway=172.30.10.1
+requiredInterface=eth0
+requiredHost=monolith
+
+if [ "x`uname -n`" != "x$requiredHost" ] ; then
+	echo "This script is only designed to run on $requiredHost"
+	exit 1
+fi
+
+routeLine=`route -n | grep '^0\.0\.0\.0[ 	]*'$requiredGateway'.*'$requiredInterface'$'`
+
+if [ "X$routeLine" = "X" ] ; then
+	echo "This script will only run when $requiredHost is running on the network $requiredGateway"
+	exit 1
+fi
+
+case "${1}" in
+        suspend|hibernate)
+                (
+			date
+			ssh-agent rsync -autvz --exclude='~*' --exclude='.~*' /home/ga/{bin,Documents,Personal,work} ga@genkan.tekazu.com:/home/ga
+		) >> /var/log/syncwith.log  2>&1
+                ;;
+        resume|thaw)
+                ;;
+esac
+

@@ -1,0 +1,108 @@
+#!/bin/bash
+
+#
+# Reset mysqladmin password script, following instructions from:
+#
+# http://www.cyberciti.biz/tips/recover-mysql-root-password.html
+#
+
+help_message="
+
+$0 - Reset mysql admin password
+
+Usage:
+
+	$0 newpassword
+
+Options:
+
+	-d, --debug       Do not reset password; just show steps	
+"
+
+NEW_MYSQL_ROOT_PASSWORD=password
+DO=
+DEBUG=false
+
+while [ $# -gt 0 ] ; do
+
+	option=$1
+	shift
+
+	case "$option" in
+
+		--help | -h | -help)
+			echo "$help_message"
+			exit 0 
+			;;
+
+		--debug)
+			DO=echo
+			BACKGROUND=\&
+			DEBUG=true
+			;;
+		
+		-*)
+			echo "Unknown option $option"
+			exit 1
+			;;
+		
+		*)
+			NEW_MYSQL_ROOT_PASSWORD=$option
+			;;
+	
+	esac
+done
+
+#
+# Step # 1: stop mysql service
+#
+$DO /etc/init.d/mysql stop
+
+#
+# Step # 2: Start mysql server without a password
+#
+$DO mysqld_safe --skip-grant-tables $BACKGROUND &
+sleep 3
+
+#
+# Step # 3 and 4: Setup new MySQL root user password
+#
+# From the command line:
+#
+#	mysql -u root
+#	mysql> use mysql;
+#	mysql> update user set password=PASSWORD("NEW-ROOT-PASSWORD") where User='root';
+#	mysql> flush privileges;
+#	mysql> quit
+#
+# We will send the above SQL commands directly to mysql.
+#
+MYSQL_SCRIPT_FILE=`mktemp`
+cat << __EOF__ > $MYSQL_SCRIPT_FILE
+use mysql;
+update user set password=PASSWORD("$NEW_MYSQL_ROOT_PASSWORD") where User='root';
+flush privileges;
+__EOF__
+
+if $DEBUG ; then
+	echo mysql -u root
+	sed -e 's|^|mysql> |' $MYSQL_SCRIPT_FILE
+else
+	mysql -u root < $MYSQL_SCRIPT_FILE
+fi
+rm $MYSQL_SCRIPT_FILE
+
+#
+# Step # 5: Stop MySQL Server: 
+#
+$DO /etc/init.d/mysql stop
+
+#
+# Step # 6: Restart MySQL server 
+#
+$DO /etc/init.d/mysql start
+
+echo
+echo "# To test your new mysql root password:"
+echo "mysql -u root -p"
+

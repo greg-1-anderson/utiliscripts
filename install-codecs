@@ -1,0 +1,86 @@
+#!/bin/bash
+
+ubuntuRevision=`grep '^#deb.*\[' /etc/apt/sources.list | sed -e 's/.*\][^ ]* *\([^ ]*\).*/\1/'`
+
+if true ; then
+
+	apt-get -y install kaffeine
+
+	chkmedibunto=`grep medibuntu.org /etc/apt/sources.list`
+	if [ "X$chkmedibunto" = "X" ] ; then
+
+	sed -e 's/__UBUNTU_REVISION__/'$ubuntuRevision'/g' <<-	__END__ >> /etc/apt/sources.list
+
+		## Medibuntu - Ubuntu from install-codecs "__UBUNTU_REVISION__"
+		## Please report any bug on https://bugs.launchpad.net/medibuntu/
+		deb http://packages.medibuntu.org/ __UBUNTU_REVISION__ free non-free
+
+	__END__
+
+	fi
+
+	# would this codec stuff have worked if I had done an 'apt-get update'
+	# here, after modifying /etc/apt/sources.list?
+
+	wget -q http://packages.medibuntu.org/medibuntu-key.gpg -O- | apt-key add - && apt-get update
+
+	apt-get -y install non-free-codecs
+	apt-get -y install gstreamer0.10-plugins-ugly-multiverse gstreamer0.10-plugins-bad-multiverse gstreamer0.10-plugins-bad gstreamer0.10-plugins-ugly gstreamer0.10-ffmpeg libxine1-ffmpeg
+	apt-get -y install libdvdcss2 libdvdread3
+	apt-get -y install w32codecs
+	apt-get -y install ffmpeg
+
+	#
+	# Find the following line and remove the comment character from /etc/apt/sources.list
+	#
+	# 	# deb http://archive.canonical.com/ubuntu jaunty partner
+	#
+	# We need to do this because acroread and some other useful things are no longer
+	# located in medibuntu as they used to be, and are instead in 'partner', which is
+	# not enabled by default.
+	#
+	sed -i -e 's|\(^# *\)\(deb http://archive.canonical.com/ubuntu '$ubuntuRevision' partner\)|\2|g' /etc/apt/sources.list
+
+	#
+	# Codecs, try 2:
+	#
+	# The codec install above was insufficient to get DVD playback
+	# working.  The following instructions made mplayer work.  This
+	# might have also fixed Kaffeine, but I haven't tried it.
+	#
+	# http://www.ubuntugeek.com/install-mplayer-and-multimedia-codecs-libdvdcss2w32codecsw64codecs-in-ubuntu-804-hardy-heron.html
+	#
+	chkmultiverse=`grep "deb http://archive.ubuntu.com/ubuntu.*universe multiverse" /etc/apt/sources.list`
+	if [ "X$chkmultiverse" = "X" ] ; then
+
+	sed -e 's/__UBUNTU_REVISION__/'$ubuntuRevision'/g' <<-	__END__ >> /etc/apt/sources.list
+
+		# Ubuntu universe and multiverse for medibuntu from install-codecs (try 2)
+		deb http://archive.ubuntu.com/ubuntu __UBUNTU_REVISION__ universe multiverse
+		deb-src http://archive.ubuntu.com/ubuntu __UBUNTU_REVISION__ universe multiverse
+
+	__END__
+
+	fi
+	
+	
+	wget http://www.medibuntu.org/sources.list.d/${ubuntuRevision}.list -O /etc/apt/sources.list.d/medibuntu.list
+	apt-get update
+	apt-get -y install medibuntu-keyring
+	apt-get update
+	apt-get -y install w32codecs libdvdcss2
+	
+	apt-get -y install vlc vlc-plugin-arts mozilla-plugin-vlc
+	
+	#
+	# Other useful applications available in medibuntu
+	#
+	apt-get -y install acroread mozilla-acroread acroread plugins
+	apt-get -y install flashplugin-nonfree
+	
+	#
+	# mp3s...
+	#
+	apt-get -y install ripperx
+
+fi

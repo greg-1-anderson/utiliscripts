@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# grep -v "^#include" $1 | gcc -E - | grep -v "^[ \t]*[{}]*[ \t]*$" | grep -v "^#" | wc -l
+
+#
+# First, make a temp file that will contain the number of lines in
+# each source file, one number per line
+#
+tmpfile=`mktemp "/tmp/sourcelinesXXXXXX"`
+
+#
+# We use a trick:  gcc -E will run the preprocessor, 
+#
+find $1 -name "*.cpp" -exec bash -c 'grep -v "^[ \t]*#include" $0 | grep -v "^[ \t]*#error" | gcc -E - | grep -v "^[ \t]*[\{\}\;]*[ \t]*$" | grep -v "^[ \t]*#" | wc -l' \{\} \; > $tmpfile
+find $1 -name "*.c" -exec bash -c 'grep -v "^[ \t]*#include" $0 | grep -v "^[ \t]*#error"  | gcc -E - | grep -v "^[ \t]*[\{\}\;]*[ \t]*$" | grep -v "^[ \t]*#" | wc -l' \{\} \; >> $tmpfile
+find $1 -name "*.h" -exec bash -c 'grep -v "^[ \t]*#include" $0 | grep -v "^[ \t]*#error"  | gcc -E - | grep -v "^[ \t]*[\{\}\;]*[ \t]*$" | grep -v "^[ \t]*#" | wc -l' \{\} \; >> $tmpfile
+find $1 -name "*.java" -exec bash -c 'cat $0 | gcc -E - | grep -v "^[ \t]*[\{\}\;]*[ \t]*$" | grep -v "^[ \t]*#" | grep -v "^[ \t]*import" | grep -v "^[ \t]*package" | wc -l' \{\} \; >> $tmpfile
+
+#
+# Sum up the lines from each source file
+#
+t=0
+for x in `cat $tmpfile`; do t=$((t+x)); done 
+rm $tmpfile
+
+echo $t
