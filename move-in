@@ -2,7 +2,11 @@
 
 #
 # Barge in to a new system and make it mine.
-# Pulls down utiliscripts and adds them to the PATH.
+#
+#	+ Insures the machine has a public / private key pair
+#	  stored in a location where it will be backed up.
+#
+#	+ Pulls down utiliscripts and adds them to the PATH.
 #
 # Good follow-up commands include:
 #
@@ -131,11 +135,17 @@ fi
 # Put in uniform drushrc.php
 
 mkdir -p $HOME/.drush
-if [ ! -f  $HOME/.drush/drushrc.php ] && [ `stat --printf="%F" $HOME/.drush/drushrc.php` != "symbolic link" ] && [ -f $HOME/work/config/drushrc.php ]
+if [ -f $HOME/work/config/drushrc.php ]
 then
-	if [ -f $HOME/.drush/drushrc.php ] && [ -]
+	if [ -f  $HOME/.drush/drushrc.php ]
         then
-        	mv $HOME/.drush/drushrc.php "$HOME/.drush/drushrc.php-"`date "+%s"`
+        	# Back up the old drushrc.php, unless it is a symbolic link, in which case we just get rid of it.
+        	if [ "`stat --printf="%F" $HOME/.drush/drushrc.php`" != "symbolic link" ]
+                then
+	        	mv $HOME/.drush/drushrc.php "$HOME/.drush/drushrc.php-"`date "+%s"`
+                else
+                	rm $HOME/.drush/drushrc.php
+        	fi
         fi
         ln -s $HOME/work/config/drushrc.php $HOME/.drush
 fi
