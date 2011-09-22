@@ -1,0 +1,30 @@
+#!/bin/bash
+
+#
+# Some aliases that Greg likes:
+#
+alias lla='ls -A -l --si'
+alias ll='ls -l --si'
+alias la='ls -A'
+alias l='ls -CF'
+alias f='find . -name'
+alias fj='find . -name "*.java"'
+alias fppt='find . -name "*.ppt"'
+alias fxls='find . -name "*.xls"'
+alias portscan='nmap -sT -O'
+alias openports='portscan localhost'
+
+#
+# If drush is in the $PATH, then source the
+# example bashrc it provides.
+#
+d=`which drush`
+if [ -n $d ] ; then
+  # If the file found is a symlink, resolve to the actual file
+  d=`readlink -f $d`
+  # Get the directory that drush is stored in
+  d="${d%/*}"
+  if [ -f $d/examples/example.bashrc ] ; then
+    . $d/examples/example.bashrc
+  fi
+fi

@@ -1,5 +1,176 @@
 #!/bin/sh
 
+#
+# Barge in to a new system and make it mine.
+# Pulls down utiliscripts and adds them to the PATH.
+#
+# Good follow-up commands include:
+#
+#	install-components
+#	syncwith $USER@someothermachine
+#
+
+
+# Don't allow this as root unless you have logged in as root.
+# I don't know that I recommend running this as root, but neither do I prevent it.
+if [ "$USER" == "root" ] && [ $HOME != "/root" ]
+then
+	echo "Do not run this script via sudo root"
+        exit 1
+fi
+
+# Set up some default locations
+if [ -z "$UTILISCRIPTS" ] ; then
+	export UTILISCRIPTS=$HOME/utiliscripts
+fi
+
+if [ -z "$INSTALLATION_DATA" ] ; then
+	export INSTALLATION_DATA=$HOME/Documents/Installation/InstallData
+fi
+
+if [ -z "$SSH_KEY_ARCHIVE" ] ; then
+	export SSH_KEY_ARCHIVE=$INSTALLATION_DATA/ssh_key_archive
+fi
+
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#
+#  I N S U R E   S S H   K E Y   P A I R S   A R E   S E T   U P
+#
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+host=`hostname -s`
+keytype=rsa
+mkdir -p $HOME/.ssh
+
+archive_key="$SSH_KEY_ARCHIVE/${host}_id_rsa"
+if [ -f "${archive_key%rsa}"dsa ]
+then
+	archive_key="${archive_key%rsa}"dsa
+        keytype=dsa
+fi
+
+# If we do not have a public/private key pair for this machine, then generate or restore one
+if [ ! -f "$HOME/.ssh/id_$keytype" ]
+then
+	if [ -f "$archive_key" ] && [ -f "${archive_key}.pub" ]
+        then
+        	echo "Restoring public / private key pair for $host"
+                cp -f "$archive_key" "$HOME/.ssh/id_${keytype}"
+                cp -f "${archive_key}.pub" "$HOME/.ssh/id_${keytype}.pub"
+        else
+		echo "Generating a public / private key pair for this system; please protect it with a password."
+		ssh-keygen -t $keytype -f $HOME/.ssh/id_$keytype
+        fi
+fi
+
+# If we have an archive of the public / private key pair for this machine, make sure it is accurate.
+# If the key has not been archived yet, then archive it.
+if [ -f "$archive_key" ] && [ -f "${archive_key}.pub" ]
+then
+        diff -q "$HOME/.ssh/id_${keytype}" "$archive_key"
+        if [ $? != 0 ]
+        then
+        	echo "WARNING: The archived key for $host is different than the current public / private key pair."
+                echo "Remove one of the following pairs, then run this script again to fix:"
+                echo "        rm \"$archive_key\" \"${archive_key}.pub\""
+                echo " - OR -"
+                echo "        rm \"$HOME/.ssh/id_$keytype\" \"$HOME/.ssh/id_${keytype}.pub\""
+        fi
+else
+        echo "Archiving public / private key pair for $host"
+        cp -f "$HOME/.ssh/id_${keytype}" "$archive_key" 
+        cp -f "$HOME/.ssh/id_${keytype}.pub" "${archive_key}.pub"
+        
+        # Try to give the private key a new password, using empty for
+        # the current password.  If this works, then balk.
+        ssh-keygen -p -P "" -N "empty_passwords_are_bad" -f "$archive_key" > /dev/null 2>&1
+        if [ $? == 0 ]
+        then
+        	echo "WARNING: The password for id_${keytype} for $host is empty; key archiving ABORTED."
+                rm -f "$archive_key"
+        fi
+fi	
+
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#
+#  G E T   U T I L I S C R I P T S
+#
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+# If we do not already have utiliscripts, then get them with git
+
+if [ ! -d $UTILISCRIPTS ] ; then
+
+        (
+                UTILISCRIPTS_DIR=${UTILISCRIPTS%/*}
+                cd $UTILISCRIPTS_DIR
+                # read+write for ga, read-only for everyone else
+                if [ "$USER" == "ga" ]
+                then
+                	git clone git@github.com:greg-1-anderson/utiliscripts.git
+                else
+                	git clone git://github.com/greg-1-anderson/utiliscripts.git
+                fi
+        )
+
+fi
+
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#
+#  S E T   U P   B A S H   A N D   E N V I R O N M E N T
+#
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+#
+# Get rid of the old .bash_customizations file if it exists
+#
+if [ -f $HOME/.bash_customizations ]; then
+	rm $HOME/.bash_customizations
+fi
+
+# Put in uniform drushrc.php
+
+mkdir -p $HOME/.drush
+if [ ! -f  $HOME/.drush/drushrc.php ] && [ `stat --printf="%F" $HOME/.drush/drushrc.php` != "symbolic link" ] && [ -f $HOME/work/config/drushrc.php ]
+then
+	if [ -f $HOME/.drush/drushrc.php ] && [ -]
+        then
+        	mv $HOME/.drush/drushrc.php "$HOME/.drush/drushrc.php-"`date "+%s"`
+        fi
+        ln -s $HOME/work/config/drushrc.php $HOME/.drush
+fi
+
+#
+# Customize bash settings
+#
+
+# If we have not set the location of the UTILISCRIPTS yet,
+# write it to $HOME/.bashrc.  Only do this once, in case
+# the user might care to change it.
+chkbashrc=`grep 'UTILISCRIPTS' $HOME/.bashrc`
+if [ "X$chkbashrc" = "X" ] ; then
+cat <<- __END__ >> $HOME/.bashrc
+export UTILISCRIPTS=$UTILISCRIPTS
+export SSH_KEY_ARCHIVE=$SSH_KEY_ARCHIVE
+if [ "x\`echo \$PATH | grep \$UTILISCRIPTS\`" == "x" ]
+then
+	export PATH=\$PATH:\$UTILISCRIPTS
+fi
+__END__
+fi
+
+# Rewrite the "Bash Customizations" section
+sed -i -e '/Include Bash Customizations/,/End Bash Customizations/ d' $HOME/.bashrc
+cat <<- __END__ >> $HOME/.bashrc
+# Include Bash Customizations
+if [ -f $UTILISCRIPTS/custom-bashrc ]; then
+	. $UTILISCRIPTS/custom-bashrc
+fi
+# End Bash Customizations
+__END__
+
+source $HOME/.bashrc
+
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #
 #  S E T   U P   P R E F E R E N C E S   F O R    V A R I O U S    A P P L I C A T I O N S
@@ -33,39 +204,12 @@ fi
 
 
 
-#
-# Customize bash settings
-#
-# To do:  analyze whether or not .bashrc already exists,
-# or whether we should use .profile or .bash_profile instead.
-#
-chkbashrc=`grep 'Bash Customizations' $HOME/.bashrc`
-if [ "X$chkbashrc" = "X" ] ; then
-	cat <<- __END__ >> $HOME/.bashrc
-	# Include Bash Customizations
-	if [ -f $HOME/.bash_customizations ]; then
-		. $HOME/.bash_customizations
-	fi
-	# End Bash Customizations
-	__END__
-fi
 
-cat << __END__ > $HOME/.bash_customizations
-alias lla='ls -A -l --si'
-alias ll='ls -l --si'
-alias la='ls -A'
-alias l='ls -CF'
-alias f='find . -name'
-alias fj='find . -name "*.java"'
-alias fppt='find . -name "*.ppt"'
-alias fxls='find . -name "*.xls"'
-alias portscan='nmap -sT -O'
-alias openports='portscan localhost'
 
-__END__
 
 exit 0
 
+# old stuff we don't trust any more.
 
 #
 # Set up firefox default preferences
