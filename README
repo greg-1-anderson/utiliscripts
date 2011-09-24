@@ -6,3 +6,15 @@ self-documenting if you read the source, but maybe not.
 
 Someday I will put a master index here.  Maybe.
 
+One of the things I use these scripts for is to make all of my systems
+behave uniformly.  To whit:
+
+	wget https://raw.github.com/greg-1-anderson/utiliscripts/master/move-in
+	./move-in
+        
+        # Optional:
+        rm move-in
+        source .bashrc
+
+The move-in script checks out all of the utiliscripts and sets
+up the $PATH and a number of other environment settings.

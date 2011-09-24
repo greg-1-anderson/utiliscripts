@@ -25,7 +25,7 @@ fi
 
 # Set up some default locations
 if [ -z "$UTILISCRIPTS" ] ; then
-	export UTILISCRIPTS=$HOME/utiliscripts
+	export UTILISCRIPTS=$HOME/local/utiliscripts
 fi
 
 if [ -z "$INSTALLATION_DATA" ] ; then
