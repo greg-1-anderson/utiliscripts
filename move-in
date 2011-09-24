@@ -45,6 +45,7 @@ fi
 host=`hostname -s`
 keytype=rsa
 mkdir -p $HOME/.ssh
+mkdir -p $SSH_KEY_ARCHIVE
 
 archive_key="$SSH_KEY_ARCHIVE/${host}_id_rsa"
 if [ -f "${archive_key%rsa}"dsa ]
@@ -179,7 +180,6 @@ fi
 # End Bash Customizations
 __END__
 
-source $HOME/.bashrc
 
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #
