@@ -15,6 +15,46 @@ alias portscan='nmap -sT -O'
 alias openports='portscan localhost'
 
 #
+# Here are some colors -- we won't call tput unless we need to.
+# To use these, wrap them in backticks, as in: "`${c_green}`"
+#
+c_cyan="tput setaf 6"
+c_red="tput setaf 1"
+c_green="tput setaf 2"
+c_sgr0="tput sgr0"
+
+#
+# Put in some colorful information about the git status
+# of the repository at the cwd.  The branch name is
+# printed in [brackets]; it is red if the branch is
+# dirty (non-empty "git diff"), and green if it is clean.
+#
+# Modified from similar scripts published at:
+# http://asemanfar.com/Current-Git-Branch-in-Bash-Prompt
+#
+__git_prompt_info()
+{
+  if git rev-parse --git-dir >/dev/null 2>&1
+  then
+    gitver=$(git branch 2>/dev/null| sed -n '/^\*/s/^\* //p')
+    color=""
+    if git diff --quiet 2>/dev/null >&2 
+    then
+      # Green
+      color="`${c_green}`"
+    else
+      # Red
+      color="`${c_red}`"
+    fi
+    echo -e "[${color}${gitver}`${c_sgr0}`] "
+  else
+    return 0
+  fi
+}
+
+PS1='$(__git_prompt_info)\u@\h:\w$ '
+
+#
 # If drush is in the $PATH, then source the
 # example bashrc it provides.
 #
