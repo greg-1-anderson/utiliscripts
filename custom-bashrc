@@ -57,7 +57,7 @@ __git_prompt_info()
 # We'll also put in colorful information about the svn
 # status of the repository at the cwd.  The revision number
 # is printed in (parens); it is red if the local copy
-# is dirty (non-empty "svn diff"), and green if it is clean.
+# is dirty, and green if it is clean.
 #
 __svn_prompt_info()
 {
@@ -65,8 +65,8 @@ __svn_prompt_info()
   then
     svnrev=$(svn info 2>/dev/null | grep 'Last Changed Rev' | sed -e 's/^[^:]*: *//g')
     color=""
-    svndiffoutput="`svn diff 2>/dev/null`"
-    if [ -z $svndiffoutput ] 
+    svnstatusoutput="`svn status 2>/dev/null | grep -v '^\?'`"
+    if [ -z "$svnstatusoutput" ] 
     then
       # Green
       color="`${c_green}`"
