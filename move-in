@@ -141,7 +141,8 @@ then
 	if [ -f  $HOME/.drush/drushrc.php ]
         then
         	# Back up the old drushrc.php, unless it is a symbolic link, in which case we just get rid of it.
-        	if [ "`stat --printf="%F" $HOME/.drush/drushrc.php`" != "symbolic link" ]
+        	drushrctype="`stat --printf='%F' $HOME/.drush/drushrc.php`"
+		if [ "$drushrctype" != "symbolic link" ]
                 then
 	        	mv $HOME/.drush/drushrc.php "$HOME/.drush/drushrc.php-"`date "+%s"`
                 else
