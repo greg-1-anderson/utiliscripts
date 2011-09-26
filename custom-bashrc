@@ -3,6 +3,7 @@
 #
 # Some aliases that Greg likes:
 #
+alias sbrc='source $HOME/.bashrc'
 alias lla='ls -A -l --si'
 alias ll='ls -l --si'
 alias la='ls -A'
