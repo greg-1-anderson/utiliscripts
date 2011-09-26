@@ -53,7 +53,34 @@ __git_prompt_info()
   fi
 }
 
-PS1='$(__git_prompt_info)\u@\h:\w$ '
+#
+# We'll also put in colorful information about the svn
+# status of the repository at the cwd.  The revision number
+# is printed in (parens); it is red if the local copy
+# is dirty (non-empty "svn diff"), and green if it is clean.
+#
+__svn_prompt_info()
+{
+  if [ -d .svn ]
+  then
+    svnrev=$(svn info 2>/dev/null | grep 'Last Changed Rev' | sed -e 's/^[^:]*: *//g')
+    color=""
+    svndiffoutput="`svn diff 2>/dev/null`"
+    if [ -z $svndiffoutput ] 
+    then
+      # Green
+      color="`${c_green}`"
+    else
+      # Red
+      color="`${c_red}`"
+    fi
+    echo -e "(${color}r${svnrev}`${c_sgr0}`) "
+  else
+    return 0
+  fi
+}
+
+PS1='$(__git_prompt_info)$(__svn_prompt_info)\u@\h:\w$ '
 
 #
 # If drush is in the $PATH, then source the
