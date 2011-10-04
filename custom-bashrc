@@ -102,5 +102,11 @@ if [ -n $d ] ; then
   d="${d%/*}"
   if [ -f $d/examples/example.bashrc ] ; then
     . $d/examples/example.bashrc
+    # Add aliases for standard bash commands
+    alias cd='cddl'
+    alias ls='lsd'
+    alias cp='cpd'
+    alias ssh='dssh'
+    alias git='gitd'
   fi
 fi
