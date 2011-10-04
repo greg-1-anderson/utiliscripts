@@ -24,63 +24,70 @@ c_red="tput setaf 1"
 c_green="tput setaf 2"
 c_sgr0="tput sgr0"
 
-#
-# Put in some colorful information about the git status
-# of the repository at the cwd.  The branch name is
-# printed in [brackets]; it is red if the branch is
-# dirty (non-empty "git diff"), and green if it is clean.
-#
-# Modified from similar scripts published at:
-# http://asemanfar.com/Current-Git-Branch-in-Bash-Prompt
-#
-__git_prompt_info()
+__prompt_color()
 {
+  # Use git colors if we have a .git directory
   if git rev-parse --git-dir >/dev/null 2>&1
   then
-    gitver=$(git branch 2>/dev/null| sed -n '/^\*/s/^\* //p')
-    color=""
     if git diff --quiet 2>/dev/null >&2 
     then
       # Green
-      color="`${c_green}`"
+      #color="`${c_green}`"
+      echo '0;32m'
     else
       # Red
-      color="`${c_red}`"
+      #color="`${c_red}`"
+      echo '0;31m'
     fi
-    echo -e "[${color}${gitver}`${c_sgr0}`] "
-  else
     return 0
   fi
-}
-
-#
-# We'll also put in colorful information about the svn
-# status of the repository at the cwd.  The revision number
-# is printed in (parens); it is red if the local copy
-# is dirty, and green if it is clean.
-#
-__svn_prompt_info()
-{
+  
+  # Use svn colors if we have a .svn directory
   if [ -d .svn ]
   then
-    svnrev=$(svn info 2>/dev/null | grep 'Last Changed Rev' | sed -e 's/^[^:]*: *//g')
-    color=""
     svnstatusoutput="`svn status 2>/dev/null | grep -v '^\?'`"
     if [ -z "$svnstatusoutput" ] 
     then
       # Green
-      color="`${c_green}`"
+      #color="`${c_green}`"
+      echo '0;32m'
     else
       # Red
-      color="`${c_red}`"
+      #color="`${c_red}`"
+      echo '0;31m'
     fi
-    echo -e "(${color}r${svnrev}`${c_sgr0}`) "
-  else
     return 0
   fi
+  
+  # Reset
+  echo '0m'
+  return 0
 }
 
-PS1='$(__git_prompt_info)$(__svn_prompt_info)\u@\h:\w$ '
+__prompt_info()
+{
+  # Emit the git branch if we have a .git directory
+  if git rev-parse --git-dir >/dev/null 2>&1
+  then
+    gitver="$(git branch 2>/dev/null| sed -n '/^\*/s/^\* //p')"
+    echo -e "[${gitver}] "
+    return 0
+  fi  
+
+  # Emit the svn revision if we have a .svn directory
+  if [ -d .svn ]
+  then
+    svnrev=$(svn info 2>/dev/null | grep 'Last Changed Rev' | sed -e 's/^[^:]*: *//g')
+    if [ -n "$svnrev" ]
+    then
+      echo -e "(r${svnrev}) "
+    fi
+    return 0
+  fi
+
+}
+
+PS1='\[\e[$(__prompt_color)\]$(__prompt_info)\[\e[0m\]\u@\h:\w$ '
 
 #
 # If drush is in the $PATH, then source the
