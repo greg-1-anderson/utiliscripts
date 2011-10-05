@@ -15,14 +15,11 @@ alias fxls='find . -name "*.xls"'
 alias portscan='nmap -sT -O'
 alias openports='portscan localhost'
 
-#
-# Here are some colors -- we won't call tput unless we need to.
-# To use these, wrap them in backticks, as in: "`${c_green}`"
-#
-c_cyan="tput setaf 6"
-c_red="tput setaf 1"
-c_green="tput setaf 2"
-c_sgr0="tput sgr0"
+c_red='0;31m'
+c_green='0;32m'
+c_blue='0;34m'
+c_lt_grey='0;37m'
+c_reset='0m'
 
 __prompt_color()
 {
@@ -31,13 +28,9 @@ __prompt_color()
   then
     if git diff --quiet 2>/dev/null >&2 
     then
-      # Green
-      #color="`${c_green}`"
-      echo '0;32m'
+      echo $c_green
     else
-      # Red
-      #color="`${c_red}`"
-      echo '0;31m'
+      echo $c_red
     fi
     return 0
   fi
@@ -48,19 +41,14 @@ __prompt_color()
     svnstatusoutput="`svn status 2>/dev/null | grep -v '^\?'`"
     if [ -z "$svnstatusoutput" ] 
     then
-      # Green
-      #color="`${c_green}`"
-      echo '0;32m'
+      echo $c_green
     else
-      # Red
-      #color="`${c_red}`"
-      echo '0;31m'
+      echo $c_red
     fi
     return 0
   fi
   
-  # Reset
-  echo '0m'
+  echo $c_reset
   return 0
 }
 
@@ -88,7 +76,7 @@ __prompt_info()
 }
 
 PROMPT_COMMAND='p=$(__prompt_info)'
-PS1='${p:0:1}\[\e[$(__prompt_color)\]${p:1:$((${#p}-3))}\[\e[0m\]${p#"${p%??}"}\[\e[0;37m\]\u@\h\[\e[0m\]:\[\e[0;37m\]\w\[\e[0m\]$ '
+PS1='${p:0:1}\[\e[$(__prompt_color)\]${p:1:$((${#p}-3))}\[\e[$c_reset\]${p#"${p%??}"}\[\e[$c_blue\]\u@\h:\w\[\e[$c_reset\]$ '
 
 #
 # If drush is in the $PATH, then source the
