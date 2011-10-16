@@ -91,10 +91,20 @@ if [ -n $d ] ; then
   if [ -f $d/examples/example.bashrc ] ; then
     . $d/examples/example.bashrc
     # Add aliases for standard bash commands
-    alias cd='cddl'
-    alias ls='lsd'
-    alias cp='cpd'
-    alias ssh='dssh'
-    alias git='gitd'
+    if [ -n "`type -t cddl`" ] ; then
+      alias cd='cddl'
+    fi
+    if [ -n "`type -t lsd`" ] ; then
+      alias ls='lsd'
+    fi
+    if [ -n "`type -t cpd`" ] ; then
+      alias cp='cpd'
+    fi
+    if [ -n "`type -t dssh`" ] ; then
+      alias ssh='dssh'
+    fi
+    if [ -n "`type -t gitd`" ] ; then
+      alias git='gitd'
+    fi
   fi
 fi
