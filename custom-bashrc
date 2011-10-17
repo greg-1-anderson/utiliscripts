@@ -14,6 +14,7 @@ alias fppt='find . -name "*.ppt"'
 alias fxls='find . -name "*.xls"'
 alias portscan='nmap -sT -O'
 alias openports='portscan localhost'
+alias rmrej='rm `find -name "*.rej"` `find -name "*.orig"`'
 
 c_red='0;31m'
 c_green='0;32m'
