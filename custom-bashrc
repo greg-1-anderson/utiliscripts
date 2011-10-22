@@ -84,7 +84,7 @@ PS1='${p:0:1}\[\e[$(__prompt_color)\]${p:1:$((${#p}-3))}\[\e[$c_reset\]${p#"${p%
 # example bashrc it provides.
 #
 d=`which drush`
-if [ -n $d ] ; then
+if [ -n "$d" ] ; then
   # If the file found is a symlink, resolve to the actual file
   d=`readlink -f $d`
   # Get the directory that drush is stored in
