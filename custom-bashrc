@@ -77,7 +77,7 @@ __prompt_info()
   # Emit the svn revision if we have a .svn directory
   if [ -d .svn ]
   then
-    svnrev=$(svn info 2>/dev/null | grep 'Last Changed Rev' | sed -e 's/^[^:]*: *//g')
+    svnrev=$(svn info 2>/dev/null | grep '^Revision' | sed -e 's/^[^:]*: *//g')
     if [ -n "$svnrev" ]
     then
       echo -e "(r${svnrev}) "
