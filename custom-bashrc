@@ -16,6 +16,7 @@ alias portscan='nmap -sT -O'
 alias openports='portscan localhost'
 alias rmrej='rm `find -name "*.rej"` `find -name "*.orig"`'
 alias rot13='tr a-zA-Z n-za-mN-ZA-M'
+alias findtabs="find -not -regex '..*/\..*' -exec grep -HP '\t' {} \;"
 
 function tolower() { tr A-Z a-z <<<$@; }
 
