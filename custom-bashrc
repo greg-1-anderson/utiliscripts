@@ -101,8 +101,8 @@ if [ -n "$d" ] ; then
   d=`readlink -f $d`
   # Get the directory that drush is stored in
   d="${d%/*}"
-  if [ -f $d/examples/example.bashrc ] ; then
-    . $d/examples/example.bashrc
+  if [ -f "$d/examples/example.bashrc" ] ; then
+    . "$d/examples/example.bashrc"
     # Add aliases for standard bash commands
     if [ -n "`type -t cddl`" ] ; then
       alias cd='cddl'
