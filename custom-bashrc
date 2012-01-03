@@ -89,7 +89,7 @@ __prompt_info()
 }
 
 PROMPT_COMMAND='p=$(__prompt_info)'
-PS1='${p:0:1}\[\e[$(__prompt_color)\]${p:1:$((${#p}-3))}\[\e[$c_reset\]${p#"${p%??}"}\[\e[$c_blue\]\u@\h:\w\[\e[$c_reset\]$ '
+PS1='${p:0:1}\[\e[$(__prompt_color)\]${p:1:$((${#p}-3))}\[\e[$c_reset\]${p#"${p%??}"}\[\e[$c_blue\]\u@\h:\w\[\e[$c_reset\]\[\e[$c_green\]$(__drush_ps1)\[\e[$c_reset\]$ '
 
 #
 # If drush is in the $PATH, then source the
