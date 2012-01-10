@@ -213,6 +213,15 @@ else
 
 fi
 
+#
+# Git stuff
+#
+# 'git push' should apply to only the current branch,
+# not to every branchname that matches on local and remote repositories.
+#
+git config --global push.default tracking
+git config --global url."ssh://git@git.drupal.org/project/".insteadOf d.o:
+git config --global url."ssh://git@git.drupal.org/sandbox/".insteadOf sandbox:
 
 
 

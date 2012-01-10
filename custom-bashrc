@@ -19,15 +19,7 @@ alias rot13='tr a-zA-Z n-za-mN-ZA-M'
 alias findtabs="find -not -regex '..*/\..*' -exec grep -HP '\t' {} \;"
 
 function tolower() { tr A-Z a-z <<<$@; }
-
-#
-# Git stuff
-#
-# 'git push' should apply to only the current branch,
-# not to every branchname that matches on local and remote repositories.
-#
-git config --global push.default tracking
-
+    
 c_red='0;31m'
 c_green='0;32m'
 c_blue='0;34m'
