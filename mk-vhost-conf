@@ -1,6 +1,40 @@
 #!/bin/bash
 
 #
+# TODO:
+#
+# Instead of writing 127.0.0.1 into /etc/hosts when creating a
+# "simulated" domain, we could instead make a new virtual
+# interface in /etc/network/interfaces.
+#
+# For example:
+#
+# auto eth0:1
+# iface eth0:1 inet static
+#        address 10.111.111.1
+#        netmask 255.255.255.255
+#
+# Note that the netmask is 255.255.255.255 here, to limit this
+# "subnet" to a single IP address.  If we used 255.255.255.0 here,
+# then other entries that overlapped (had the same first three octets)
+# would not work, and could cause operational problems with the network.
+#
+# Replace all of the "1"s in the above recepe to any unused
+# number; then use this new IP address for the entry in /etc/hosts
+# and for the IP address in <VirtualHost 10.111.111.1:443>, and
+# you will no longer need to worry about masking one local https site
+# with another.
+#
+# IMPORTANT:
+#
+# When defining a new interface like this, you must:
+#
+# /etc/init.d/networking stop; /etc/init.d/networking start
+#
+# Runing networking restart does not work!
+#
+
+#
 # Here are some common default values.
 # We set more default values after the
 # command line args are processed
