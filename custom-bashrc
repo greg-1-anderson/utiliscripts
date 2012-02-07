@@ -82,6 +82,13 @@ __prompt_info()
 
 }
 
+
+if [ "`type __drush_ps1 2> /dev/null`" == "" ] ; then
+  __drush_ps1() {
+    return 0
+  }
+fi
+
 PROMPT_COMMAND='p=$(__prompt_info)'
 PS1='${p:0:1}\[\e[$(__prompt_color)\]${p:1:$((${#p}-3))}\[\e[$c_reset\]${p#"${p%??}"}\[\e[$c_blue\]\u@\h:\w\[\e[$c_reset\]\[\e[$c_green\]$(__drush_ps1)\[\e[$c_reset\]$ '
 
