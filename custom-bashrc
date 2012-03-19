@@ -1,7 +1,5 @@
 #!/bin/bash
 
-export EDITOR=ne
-
 #
 # Some aliases and functions that Greg likes:
 #
