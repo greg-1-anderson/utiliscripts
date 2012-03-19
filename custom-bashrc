@@ -1,5 +1,7 @@
 #!/bin/bash
 
+export EDITOR=ne
+
 #
 # Some aliases and functions that Greg likes:
 #
@@ -19,15 +21,7 @@ alias rot13='tr a-zA-Z n-za-mN-ZA-M'
 alias findtabs="find -not -regex '..*/\..*' -exec grep -HP '\t' {} \;"
 
 function tolower() { tr A-Z a-z <<<$@; }
-
-#
-# Git stuff
-#
-# 'git push' should apply to only the current branch,
-# not to every branchname that matches on local and remote repositories.
-#
-git config --global push.default tracking
-
+    
 c_red='0;31m'
 c_green='0;32m'
 c_blue='0;34m'
@@ -88,8 +82,15 @@ __prompt_info()
 
 }
 
+
+if [ "`type __drush_ps1 2> /dev/null`" == "" ] ; then
+  __drush_ps1() {
+    return 0
+  }
+fi
+
 PROMPT_COMMAND='p=$(__prompt_info)'
-PS1='${p:0:1}\[\e[$(__prompt_color)\]${p:1:$((${#p}-3))}\[\e[$c_reset\]${p#"${p%??}"}\[\e[$c_blue\]\u@\h:\w\[\e[$c_reset\]$ '
+PS1='${p:0:1}\[\e[$(__prompt_color)\]${p:1:$((${#p}-3))}\[\e[$c_reset\]${p#"${p%??}"}\[\e[$c_blue\]\u@\h:\w\[\e[$c_reset\]\[\e[$c_green\]$(__drush_ps1)\[\e[$c_reset\]$ '
 
 # Set the editor to 'ne', unless it is not available
 n=`which ne`
@@ -109,8 +110,8 @@ if [ -n "$d" ] ; then
   d=`readlink -f $d`
   # Get the directory that drush is stored in
   d="${d%/*}"
-  if [ -f $d/examples/example.bashrc ] ; then
-    . $d/examples/example.bashrc
+  if [ -f "$d/examples/example.bashrc" ] ; then
+    . "$d/examples/example.bashrc"
     # Add aliases for standard bash commands
     if [ -n "`type -t cddl`" ] ; then
       alias cd='cddl'
