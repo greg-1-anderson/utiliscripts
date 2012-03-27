@@ -89,7 +89,7 @@ packages["compress"]="sharutils zip p7zip "
 packages["nvidia"]="nvidia-settings"
 
 
-groups["database"]="postgres mysql"
+groups["database"]="postgres mysql sqlite"
 
 groups["programming"]="compile-build dev-docs webservices debug ide repository compress java ${groups[database]}"
 
@@ -105,6 +105,8 @@ packages["internet"]="chromium-browser"
 packages["webservices"]="apache2 php5 libssl-dev php-pear libapache2-mod-php5 phpsysinfo php5-cli php5-pgsql php5-gd php5-xsl php5-tidy apache2-doc php5-cgi"
 
 packages["postgres"]="postgresql libdbi-perl libdbd-pg-perl"
+
+packages["sqlite"]="sqlite php5-sqlite"
 
 packages["mysql"]="libdbd-mysql-perl libdbd-mysql mysql-client mysql-server php5-mysql"
 # mysql-doc
