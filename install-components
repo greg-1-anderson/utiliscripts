@@ -95,7 +95,7 @@ groups["programming"]="compile-build dev-docs webservices debug ide repository c
 
 packages["compile-build"]="g++ autoconf automake1.9 libtool libc6 flex bison"
 
-packages["dev-docs"]="manpages-dev php-docs"
+packages["dev-docs"]="manpages-dev php-doc openjdk-7-doc"
 
 packages["kernel"]="build-essential linux-headers-generic"
 # linux-kernel-devel
@@ -109,7 +109,7 @@ packages["postgres"]="postgresql libdbi-perl libdbd-pg-perl"
 packages["mysql"]="libdbd-mysql-perl libdbd-mysql mysql-client mysql-server php5-mysql"
 # mysql-doc
 
-packages["java"]="sun-java6-jdk sun-java6-plugin ant java2html"
+packages["java"]="openjdk-7-jdk ant java2html"
 
 #
 # valgrind will find memory leaks, etc.
