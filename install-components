@@ -41,7 +41,7 @@ declare -A packages
 declare -A install_list
 declare -A groups
 
-groups["apps"]="reader-editor kde-utils graphics sound"
+groups["apps"]="reader-editor kde-utils graphics sound internet"
 groups["kde"]="kde-utils"
 
 #
@@ -95,12 +95,14 @@ groups["programming"]="compile-build dev-docs webservices debug ide repository c
 
 packages["compile-build"]="g++ autoconf automake1.9 libtool libc6 flex bison"
 
-packages["dev-docs"]="manpages-dev"
+packages["dev-docs"]="manpages-dev php-docs"
 
 packages["kernel"]="build-essential linux-headers-generic"
 # linux-kernel-devel
 
-packages["webservices"]="apache2 php5 libssl-dev php-pear libapache2-mod-php5 phpsysinfo php5-cli php5-pgsql php5-gd php5-xsl php5-tidy apache2-doc"
+packages["internet"] = "chromium-browser"
+
+packages["webservices"]="apache2 php5 libssl-dev php-pear libapache2-mod-php5 phpsysinfo php5-cli php5-pgsql php5-gd php5-xsl php5-tidy apache2-doc php5-cgi"
 
 packages["postgres"]="postgresql libdbi-perl libdbd-pg-perl"
 

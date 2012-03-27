@@ -44,8 +44,11 @@ fi
 
 host=`hostname -s`
 keytype=rsa
+UTILISCRIPTS_DIR=${UTILISCRIPTS%/*}
+
 mkdir -p $HOME/.ssh
 mkdir -p $SSH_KEY_ARCHIVE
+mkdir -p $UTILISCRIPTS_DIR
 
 archive_key="$SSH_KEY_ARCHIVE/${host}_id_rsa"
 if [ -f "${archive_key%rsa}"dsa ]
@@ -107,13 +110,18 @@ fi
 if [ ! -d $UTILISCRIPTS ] ; then
 
         (
-                UTILISCRIPTS_DIR=${UTILISCRIPTS%/*}
                 cd $UTILISCRIPTS_DIR
                 # read+write for ga, read-only for everyone else
                 if [ "$USER" == "ga" ]
                 then
                 	git clone git@github.com:greg-1-anderson/utiliscripts.git
-                else
+                        if [ $? !== 0 ]
+                        then
+                        	echo "Could not clone a r/w copy of utiliscripts; cloning a r/o copy instead."
+                        fi
+                fi
+                
+                if [ ! -d $UTILISCRIPTS ] ; then
                 	git clone git://github.com/greg-1-anderson/utiliscripts.git
                 fi
         )
