@@ -100,7 +100,7 @@ packages["dev-docs"]="manpages-dev php-doc openjdk-7-doc"
 packages["kernel"]="build-essential linux-headers-generic"
 # linux-kernel-devel
 
-packages["internet"] = "chromium-browser"
+packages["internet"]="chromium-browser"
 
 packages["webservices"]="apache2 php5 libssl-dev php-pear libapache2-mod-php5 phpsysinfo php5-cli php5-pgsql php5-gd php5-xsl php5-tidy apache2-doc php5-cgi"
 
