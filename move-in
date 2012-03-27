@@ -130,6 +130,36 @@ fi
 
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #
+#  G E T   D R U S H
+#
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+# If we do not already have drush, then get the master branch with git
+
+d=`which drush`
+if [ -z "$d" ] ; then
+
+        (
+                cd $HOME/local
+                # read+write for ga, read-only for everyone else
+                if [ "$USER" == "ga" ]
+                then
+                        git clone --branch master greg1anderson@git.drupal.org:project/drush.git
+                        if [ $? <> 0 ]
+                        then
+                        	echo "Could not clone a r/w copy of drush; cloning a r/o copy instead."
+                        fi
+                fi
+                
+                if [ ! -d drush ] ; then
+			git clone --branch master http://git.drupal.org/project/drush.git
+                fi
+        )
+
+fi
+
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#
 #  S E T   U P   B A S H   A N D   E N V I R O N M E N T
 #
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -167,7 +197,7 @@ fi
 # If we have not set the location of the UTILISCRIPTS yet,
 # write it to $HOME/.bashrc.  Only do this once, in case
 # the user might care to change it.
-chkbashrc=`grep 'UTILISCRIPTS' $HOME/.bashrc`
+chkbashrc=`grep '\(UTILISCRIPTS\|Bash Customizations\)' $HOME/.bashrc`
 if [ "X$chkbashrc" = "X" ] ; then
 cat <<- __END__ >> $HOME/.bashrc
 export UTILISCRIPTS=$UTILISCRIPTS
@@ -175,6 +205,19 @@ export SSH_KEY_ARCHIVE=$SSH_KEY_ARCHIVE
 if [ "x\`echo \$PATH | grep \$UTILISCRIPTS\`" == "x" ]
 then
 	export PATH=\$PATH:\$UTILISCRIPTS
+fi
+__END__
+fi
+
+# If we have not set the location of the drush yet,
+# write it to $HOME/.bashrc.  Only do this once, in case
+# the user might care to change it.
+chkbashrc=`grep '\(drush\|Bash Customizations\)' $HOME/.bashrc`
+if [ "X$chkbashrc" = "X" ] ; then
+cat <<- __END__ >> $HOME/.bashrc
+if [ "x\`echo \$PATH | grep drush\`" == "x" ]
+then
+	export PATH=\$PATH:\$HOME/local/drush
 fi
 __END__
 fi
