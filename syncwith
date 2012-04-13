@@ -138,7 +138,7 @@ if [ "X$2" = "Xsync" ] || [ "X$hasID" != "X" ] ; then
 	rsync -autvz \
 		--exclude='~*' \
 		--exclude='.~*' \
-		/home/$USER/{Documents/Ricoh,Documents/Installation,Documents/Personal,work} \
+		/home/$USER/{Documents,work} \
 		$target
 
 
@@ -149,7 +149,7 @@ if [ "X$2" = "Xsync" ] || [ "X$hasID" != "X" ] ; then
 	rsync -autvz \
 		--exclude='~*' \
 		--exclude='.~*' \
-		$target/'{Documents/Ricoh,Documents/Installation,Documents/Personal,work}' \
+		$target/'{Documents,work}' \
 		/home/$USER
 
 else
