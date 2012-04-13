@@ -56,7 +56,7 @@ packages[kde-utils]="konqueror kcalc"
 #
 # Graphic manipulation packages
 #
-packages["graphics"]="gimp inkscape imagemagick"
+packages["graphics"]="gimp inkscape imagemagick graphvis"
 
 #
 # Sound manipulation packages
@@ -91,9 +91,9 @@ packages["nvidia"]="nvidia-settings"
 
 groups["database"]="postgres mysql sqlite"
 
-groups["programming"]="compile-build dev-docs webservices debug ide repository compress java ${groups[database]}"
+groups["programming"]="compile-build dev-docs webservices debug ide repository compress java python ${groups[database]}"
 
-packages["compile-build"]="g++ autoconf automake1.9 libtool libc6 flex bison"
+packages["compile-build"]="g++ autoconf automake1.9 libtool libc6 flex bison libncurses5-dev"
 
 packages["dev-docs"]="manpages-dev php-doc openjdk-7-doc"
 
@@ -113,10 +113,13 @@ packages["mysql"]="libdbd-mysql-perl libdbd-mysql mysql-client mysql-server php5
 
 packages["java"]="openjdk-7-jdk ant java2html"
 
+# For phpsh, we need easy_install (python-pip), Python.h (python-dev) and ncurses (libncurses5-dev).
+packages["python"]="python-pip python-dev"
+
 #
 # valgrind will find memory leaks, etc.
 #
-packages["debug"]="valgrind"
+packages["debug"]="valgrind php5-xdebug"
 
 packages["ide"]="eclipse" # and netbeans
 
