@@ -460,7 +460,7 @@ if [ "X$sshKeyOk" = "X1" ] || [ "X$hasID" != "X" ] ; then
 	# to include modification dates.  We then reverse-sort the result
 	# and take the first item to find the most recent.
 	#
-	mostRecentModDate=`$GREP '^:::' $rsyncLog | $SORT -r | $HEAD -n 1 | $SED -e 's/^::: //' -e 's/:[0-9][0-9] :::.*//' -e 's|-| |'`
+	mostRecentModDate=`$GREP '^:::' $rsyncLog | grep -v '^:::.*::: \.$' | $SORT -r | $HEAD -n 1 | $SED -e 's/^::: //' -e 's/:[0-9][0-9] :::.*//' -e 's|-| |'`
 	mostRecentModDateForTouch=`$ECHO $mostRecentModDate | $SED -e 's|[:/ ]*||g'`
 	if [ "X$mostRecentModDate" != "X" ] ; then
 		#
