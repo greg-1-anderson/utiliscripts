@@ -140,7 +140,8 @@ d=`which drush`
 if [ -z "$d" ] ; then
 
         (
-                cd $HOME/local
+                mkdir -p $HOME/local/drupal
+                cd $HOME/local/drupal
                 # read+write for ga, read-only for everyone else
                 if [ "$USER" == "ga" ]
                 then
@@ -188,6 +189,8 @@ then
         	fi
         fi
         ln -s $HOME/work/config/drushrc.php $HOME/.drush
+        ln -s $HOME/work/config/drushrc5.php $HOME/.drush
+        ln -s $HOME/work/config/drushrc5.php $HOME/.drush/drushrc6.php
 fi
 
 #
@@ -217,7 +220,7 @@ if [ "X$chkbashrc" = "X" ] ; then
 cat <<- __END__ >> $HOME/.bashrc
 if [ "x\`echo \$PATH | grep drush\`" == "x" ]
 then
-	export PATH=\$PATH:\$HOME/local/drush
+	export PATH=\$PATH:\$HOME/local/drupal/drush
 fi
 __END__
 fi
