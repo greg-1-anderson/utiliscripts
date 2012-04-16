@@ -172,6 +172,33 @@ if [ -z "$d" ] && [ ! -d  $HOME/local/drupal/drush ] ; then
 
 fi
 
+echo "# Check drush extensions..."
+
+mkdir -p $HOME/local/drupal/drush_extensions
+
+for drush_extension in drush_sup drush_extras dbtng_migrator registry_rebuild ; do
+
+	if [ ! -d "$HOME/local/drupal/drush_extensions/$drush_extension" ] ; then
+		(
+			cd $HOME/local/drupal/drush_extensions
+			$HOME/local/drupal/drush/drush pm-download $drush_extension --destination=$HOME/local/drupal/drush_extensions
+		)
+	fi
+	
+done
+
+# Also copy in some of the example drush extensions from the drush/examples folder
+
+for example_extensions in sync_enable.drush.inc sync_via_http.drush.inc ; do
+
+	if [ ! -f "$HOME/local/drupal/drush_extensions/$example_extensions" ] ; then
+	
+		cp "$HOME/local/drupal/drush/examples/$example_extensions" $HOME/local/drupal/drush_extensions
+	
+	fi
+done
+
+
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #
 #  S E T   U P   B A S H   A N D   E N V I R O N M E N T
