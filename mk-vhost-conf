@@ -564,6 +564,11 @@ if [ "x$static_ip" == "x" ] ; then
 		echo "assume localhost; clear_hosts is $clear_hosts"
 		if ! $clear_hosts ; then
 			set_hosts=true
+			drush mk-local-ip $site_alias
+                        local_ip=`grep $site_alias /etc/hosts 2>/dev/null | sed -e 's/  *.*//'`
+                        if [ "x$local_ip" != "x" ] ; then
+                        	static_ip=$local_ip
+                        fi
 			echo "Simulating $site_alias at $static_ip by adding an entry to /etc/hosts (use --clear-hosts to remove)"
 			if [ "x$site_alias_ip" != "x" ] ; then
 				echo "WARNING:  Masking real site $site_alias at $site_alias_ip"
@@ -1123,7 +1128,11 @@ else
 	if $clear_hosts ; then
 		sed -i -e '/ $site_alias\$/d' /etc/hosts
 	elif $set_hosts && [ "x`grep "^127.0.0.1[ \t]*$site_alias$" /etc/hosts`" == "x" ] ; then
-		echo "127.0.0.1 $site_alias" >> /etc/hosts
+                # Only write the /etc/hosts entry if $static_ip is 127.0.0.1; if
+                # it is any other value, drush mk-local-ip has already created it.
+                if [ "x$static_ip" == "x127.0.0.1" ] ; then
+                	echo "127.0.0.1 $site_alias" >> /etc/hosts
+                fi
 	fi
 	
 	#
