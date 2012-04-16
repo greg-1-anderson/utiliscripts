@@ -42,6 +42,8 @@ fi
 #
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+echo "# Check ssh keys..."
+
 host=`hostname -s`
 keytype=rsa
 UTILISCRIPTS_DIR=${UTILISCRIPTS%/*}
@@ -83,7 +85,9 @@ then
                 echo "        rm \"$archive_key\" \"${archive_key}.pub\""
                 echo " - OR -"
                 echo "        rm \"$HOME/.ssh/id_$keytype\" \"$HOME/.ssh/id_${keytype}.pub\""
-        fi
+        else
+		echo "Public and private key already archived as ${archive_key##*/}"
+	fi
 else
         echo "Archiving public / private key pair for $host"
         cp -f "$HOME/.ssh/id_${keytype}" "$archive_key" 
@@ -94,16 +98,23 @@ else
         ssh-keygen -p -P "" -N "empty_passwords_are_bad" -f "$archive_key" > /dev/null 2>&1
         if [ $? == 0 ]
         then
-        	echo "WARNING: The password for id_${keytype} for $host is empty; key archiving ABORTED."
+        	echo "WARNING: The password for id_${keytype} for $host is empty; private key REMOVED from archive."
                 rm -f "$archive_key"
         fi
 fi	
+
+if [ -f "$HOME/.ssh/id_$keytype.pub" ] ; then
+	echo "ssh key fingerprint for public key:"
+	ssh-keygen -lf "$HOME/.ssh/id_$keytype.pub"
+fi
 
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #
 #  G E T   U T I L I S C R I P T S
 #
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+echo "# Check utiliscripts..."
 
 # If we do not already have utiliscripts, then get them with git
 
@@ -134,10 +145,12 @@ fi
 #
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+echo "# Check drush..."
+
 # If we do not already have drush, then get the master branch with git
 
 d=`which drush`
-if [ -z "$d" ] ; then
+if [ -z "$d" ] && [ ! -d  $HOME/local/drupal/drush ] ; then
 
         (
                 mkdir -p $HOME/local/drupal
@@ -146,7 +159,7 @@ if [ -z "$d" ] ; then
                 if [ "$USER" == "ga" ]
                 then
                         git clone --branch master greg1anderson@git.drupal.org:project/drush.git
-                        if [ $? <> 0 ]
+                        if [ ! -d drush ]
                         then
                         	echo "Could not clone a r/w copy of drush; cloning a r/o copy instead."
                         fi
@@ -164,6 +177,8 @@ fi
 #  S E T   U P   B A S H   A N D   E N V I R O N M E N T
 #
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+echo "# Check bash environment..."
 
 #
 # Get rid of the old .bash_customizations file if it exists
@@ -188,9 +203,9 @@ then
                 	rm $HOME/.drush/drushrc.php
         	fi
         fi
-        ln -s $HOME/work/config/drushrc.php $HOME/.drush
-        ln -s $HOME/work/config/drushrc5.php $HOME/.drush
-        ln -s $HOME/work/config/drushrc5.php $HOME/.drush/drushrc6.php
+        ln -s -f $HOME/work/config/drushrc.php $HOME/.drush
+        ln -s -f $HOME/work/config/drushrc5.php $HOME/.drush
+        ln -s -f $HOME/work/config/drushrc5.php $HOME/.drush/drushrc6.php
 fi
 
 #
@@ -242,6 +257,7 @@ __END__
 #
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+echo "# Check preferences and configuration..."
 
 #
 # Set up nedit default preferences
@@ -266,6 +282,8 @@ else
 	__END__
 
 fi
+
+echo "# Check git settings..."
 
 #
 # Git stuff
