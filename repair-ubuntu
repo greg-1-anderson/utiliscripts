@@ -61,54 +61,68 @@ if [ "x$ubuntuRevision" = "xhardy" ] && [ -d /usr/share/apps/konqueror/serviceme
 	) >> $REPAIR_SCRIPT
 fi
 
+if [ -f /etc/X11/xorg.conf ] ; then
+	chktapconfig=`grep TapButton1 /etc/X11/xorg.conf`
+	chksynaptics=`grep "Synaptics Touchpad" /etc/X11/xorg.conf`
+	if [ "X$chktapconfig" = "X" ] && [ "X$chksynaptics" != "X" ] ; then
 
-chktapconfig=`grep TapButton1 /etc/X11/xorg.conf`
-chksynaptics=`grep "Synaptics Touchpad" /etc/X11/xorg.conf`
-if [ "X$chktapconfig" = "X" ] && [ "X$chksynaptics" != "X" ] ; then
+		$tapping && echo "Doing tapping" || echo "Skipping tapping"
 
-	$tapping && echo "Doing tapping" || echo "Skipping tapping"
+		if $tapping ; then
 
-	if $tapping ; then
+			#
+			# Put a TapButton1 0 directive into /etc/X11/xorg.conf to disable tapping.
+			#
+			echo add Option "TapButton1" "0" to InputDevice section of  the synaptices touchpad in xorg.conf.
 
-		#
-		# Put a TapButton1 0 directive into /etc/X11/xorg.conf to disable tapping.
-		#
-		echo add Option "TapButton1" "0" to InputDevice section of  the synaptices touchpad in xorg.conf.
+			xorgconf=/etc/X11/xorg.conf
+			xorgwork=$WORK_DIR/xorg.conf
 
-		xorgconf=/etc/X11/xorg.conf
-		xorgwork=$WORK_DIR/xorg.conf
+			sed /Identifier.*Synaptics.Touchpad/,\$d $xorgconf > ${xorgwork}-beginpart
+			grep "Identifier.*Synaptics.Touchpad" $xorgconf >> ${xorgwork}-beginpart
+			sed 1,/Identifier.*Synaptics.Touchpad/d $xorgconf > ${xorgwork}-endpart
+			sed /EndSection/,\$d ${xorgwork}-endpart > ${xorgwork}-endpart-1
+			sed 1,/EndSection/d ${xorgwork}-endpart > ${xorgwork}-endpart-2
 
-		sed /Identifier.*Synaptics.Touchpad/,\$d $xorgconf > ${xorgwork}-beginpart
-		grep "Identifier.*Synaptics.Touchpad" $xorgconf >> ${xorgwork}-beginpart
-		sed 1,/Identifier.*Synaptics.Touchpad/d $xorgconf > ${xorgwork}-endpart
-		sed /EndSection/,\$d ${xorgwork}-endpart > ${xorgwork}-endpart-1
-		sed 1,/EndSection/d ${xorgwork}-endpart > ${xorgwork}-endpart-2
+			(
+				cat ${xorgwork}-beginpart 
+				cat ${xorgwork}-endpart-1
+				echo '	# Added by the "install-components" script to disable tapping'
+				echo '	Option		"TapButton1"	"0"'
+				echo EndSection
+				cat ${xorgwork}-endpart-2
+			) > $xorgwork
 
-		(
-			cat ${xorgwork}-beginpart 
-			cat ${xorgwork}-endpart-1
-			echo '	# Added by the "install-components" script to disable tapping'
-			echo '	Option		"TapButton1"	"0"'
-			echo EndSection
-			cat ${xorgwork}-endpart-2
-		) > $xorgwork
-                
-                diff -Nup $xorgconf $xorgwork >> $PATCH_FILE
+                	diff -Nup $xorgconf $xorgwork >> $PATCH_FILE
 
-		#
-		# This command insures that xorg.conf will be updated
-		# if necessary due to an upgrade of the xserver-xorg
-		# package.  If this happens for some reason, tapping
-		# might be re-enabled.  Just make sure that the TapButton1 0
-		# setting gets put back into /etc/X11/xorg.conf
-		#
-                (
-                	echo "# Insure that updates to xorg.conf take precedence over our modification of this file."
-			echo "dpkg-reconfigure -phigh xserver-xorg"
-		) >> $REPAIR_SCRIPT
-	fi 
+			#
+			# This command insures that xorg.conf will be updated
+			# if necessary due to an upgrade of the xserver-xorg
+			# package.  If this happens for some reason, tapping
+			# might be re-enabled.  Just make sure that the TapButton1 0
+			# setting gets put back into /etc/X11/xorg.conf
+			#
+                	(
+                		echo "# Insure that updates to xorg.conf take precedence over our modification of this file."
+				echo "dpkg-reconfigure -phigh xserver-xorg"
+			) >> $REPAIR_SCRIPT
+		fi 
+	fi
 fi
 
+#
+# Adjust sudoers file so that the $PATH is not adjusted when using `sudo`.
+#
+SUDOERS_ORIG=/etc/sudoers
+SUDOERS_WORK=$WORK_DIR/sudoers
+cp $SUDOERS_ORIG $SUDOERS_WORK
+sed -i -e '/Defaults\s*env_reset/a \
+Defaults	!secure_path' $SUDOERS_WORK
+diff -Nup $SUDOERS_ORIG $SUDOERS_WORK >> $PATCH_FILE
+
+#
+# Fix Alsa on the Dell Studio XPS under Karmic
+#
 ALSA_ORIG=/etc/modprobe.d/alsa-base.conf
 ALSA_WORK=$WORK_DIR/alsa-base.conf
 if [ "x$ubuntuRevision" = "xkarmic" ] && [ -f $ALSA_ORIG ] && [ "x`grep snd-hda-intel $ALSA_ORIG`" != "x" ] && [ "x`grep model=dell-m6-dmic $ALSA_ORIG`" == "x" ] ; then
