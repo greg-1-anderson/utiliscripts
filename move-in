@@ -198,6 +198,31 @@ for example_extensions in sync_enable.drush.inc sync_via_http.drush.inc ; do
 	fi
 done
 
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#
+#  G E T   S U B L I M E
+#
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+echo "# Check sublime..."
+
+s=`which sublime_text`
+if [ -z "$s" ] ; then
+
+	sublime_url=`curl http://www.sublimetext.com/2 2>/dev/null | grep 'a href.*Linux 32' | sed -e 's/.*href="\([^"]*\).*/\1/'`
+	if [ -z "$sublime_url" ] ; then
+		sublime_url="http://c758482.r82.cf2.rackcdn.com/Sublime Text 2 Build 2181.tar.bz2"
+	fi
+	sublime_file="${sublime_url##*/}"
+	
+	mkdir -p $HOME/tmp
+	mkdir -p $HOME/local
+	
+	wget -O "$HOME/tmp/$sublime_file" "$sublime_url"
+	tar -xjvf "$HOME/tmp/$sublime_file" -C $HOME/local
+	
+	mv "$HOME/local/Sublime Text 2" $HOME/local/sublime-text-2
+fi
 
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #
@@ -274,6 +299,9 @@ cat <<- __END__ >> $HOME/.bashrc
 if [ -f $UTILISCRIPTS/custom-bashrc ]; then
 	. $UTILISCRIPTS/custom-bashrc
 fi
+if [ -d "$HOME/local/sublime-text-2" ] ; then
+	export PATH=\$PATH:\$HOME/local/sublime-text-2
+fi
 # End Bash Customizations
 __END__
 
@@ -285,6 +313,31 @@ __END__
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 echo "# Check preferences and configuration..."
+
+#
+# Set up sublime default preferences
+#
+if [ -d "$HOME/local/sublime-text-2" ] && [ ! -f $HOME/.config/sublime-text-2/Packages/User/Preferences.sublime-settings ] ; then
+
+mkdir -p $HOME/.config/sublime-text-2/Packages/User
+
+cat << "__END__" > $HOME/.config/sublime-text-2/Packages/User/Preferences.sublime-settings
+{
+	"color_scheme": "Packages/Color Scheme - Default/Mac Classic.tmTheme",
+	"rulers": [80],
+	"tab_size": 2,
+	"translate_tabs_to_spaces": true,
+	"use_tab_stops": true,
+	"trim_automatic_white_space": true,
+	"trim_trailing_white_space_on_save": true,
+	"ensure_newline_at_eof_on_save": true,
+	"fallback_encoding": "UTF-8",
+	"default_line_ending": "unix",
+	"shift_tab_unindent": true
+}
+__END__
+
+fi
 
 #
 # Set up nedit default preferences
