@@ -90,9 +90,9 @@ then
 	fi
 else
         echo "Archiving public / private key pair for $host"
-        cp -f "$HOME/.ssh/id_${keytype}" "$archive_key" 
+        cp -f "$HOME/.ssh/id_${keytype}" "$archive_key"
         cp -f "$HOME/.ssh/id_${keytype}.pub" "${archive_key}.pub"
-        
+
         # Try to give the private key a new password, using empty for
         # the current password.  If this works, then balk.
         ssh-keygen -p -P "" -N "empty_passwords_are_bad" -f "$archive_key" > /dev/null 2>&1
@@ -101,7 +101,7 @@ else
         	echo "WARNING: The password for id_${keytype} for $host is empty; private key REMOVED from archive."
                 rm -f "$archive_key"
         fi
-fi	
+fi
 
 if [ -f "$HOME/.ssh/id_$keytype.pub" ] ; then
 	echo "ssh key fingerprint for public key:"
@@ -131,7 +131,7 @@ if [ ! -d $UTILISCRIPTS ] ; then
                         	echo "Could not clone a r/w copy of utiliscripts; cloning a r/o copy instead."
                         fi
                 fi
-                
+
                 if [ ! -d $UTILISCRIPTS ] ; then
                 	git clone git://github.com/greg-1-anderson/utiliscripts.git
                 fi
@@ -164,7 +164,7 @@ if [ -z "$d" ] && [ ! -d  $HOME/local/drupal/drush ] ; then
                         	echo "Could not clone a r/w copy of drush; cloning a r/o copy instead."
                         fi
                 fi
-                
+
                 if [ ! -d drush ] ; then
 			git clone --branch master http://git.drupal.org/project/drush.git
                 fi
@@ -184,7 +184,7 @@ for drush_extension in drush_sup drush_extras dbtng_migrator registry_rebuild ; 
 			$HOME/local/drupal/drush/drush pm-download $drush_extension --destination=$HOME/local/drupal/drush_extensions
 		)
 	fi
-	
+
 done
 
 # Also copy in some of the example drush extensions from the drush/examples folder
@@ -192,9 +192,9 @@ done
 for example_extensions in sync_enable.drush.inc sync_via_http.drush.inc ; do
 
 	if [ ! -f "$HOME/local/drupal/drush_extensions/$example_extensions" ] ; then
-	
+
 		cp "$HOME/local/drupal/drush/examples/$example_extensions" $HOME/local/drupal/drush_extensions
-	
+
 	fi
 done
 
@@ -214,13 +214,13 @@ if [ -z "$s" ] ; then
 		sublime_url="http://c758482.r82.cf2.rackcdn.com/Sublime Text 2 Build 2181.tar.bz2"
 	fi
 	sublime_file="${sublime_url##*/}"
-	
+
 	mkdir -p $HOME/tmp
 	mkdir -p $HOME/local
-	
+
 	wget -O "$HOME/tmp/$sublime_file" "$sublime_url"
 	tar -xjvf "$HOME/tmp/$sublime_file" -C $HOME/local
-	
+
 	mv "$HOME/local/Sublime Text 2" $HOME/local/sublime-text-2
 fi
 
@@ -335,6 +335,32 @@ cat << "__END__" > $HOME/.config/sublime-text-2/Packages/User/Preferences.sublim
 	"default_line_ending": "unix",
 	"shift_tab_unindent": true
 }
+__END__
+
+fi
+
+if [ -d "$HOME/local/sublime-text-2" ] && [ ! -f "$HOME/.config/sublime-text-2/Packages/User/Default (Linux).sublime-keymap" ] ; then
+
+mkdir -p $HOME/.config/sublime-text-2/Packages/User
+
+cat << "__END__" > "$HOME/.config/sublime-text-2/Packages/User/Default (Linux).sublime-keymap"
+[
+  /**
+   * Nedit key bindings:
+   *
+   *  Control-g: Find again
+   *  Control-shift-g: Find again (reverse)
+   *  Control-l: Go to line
+   *
+   * Remapped Sublime Text key bindings:
+   *
+   *  Control-shift-l: Expand selection to line (was Control-l)
+   */
+  { "keys": ["ctrl+g"], "command": "find_under" },
+  { "keys": ["ctrl+shift+g"], "command": "find_under_prev" },
+  { "keys": ["ctrl+shift+l"], "command": "expand_selection", "args": {"to": "line"} },
+  { "keys": ["ctrl+l"], "command": "show_overlay", "args": {"overlay": "goto", "text": ":"} }
+]
 __END__
 
 fi
@@ -479,7 +505,7 @@ fi
 #
 if [ -f $VERSION_SPECIFIC_CONF_DIR/gconf.xml ] ; then
 	gconftool-2 --load $VERSION_SPECIFIC_CONF_DIR/gconf.xml
-	
+
 	# Restart gnome-panel so that the configuration
 	# changes made above will take effect
 	# TODO:  Should we look at gconf.xml to determine if
