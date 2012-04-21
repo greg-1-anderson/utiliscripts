@@ -317,7 +317,7 @@ echo "# Check preferences and configuration..."
 #
 # Set up sublime default preferences
 #
-if [ -d "$HOME/local/sublime-text-2" ] && [ ! -f $HOME/.config/sublime-text-2/Packages/User/Preferences.sublime-settings ] ; then
+if [ ! -f $HOME/.config/sublime-text-2/Packages/User/Preferences.sublime-settings ] ; then
 
 mkdir -p $HOME/.config/sublime-text-2/Packages/User
 
@@ -339,7 +339,7 @@ __END__
 
 fi
 
-if [ -d "$HOME/local/sublime-text-2" ] && [ ! -f "$HOME/.config/sublime-text-2/Packages/User/Default (Linux).sublime-keymap" ] ; then
+if [ ! -f "$HOME/.config/sublime-text-2/Packages/User/Default (Linux).sublime-keymap" ] || [ "`stat --printf='%s' \"$HOME/.config/sublime-text-2/Packages/User/Default (Linux).sublime-keymap\"`" -lt 10 ] ; then
 
 mkdir -p $HOME/.config/sublime-text-2/Packages/User
 
@@ -351,14 +351,21 @@ cat << "__END__" > "$HOME/.config/sublime-text-2/Packages/User/Default (Linux).s
    *  Control-g: Find again
    *  Control-shift-g: Find again (reverse)
    *  Control-l: Go to line
-   *
-   * Remapped Sublime Text key bindings:
-   *
-   *  Control-shift-l: Expand selection to line (was Control-l)
+   *  Control-Shift-9: Unindent (same as Sublime shift-tab w/ selection that contains "\n")
+   *  Control-Shift-0: Indent (same as Sublime tab w/ selection that contains "\n")
    */
   { "keys": ["ctrl+g"], "command": "find_under" },
   { "keys": ["ctrl+shift+g"], "command": "find_under_prev" },
   { "keys": ["ctrl+shift+l"], "command": "expand_selection", "args": {"to": "line"} },
+  { "keys": ["ctrl+shift+9"], "command": "unindent" },
+  { "keys": ["ctrl+shift+0"], "command": "indent" },
+
+  /**
+   *
+   * Remapped Sublime Text key bindings:
+   *
+   *  Control-shift-l: Expand selection to line (Sublime default is Control-l)
+   */
   { "keys": ["ctrl+l"], "command": "show_overlay", "args": {"overlay": "goto", "text": ":"} }
 ]
 __END__
