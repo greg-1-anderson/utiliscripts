@@ -6,8 +6,8 @@
 # to be passed to apt-get install.  I typically run this with no
 # parameters on any new install.  Whenever I apt-get install
 # something that I need, I add the package to some category in this
-# script.  This insures that I have every package I will need later, 
-# so that I do not find myself without something critical when I'm not 
+# script.  This insures that I have every package I will need later,
+# so that I do not find myself without something critical when I'm not
 # connected to the internet.
 #
 # The other way that I commonly use this script is to run it with the
@@ -24,7 +24,7 @@ host=`uname -n`
 echo "Install Components for Ubuntu $ubuntuRevision on $host"
 
 #
-# We're going to list all of our available packages 
+# We're going to list all of our available packages
 # in an associative array called 'packages'.
 #
 # The packages to install will be placed in another
@@ -45,7 +45,7 @@ groups["apps"]="reader-editor kde-utils graphics sound internet"
 groups["kde"]="kde-utils"
 
 #
-# Misc useful applications that are not part of the 
+# Misc useful applications that are not part of the
 # standard install
 #
 packages[reader-editor]="nedit"
@@ -79,10 +79,10 @@ packages["intl"]="i8kutils"
 packages["security"]="uif bastille"
 
 packages["network"]="ssh rsh-client nmap davfs2 wireshark curl"
-	
+
 packages["system-gui"]="perl-tk gnome-session-fallback"
 
-packages["repository"]="subversion cvs git git-core"
+packages["repository"]="subversion cvs git git-core mercurial"
 
 packages["compress"]="sharutils zip p7zip "
 
@@ -147,18 +147,18 @@ for option in $* ; do
 			verbose=true
 			show=true
 			;;
-		
+
 		--show )
 			show=true
 			;;
-		
+
 		-h | --help )
 			help=true
 			;;
-			
+
 		-* )
 			;;
-		
+
 		*)
 			if [ "x${packages[$option]}" != "x" ] ; then
 				$verbose && echo "Select $option: ${packages[$option]}" >&2
@@ -235,18 +235,18 @@ while [ $# -gt 0 ] ; do
 
 	option=$1
 	shift
-	
+
 	# echo "Process $option"
-	
+
 	case "$option" in
-	
+
 		--no-* )
 			remove=${option:5}
 			if [ "x${install_list[$remove]}" != "x" ] ; then
 				$verbose && echo "Deselect $remove: ${install_list[$remove]}" >&2
 				unset install_list[$remove]
 			fi
-			
+
 			if [ "x${groups[$remove]}" != "x" ] ; then
 				$verbose && echo "Deselect group $remove=${groups[$remove]}" >&2
 				for i in ${groups[$remove]} ; do
@@ -256,7 +256,7 @@ while [ $# -gt 0 ] ; do
 			fi
 
 			;;
-		
+
 		--yes-* )
 			add=${option:6}
 			yes_list="$yes_list $add"
