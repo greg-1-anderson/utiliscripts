@@ -11,7 +11,7 @@
 # Good follow-up commands include:
 #
 #	install-components
-#	syncwith $USER@someothermachine
+#	repair-ubuntu
 #
 
 
@@ -176,7 +176,7 @@ echo "# Check drush extensions..."
 
 mkdir -p $HOME/local/drupal/drush_extensions
 
-for drush_extension in drush_sup drush_extras dbtng_migrator registry_rebuild ; do
+for drush_extension in drush_sup drush_extras dbtng_migrator registry_rebuild sublime_completion ; do
 
 	if [ ! -d "$HOME/local/drupal/drush_extensions/$drush_extension" ] ; then
 		(
@@ -207,7 +207,7 @@ done
 echo "# Check sublime..."
 
 s=`which sublime_text`
-if [ -z "$s" ] ; then
+if [ -z "$s" ] && [ ! -d "$HOME/local/sublime-text-2"]; then
 
 	sublime_url=`curl http://www.sublimetext.com/2 2>/dev/null | grep 'a href.*Linux 32' | sed -e 's/.*href="\([^"]*\).*/\1/'`
 	if [ -z "$sublime_url" ] ; then
@@ -321,6 +321,9 @@ if [ ! -f $HOME/.config/sublime-text-2/Packages/User/Preferences.sublime-setting
 
 mkdir -p $HOME/.config/sublime-text-2/Packages/User
 
+# Set up Sublime default editing preferences to match Drupal php conventions.
+# See: http://drupal.org/node/1346890
+# Also: http://www.sublimetext.com/forum/viewtopic.php?f=3&t=2704
 cat << "__END__" > $HOME/.config/sublime-text-2/Packages/User/Preferences.sublime-settings
 {
 	"color_scheme": "Packages/Color Scheme - Default/Mac Classic.tmTheme",
@@ -333,7 +336,9 @@ cat << "__END__" > $HOME/.config/sublime-text-2/Packages/User/Preferences.sublim
 	"ensure_newline_at_eof_on_save": true,
 	"fallback_encoding": "UTF-8",
 	"default_line_ending": "unix",
-	"shift_tab_unindent": true
+	"shift_tab_unindent": true,
+  // Characters that are considered to separate words
+  "word_separators": "./\\()\"'-:,.;<>~!@#%^&*|+=[]{}`~?"
 }
 __END__
 
@@ -370,6 +375,35 @@ cat << "__END__" > "$HOME/.config/sublime-text-2/Packages/User/Default (Linux).s
 ]
 __END__
 
+fi
+
+# Install Sublime Code Intel plugin
+if [ ! -d "$HOME/.config/sublime-text-2/Packages/SublimeCodeIntel" ] ; then
+
+  git clone git://github.com/Kronuz/SublimeCodeIntel.git "$HOME/.config/sublime-text-2/Packages/SublimeCodeIntel"
+
+fi
+
+# Install Sublime PhpDoc plugin
+if [ ! -d "$HOME/.config/sublime-text-2/Packages/PhpDoc" ] ; then
+  git clone git://github.com/SublimeText/PhpDoc.git "$HOME/.config/sublime-text-2/Packages/PhpDoc"
+fi
+
+# Install Sublime Drupal snippets
+if [ ! -d "$HOME/.config/sublime-text-2/Packages/DrupalSnippets" ] ; then
+  git clone git://gitorious.org/sublime-text-snippets/drupal.git "$HOME/.config/sublime-text-2/Packages/DrupalSnippets"
+fi
+
+# Install Suplime php lint
+if [ ! -d "$HOME/.config/sublime-text-2/Packages/sublimelint" ] ; then
+  git clone git://github.com/lunixbochs/sublimelint.git "$HOME/.config/sublime-text-2/Packages/sublimelint"
+fi
+
+# Install Sublime zen coding plugin (if mercurial is available)
+# See: http://code.google.com/p/zen-coding/downloads/detail?name=ZenCodingCheatSheet.pdf
+hg=`which hg`
+if [ ! -z "$hg" ] && [ ! -d "$HOME/.config/sublime-text-2/Packages/sublime-2-zencoding" ] ; then
+  hg clone https://bitbucket.org/sublimator/sublime-2-zencoding "$HOME/.config/sublime-text-2/Packages/sublime-2-zencoding"
 fi
 
 #
