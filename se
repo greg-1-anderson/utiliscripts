@@ -1,3 +1,19 @@
 #!/bin/bash
 
-sublime_text -n "$@" &
+# See http://superuser.com/questions/183680/gnome-ubuntu-how-to-bring-a-program-window-to-the-front-using-a-command-line
+for f in "$@" ; do
+  # If the parameter is a directory, then open it in a new sublime window
+  if [ -d "$f" ] ; then
+    sublime_text -n "$f" &
+  else
+    # Test to see if the file is already open in Sublime; if it is, then
+    # bring the focused window frontmost instead of opening a new one.
+    d=$(cd "$(dirname "$f")" 2>/dev/null && pwd | sed -e "s|^$HOME|~|")
+    b=$(basename -- "$f")
+    if [ `wmctrl -l | grep -c "$d/$b"` != 0 ] ; then
+      wmctrl -a "$d/$b" &
+    else
+      sublime_text -n "$f" &
+    fi
+  fi
+done
