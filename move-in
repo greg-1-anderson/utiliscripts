@@ -213,24 +213,28 @@ done
 #
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-echo "# Check sublime..."
+if [ -n "$DISPLAY" ] ; then
 
-s=`which sublime_text`
-if [ -z "$s" ] && [ ! -d "$HOME/local/sublime-text-2"]; then
+  echo "# Check sublime..."
 
-	sublime_url=`curl http://www.sublimetext.com/2 2>/dev/null | grep 'a href.*Linux 32' | sed -e 's/.*href="\([^"]*\).*/\1/'`
-	if [ -z "$sublime_url" ] ; then
-		sublime_url="http://c758482.r82.cf2.rackcdn.com/Sublime Text 2 Build 2181.tar.bz2"
-	fi
-	sublime_file="${sublime_url##*/}"
+  s=`which sublime_text`
+  if [ -z "$s" ] && [ ! -d "$HOME/local/sublime-text-2"]; then
 
-	mkdir -p $HOME/tmp
-	mkdir -p $HOME/local
+  	sublime_url=`curl http://www.sublimetext.com/2 2>/dev/null | grep 'a href.*Linux 32' | sed -e 's/.*href="\([^"]*\).*/\1/'`
+  	if [ -z "$sublime_url" ] ; then
+  		sublime_url="http://c758482.r82.cf2.rackcdn.com/Sublime Text 2 Build 2181.tar.bz2"
+  	fi
+  	sublime_file="${sublime_url##*/}"
 
-	wget -O "$HOME/tmp/$sublime_file" "$sublime_url"
-	tar -xjvf "$HOME/tmp/$sublime_file" -C $HOME/local
+  	mkdir -p $HOME/tmp
+  	mkdir -p $HOME/local
 
-	mv "$HOME/local/Sublime Text 2" $HOME/local/sublime-text-2
+  	wget -O "$HOME/tmp/$sublime_file" "$sublime_url"
+  	tar -xjvf "$HOME/tmp/$sublime_file" -C $HOME/local
+
+  	mv "$HOME/local/Sublime Text 2" $HOME/local/sublime-text-2
+  fi
+
 fi
 
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
