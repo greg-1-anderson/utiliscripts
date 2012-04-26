@@ -492,6 +492,21 @@ if [ -n "$g" ] && [ -n "$DISPLAY" ] ; then
     gconftool-2 --type string --set /desktop/gnome/background/picture_filename $DESKTOP_BACKGROUND
     gconftool-2 --type string --set /desktop/gnome/background/picture_options zoom
   fi
+
+  # Maybe set:
+  # /apps/gnome-session/options/splash_image == login page image
+
+  # With a little work, we could probably get our panel configured.
+  # `gconftool-2 -R /apps/panel` shows a lot of settings we might want to adjust
+  # /apps/panel/general/toplevel_id_list shows something like [bottom_panel_screen0]
+  # /apps/panel/general/applet_id_list = [...,workspace_switcher_screen0,...]
+  # then we have:
+  # /apps/panel/applets/workspace_switcher_screen0/position = ...
+  # /apps/panel/applets/workspace_switcher_screen0/toplevel_id = bottom_panel_screen0
+  # /apps/panel/applets/workspace_switcher_screen0/prefs/display_all_workspaces = true
+  # /apps/panel/applets/workspace_switcher_screen0/prefs/num_rows = 2
+  # /apps/panel/applets/workspace_switcher_screen0/prefs/display_workspace_names = true
+
 fi
 
 exit 0
