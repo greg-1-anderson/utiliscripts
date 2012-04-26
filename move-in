@@ -350,28 +350,51 @@ mkdir -p $HOME/.config/sublime-text-2/Packages/User
 
 cat << "__END__" > "$HOME/.config/sublime-text-2/Packages/User/Default (Linux).sublime-keymap"
 [
-  /**
+  /*
    * Nedit key bindings:
    *
-   *  Control-g: Find again
-   *  Control-shift-g: Find again (reverse)
-   *  Control-l: Go to line
-   *  Control-Shift-9: Unindent (same as Sublime shift-tab w/ selection that contains "\n")
-   *  Control-Shift-0: Indent (same as Sublime tab w/ selection that contains "\n")
+   *  Control-g: Find again                   (Also F3 or [Enter])
+   *  Control-shift-g: Find previous          (Also shift-F3 or shift-[Enter])
+   *  Control-h: Find under                   (Also ctrl-F3)
+   *  Control-shift-h: Find under previous    (Also ctrl-shift-F3)
+   *  Control-r: replace                      (Was: ctrl-h)
+   *  Control-shift-r: Replace next           (Was: shift-ctrl-h)
+   *  Control-l: Go to line                   (Was: ctrl-g)
+   *  Control-Shift-9: unindent               (Also ctrl-[, or shift-tab w/ selection that contains "\n")
+   *  Control-Shift-0: indent                 (Also ctrl-], or tab w/ selection that contains "\n")
    */
-  { "keys": ["ctrl+g"], "command": "find_under" },
-  { "keys": ["ctrl+shift+g"], "command": "find_under_prev" },
-  { "keys": ["ctrl+shift+l"], "command": "expand_selection", "args": {"to": "line"} },
+  { "keys": ["ctrl+g"], "command": "find_next" },
+  { "keys": ["ctrl+shift+g"], "command": "find_prev" },
+  { "keys": ["ctrl+h"], "command": "find_under" },
+  { "keys": ["ctrl+shift+h"], "command": "find_under_prev" },
+  { "keys": ["ctrl+r"], "command": "show_panel", "args": {"panel": "replace"} },
+  { "keys": ["ctrl+shift+r"], "command": "replace_next" },
   { "keys": ["ctrl+shift+9"], "command": "unindent" },
   { "keys": ["ctrl+shift+0"], "command": "indent" },
+  { "keys": ["ctrl+l"], "command": "show_overlay", "args": {"overlay": "goto", "text": ":"} },
 
-  /**
+  /*
    *
    * Remapped Sublime Text key bindings:
    *
-   *  Control-shift-l: Expand selection to line (Sublime default is Control-l)
+   *  Control-shift-=: Expand selection to line (Was: ctrl-l)
    */
-  { "keys": ["ctrl+l"], "command": "show_overlay", "args": {"overlay": "goto", "text": ":"} }
+  { "keys": ["ctrl+shift+="], "command": "expand_selection", "args": {"to": "line"} },
+  /*
+   * Removed Sublime Text key bindings:
+   *
+   *  Control-R: goto symbol
+   */
+  // { "keys": ["ctrl+r"], "command": "show_overlay", "args": {"overlay": "goto", "text": "@"} },
+  /*
+   * Repeated Sublime Text key bindings:
+   *
+   *  We list these standard options again so that they will be shown in
+   *  place of our customizations in the Sublime menus.  Usually we want
+   *  our customization to show up, but here we do not.
+   */
+  { "keys": ["ctrl+]"], "command": "indent" },
+  { "keys": ["ctrl+["], "command": "unindent" }
 ]
 __END__
 
