@@ -80,7 +80,7 @@ packages["security"]="uif bastille"
 
 packages["network"]="ssh rsh-client nmap davfs2 wireshark curl"
 
-packages["system-gui"]="perl-tk gnome-session-fallback"
+packages["system-gui"]="perl-tk gnome-session-fallback k3b"
 
 packages["repository"]="subversion cvs git git-core mercurial"
 
@@ -242,19 +242,7 @@ while [ $# -gt 0 ] ; do
 
 		--no-* )
 			remove=${option:5}
-			if [ "x${install_list[$remove]}" != "x" ] ; then
-				$verbose && echo "Deselect $remove: ${install_list[$remove]}" >&2
-				unset install_list[$remove]
-			fi
-
-			if [ "x${groups[$remove]}" != "x" ] ; then
-				$verbose && echo "Deselect group $remove=${groups[$remove]}" >&2
-				for i in ${groups[$remove]} ; do
-					$verbose && echo "Deselect $i: ${install_list[$i]}"
-					unset install_list[$i]
-				done
-			fi
-
+			no_list="$no_list $remove"
 			;;
 
 		--yes-* )
@@ -263,6 +251,30 @@ while [ $# -gt 0 ] ; do
 			;;
 
 	esac
+done
+
+# If there is no $DISPLAY, then skip packages that depend on it.
+if [ -z "$DISPLAY" ] ; then
+  $verbose && echo "Automatically de-select gui packages on headless system (--no-gui implied)."
+  $no_list="$no_list gui"
+fi
+
+#
+# Remove all of the --no items
+#
+for remove in $no_list ; do
+	if [ "x${install_list[$remove]}" != "x" ] ; then
+		$verbose && echo "Deselect $remove: ${install_list[$remove]}" >&2
+		unset install_list[$remove]
+	fi
+
+	if [ "x${groups[$remove]}" != "x" ] ; then
+		$verbose && echo "Deselect group $remove=${groups[$remove]}" >&2
+		for i in ${groups[$remove]} ; do
+			$verbose && echo "Deselect $i: ${install_list[$i]}"
+			unset install_list[$i]
+		done
+	fi
 done
 
 #
