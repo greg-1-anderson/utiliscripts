@@ -8,6 +8,11 @@
 #
 #	+ Pulls down utiliscripts and adds them to the PATH.
 #
+# + Installs Drush, Sublime Text and other useful tools
+#   that I use.
+#
+# + Sets up bash settings and other system preferences.
+#
 # Good follow-up commands include:
 #
 #	install-components
@@ -34,6 +39,10 @@ fi
 
 if [ -z "$SSH_KEY_ARCHIVE" ] ; then
 	export SSH_KEY_ARCHIVE=$INSTALLATION_DATA/ssh_key_archive
+fi
+
+if [ -z "$DESKTOP_BACKGROUND_DIR" ] ; then
+  DESKTOP_BACKGROUND_DIR=$HOME/Documents/Installation/InstallData/DesktopBackgrounds
 fi
 
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -166,7 +175,7 @@ if [ -z "$d" ] && [ ! -d  $HOME/local/drupal/drush ] ; then
                 fi
 
                 if [ ! -d drush ] ; then
-			git clone --branch master http://git.drupal.org/project/drush.git
+			                  git clone --branch master http://git.drupal.org/project/drush.git
                 fi
         )
 
@@ -466,37 +475,28 @@ git config --global url."ssh://git@git.drupal.org/project/".insteadOf d.o:
 git config --global url."ssh://git@git.drupal.org/sandbox/".insteadOf sandbox:
 
 
+# If we can find gconftool-2, AND we have a $DISPLAY, then set up some GUI prefs
+g=`which gconftool-2`
+if [ -n "$g" ] && [ -n "$DISPLAY" ] ; then
+  host=`uname -n`
+  #
+  # Select and apply a desktop background
+  #
+  DESKTOP_BACKGROUND=$DESKTOP_BACKGROUND_DIR/Ubuntu-Ubuntu_Grass_1280x1024.jpg
 
-
+  check_host_bg=`ls -1 "$DESKTOP_BACKGROUND_DIR" | grep -i "$host" | head -n 1`
+  if [ -n "$check_host_bg" ] ; then
+    DESKTOP_BACKGROUND=$DESKTOP_BACKGROUND_DIR/$check_host_bg
+  fi
+  if [ -f "$DESKTOP_BACKGROUND" ] ; then
+    gconftool-2 --type string --set /desktop/gnome/background/picture_filename $DESKTOP_BACKGROUND
+    gconftool-2 --type string --set /desktop/gnome/background/picture_options zoom
+  fi
+fi
 
 exit 0
 
 # old stuff we don't trust any more.
-
-#
-# Set up firefox default preferences
-#
-# NOTE 1:  If firefox is running, this will not work (firefox will ignore & overwrite on exit)
-#
-# NOTE 2:  What is 'ime2irqv.default'?  Might this at some point be the wrong location for prefs?
-#
-mkdir -p $HOME/Downloads
-mkdir -p $HOME/.mozilla/firefox/ime2irqv.default
-
-if [ -f $HOME/.mozilla/firefox/ime2irqv.default/prefs.js ] ; then
-
-	grep -v "\(browser.download.dir\|browser.download.downloadDir\|browser.startup.homepage\|browser.startup.page\)" $HOME/.mozilla/firefox/ime2irqv.default/prefs.js > /tmp/prefs.js
-	cp -f /tmp/prefs.js $HOME/.mozilla/firefox/ime2irqv.default/prefs.js
-
-fi
-
-cat << __END__ >> $HOME/.mozilla/firefox/ime2irqv.default/prefs.js
-user_pref("browser.download.dir", "$HOME/Downloads");
-user_pref("browser.download.downloadDir", "$HOME/Downloads");
-user_pref("browser.startup.homepage", "http://my.yahoo.com");
-user_pref("browser.startup.page", 0);
-__END__
-
 
 
 
@@ -576,22 +576,4 @@ if [ -f $VERSION_SPECIFIC_CONF_DIR/gconf.xml ] ; then
 	# there are any additional processes that must be restarted?
 	killall -HUP gnome-panel 2>/dev/null
 fi
-
-
-#
-# Select and apply a desktop background
-#
-DESKTOP_BACKGROUND_DIR=$HOME/Documents/Installation/InstallData/DesktopBackgrounds
-DESKTOP_BACKGROUND=$DESKTOP_BACKGROUND_DIR/Ubuntu-Ubuntu_Grass_1280x1024.jpg
-
-if [ -f $DESKTOP_BACKGROUND_DIR/$host.jpg ] ; then
-	DESKTOP_BACKGROUND=$DESKTOP_BACKGROUND_DIR/$host.jpg
-fi
-
-if [ "x$host" == "xmonolith" ] ; then
-	DESKTOP_BACKGROUND=$DESKTOP_BACKGROUND_DIR/Atmospheres_by_Karezoid.jpg
-fi
-
-gconftool-2 --type string --set /desktop/gnome/background/picture_filename $DESKTOP_BACKGROUND
-gconftool-2 --type string --set /desktop/gnome/background/picture_options zoom
 
