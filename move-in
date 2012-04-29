@@ -42,7 +42,7 @@ if [ -z "$SSH_KEY_ARCHIVE" ] ; then
 fi
 
 if [ -z "$DESKTOP_BACKGROUND_DIR" ] ; then
-  DESKTOP_BACKGROUND_DIR=$HOME/Documents/Installation/InstallData/DesktopBackgrounds
+  DESKTOP_BACKGROUND_DIR=$INSTALLATION_DATA/DesktopBackgrounds
 fi
 
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -500,99 +500,46 @@ if [ -n "$g" ] && [ -n "$DISPLAY" ] ; then
   # Maybe set:
   # /apps/gnome-session/options/splash_image == login page image
 
-  # With a little work, we could probably get our panel configured.
-  # `gconftool-2 -R /apps/panel` shows a lot of settings we might want to adjust
-  # /apps/panel/general/toplevel_id_list shows something like [bottom_panel_screen0]
-  # /apps/panel/general/applet_id_list = [...,workspace_switcher_screen0,...]
-  # then we have:
-  # /apps/panel/applets/workspace_switcher_screen0/position = ...
-  # /apps/panel/applets/workspace_switcher_screen0/toplevel_id = bottom_panel_screen0
-  # /apps/panel/applets/workspace_switcher_screen0/prefs/display_all_workspaces = true
-  # /apps/panel/applets/workspace_switcher_screen0/prefs/num_rows = 2
-  # /apps/panel/applets/workspace_switcher_screen0/prefs/display_workspace_names = true
+  # Remove the top panel
+  gsettings set org.gnome.gnome-panel.layout toplevel-id-list "['bottom-panel']"
+
+  # Add the main menu.  The problem is, we need to set the definition for object-0 too.
+  # Unfortunately, we can't modify it; see below.
+#-org.gnome.gnome-panel.layout object-id-list ['menu-bar', 'indicators', 'show-desktop', 'window-list', 'workspace-switcher']
+#+org.gnome.gnome-panel.layout object-id-list ['menu-bar', 'indicators', 'show-desktop', 'window-list', 'workspace-switcher', 'object-0']
+
+  # Desktop names
+  gconftool-2 --type int --set /apps/metacity/general/num_workspaces 4
+  gconftool-2 --type string --set /apps/metacity/workspace_names/name_1 Dev
+  gconftool-2 --type string --set /apps/metacity/workspace_names/name_2 Docs
+  gconftool-2 --type string --set /apps/metacity/workspace_names/name_3 VM
+  gconftool-2 --type string --set /apps/metacity/workspace_names/name_4 Web
+
+  # Documentation on gconf tool is here:
+  # http://library.gnome.org/admin/system-admin-guide/stable/gconf-8.html.en
+
+  # To dump all gconf variables:
+  #
+  #   gconftool-2 -R /
+  #
+  # To dump all dconf variables:
+  #
+  #   gsettings list-recursively
+  #
+  # Dump the output of both of these commands into two separate files;
+  # then, change the settings you wish via the GUI, dump the settings again,
+  # and diff against the old output.  If you do not see all of the information
+  # from the settings that you changed, it means that preference is stored
+  # in a schemaless key in dconf.  There is no really good way around this
+  # problem.  All panel items, the number of rows in the workspace switcher,
+  # and the settings to show workspace names are all examples of variables that
+  # cannot be set.
+  #
+  # More info here:
+  #
+  # http://askubuntu.com/questions/126300/how-do-i-configure-the-gnome-panel-from-a-script
 
 fi
 
 exit 0
-
-# old stuff we don't trust any more.
-
-
-
-#
-# Customize based on host and user data
-#
-host=`uname -n`
-
-
-#
-# Set up a launcher item for the home folder
-#
-if [ ! -f $HOME/.gnome2/panel2.d/default/launchers/homefolder.desktop ] ; then
-
-	cat <<- __END__ > $HOME/.gnome2/panel2.d/default/launchers/homefolder.desktop
-	#!/usr/bin/env xdg-open
-
-	[Desktop Entry]
-	Encoding=UTF-8
-	Version=1.0
-	Name=Home Folder
-	Comment=Open '/home/$USER'
-	Icon=user-home
-	Name[en_US]=Home Folder
-	Comment[en_US]=Open '/home/$USER'
-	Icon[en_US]=user-home
-	URL=file:///home/$USER
-	Type=Link
-	__END__
-fi
-
-
-#
-# Do version-specific stuff
-#
-ubuntuRevision=`grep '^#deb.*\[' /etc/apt/sources.list | sed -e 's/.*\][^ ]* *\([^ ]*\).*/\1/'`
-
-VERSION_SPECIFIC_CONF_DIR=$HOME/Documents/Installation/InstallData/version-specific/$ubuntuRevision
-
-THEMES_DIR=$VERSION_SPECIFIC_CONF_DIR/Themes
-GCONF_DIR=$VERSION_SPECIFIC_CONF_DIR/gconf
-
-#
-# Apply preferences from InstallData/gconf if available
-#
-if [ -d $THEMES_DIR ] && [ -d $HOME/.themes ] ; then
-	for theme in `ls $THEMES_DIR/*.tar.gz` ; do
-		( cd $HOME/.themes && tar xzvf $THEMES_DIR/$theme )
-	done
-fi
-
-#
-# Apply preferences from InstallData/gconf if available.
-#
-# To update this conf file:
-#
-#	gconftool-2 --dump /desktop/gnome/sound /apps/panel | sed -e "s|$USER.desktop|homefolder.desktop|g" > gconf.xml
-#
-# Then move gconf.xml to InstallData/version-specific/karmic/gconf.xml
-# (where 'karmic' is replaced with the name of the specific ubuntu
-# revision you're using).  You may also want to add additional gconf
-# sections to the dump command above; any preference you dump will
-# be restored on move-in.
-#
-# It is also possible to hand-code setting values using --type string --set,
-# as shown below in the desktop-background selection code.  For more
-# information on available gconf paths, see:
-#
-# http://library.gnome.org/admin/system-admin-guide/stable/gconf-8.html.en
-#
-if [ -f $VERSION_SPECIFIC_CONF_DIR/gconf.xml ] ; then
-	gconftool-2 --load $VERSION_SPECIFIC_CONF_DIR/gconf.xml
-
-	# Restart gnome-panel so that the configuration
-	# changes made above will take effect
-	# TODO:  Should we look at gconf.xml to determine if
-	# there are any additional processes that must be restarted?
-	killall -HUP gnome-panel 2>/dev/null
-fi
 
