@@ -218,7 +218,7 @@ if [ -n "$DISPLAY" ] ; then
   echo "# Check sublime..."
 
   s=`which sublime_text`
-  if [ -z "$s" ] && [ ! -d "$HOME/local/sublime-text-2"]; then
+  if [ -z "$s" ] && [ ! -d "$HOME/local/sublime-text-2" ]; then
 
   	sublime_url=`curl http://www.sublimetext.com/2 2>/dev/null | grep 'a href.*Linux 32' | sed -e 's/.*href="\([^"]*\).*/\1/'`
   	if [ -z "$sublime_url" ] ; then
