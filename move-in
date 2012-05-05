@@ -309,11 +309,11 @@ fi
 sed -i -e '/Include Bash Customizations/,/End Bash Customizations/ d' $HOME/.bashrc
 cat <<- __END__ >> $HOME/.bashrc
 # Include Bash Customizations
+if [ -d "$HOME/local/sublime-text-2" ] ; then
+  export PATH=\$PATH:\$HOME/local/sublime-text-2
+fi
 if [ -f $UTILISCRIPTS/custom-bashrc ]; then
 	. $UTILISCRIPTS/custom-bashrc
-fi
-if [ -d "$HOME/local/sublime-text-2" ] ; then
-	export PATH=\$PATH:\$HOME/local/sublime-text-2
 fi
 # End Bash Customizations
 __END__
