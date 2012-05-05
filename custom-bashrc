@@ -20,7 +20,7 @@ alias findtabs="find -not -regex '..*/\..*' -exec grep -HP '\t' {} \;"
 alias histt='HISTTIMEFORMAT="[%m/%d@%H:%M:%S]  " history'
 
 function tolower() { tr A-Z a-z <<<$@; }
-    
+
 c_red='0;31m'
 c_green='0;32m'
 c_blue='0;34m'
@@ -32,7 +32,7 @@ __prompt_color()
   # Use git colors if we have a .git directory
   if git rev-parse --git-dir >/dev/null 2>&1
   then
-    if git diff --quiet 2>/dev/null >&2 
+    if git diff --quiet 2>/dev/null >&2
     then
       echo $c_green
     else
@@ -40,12 +40,12 @@ __prompt_color()
     fi
     return 0
   fi
-  
+
   # Use svn colors if we have a .svn directory
   if [ -d .svn ]
   then
     svnstatusoutput="`svn status 2>/dev/null | grep -v '^\?'`"
-    if [ -z "$svnstatusoutput" ] 
+    if [ -z "$svnstatusoutput" ]
     then
       echo $c_green
     else
@@ -53,7 +53,7 @@ __prompt_color()
     fi
     return 0
   fi
-  
+
   echo $c_reset
   return 0
 }
@@ -66,7 +66,7 @@ __prompt_info()
     gitver="$(git branch 2>/dev/null| sed -n '/^\*/s/^\* //p')"
     echo -e "[${gitver}] "
     return 0
-  fi  
+  fi
 
   # Emit the svn revision if we have a .svn directory
   if [ -d .svn ]
@@ -91,10 +91,10 @@ fi
 PROMPT_COMMAND='p=$(__prompt_info)'
 PS1='${p:0:1}\[\e[$(__prompt_color)\]${p:1:$((${#p}-3))}\[\e[$c_reset\]${p#"${p%??}"}\[\e[$c_blue\]\u@\h:\w\[\e[$c_reset\]\[\e[$c_green\]$(__drush_ps1)\[\e[$c_reset\]$ '
 
-# Set the editor to 'ne', unless it is not available
-n=`which ne`
-if [ -n "$DISPLAY" ] && [ -n "$n" ] ; then
-  export EDITOR=ne
+# Set the editor to 'se', unless it is not available
+s=`which sublime_text`
+if [ -n "$DISPLAY" ] && [ -n "$s" ] ; then
+  export EDITOR=se
 else
   export EDITOR=vi
 fi
