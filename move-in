@@ -514,6 +514,12 @@ if [ -n "$g" ] && [ -n "$DISPLAY" ] ; then
   gconftool-2 --type string --set /apps/metacity/workspace_names/name_2 Docs
   gconftool-2 --type string --set /apps/metacity/workspace_names/name_3 VM
   gconftool-2 --type string --set /apps/metacity/workspace_names/name_4 Web
+  dconf write /org/gnome/gnome-panel/layout/objects/workspace-switcher/instance-config/num-rows 2
+  dconf write /org/gnome/gnome-panel/layout/objects/workspace-switcher/instance-config/display-workspace-names true
+  dconf write /org/gnome/gnome-panel/layout/objects/workspace-switcher/instance-config/display-all-workspaces true
+
+  # For panel settings, see:
+  # dconf dump /org/gnome/gnome-panel/layout/
 
   # Documentation on gconf tool is here:
   # http://library.gnome.org/admin/system-admin-guide/stable/gconf-8.html.en
