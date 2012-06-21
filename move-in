@@ -483,22 +483,24 @@ git config --global url."ssh://git@git.drupal.org/sandbox/".insteadOf sandbox:
 g=`which gconftool-2`
 if [ -n "$g" ] && [ -n "$DISPLAY" ] ; then
   host=`uname -n`
-  #
-  # Select and apply a desktop background
-  #
-  DESKTOP_BACKGROUND=$DESKTOP_BACKGROUND_DIR/Ubuntu-Ubuntu_Grass_1280x1024.jpg
+  if [ -d $DESKTOP_BACKGROUND_DIR ] ; then
+    #
+    # Select and apply a desktop background
+    #
+    DESKTOP_BACKGROUND=$DESKTOP_BACKGROUND_DIR/Ubuntu-Ubuntu_Grass_1280x1024.jpg
 
-  check_host_bg=`ls -1 "$DESKTOP_BACKGROUND_DIR" | grep -i "$host" | head -n 1`
-  if [ -n "$check_host_bg" ] ; then
-    DESKTOP_BACKGROUND=$DESKTOP_BACKGROUND_DIR/$check_host_bg
-  fi
-  if [ -f "$DESKTOP_BACKGROUND" ] ; then
-    gconftool-2 --type string --set /desktop/gnome/background/picture_filename $DESKTOP_BACKGROUND
-    gconftool-2 --type string --set /desktop/gnome/background/picture_options zoom
-  fi
+    check_host_bg=`ls -1 "$DESKTOP_BACKGROUND_DIR" | grep -i "$host" | head -n 1`
+    if [ -n "$check_host_bg" ] ; then
+      DESKTOP_BACKGROUND=$DESKTOP_BACKGROUND_DIR/$check_host_bg
+    fi
+    if [ -f "$DESKTOP_BACKGROUND" ] ; then
+      gconftool-2 --type string --set /desktop/gnome/background/picture_filename $DESKTOP_BACKGROUND
+      gconftool-2 --type string --set /desktop/gnome/background/picture_options zoom
+    fi
 
-  # Maybe set:
-  # /apps/gnome-session/options/splash_image == login page image
+    # Maybe set:
+    # /apps/gnome-session/options/splash_image == login page image
+  fi
 
   # Remove the top panel
   gsettings set org.gnome.gnome-panel.layout toplevel-id-list "['bottom-panel']"

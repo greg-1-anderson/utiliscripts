@@ -11,20 +11,20 @@ behave uniformly.  To whit:
 
 	# First:
 
-	sudo apt-get install git
-        wget https://raw.github.com/greg-1-anderson/utiliscripts/master/move-in
+	sudo apt-get install git php wmctrl
+  wget https://raw.github.com/greg-1-anderson/utiliscripts/master/move-in
 	chmod +x move-in
-        ./move-in
-        
-        # Optional:
+  ./move-in
 
-        rm move-in
-        source $HOME/.bashrc
-        sudo $HOME/local/utiliscripts/install-components
+  # Optional:
+
+  rm move-in
+  source $HOME/.bashrc
+  sudo $HOME/local/utiliscripts/install-components
 
 The move-in script checks out all of the utiliscripts and sets
-up the $PATH and a number of other environment settings.  
+up the $PATH and a number of other environment settings.
 
-The install-components uses `apt-get install` to install a whole 
-bunch of packages.  Run with --help to see options for installing 
+The install-components uses `apt-get install` to install a whole
+bunch of packages.  Run with --help to see options for installing
 less than everything (the default is 'everything').
