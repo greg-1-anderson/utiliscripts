@@ -11,7 +11,7 @@ behave uniformly.  To whit:
 
 	# First:
 
-	sudo apt-get install git php wmctrl dconf
+	sudo apt-get install git php5 wmctrl dconf
   wget https://raw.github.com/greg-1-anderson/utiliscripts/master/move-in
 	chmod +x move-in
   ./move-in
