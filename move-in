@@ -222,7 +222,7 @@ if [ -n "$DISPLAY" ] ; then
 
   	sublime_url=`curl http://www.sublimetext.com/2 2>/dev/null | grep 'a href.*Linux 32' | sed -e 's/.*href="\([^"]*\).*/\1/'`
   	if [ -z "$sublime_url" ] ; then
-  		sublime_url="http://c758482.r82.cf2.rackcdn.com/Sublime Text 2 Build 2181.tar.bz2"
+  		sublime_url="http://c758482.r82.cf2.rackcdn.com/Sublime Text 2.0.tar.bz2"
   	fi
   	sublime_file="${sublime_url##*/}"
 
@@ -280,6 +280,13 @@ fi
 # If we have not set the location of the UTILISCRIPTS yet,
 # write it to $HOME/.bashrc.  Only do this once, in case
 # the user might care to change it.
+#
+# TODO: To make this work right with non-login shells (e.g.
+# `ssh user@host 'command'` or `drush sql-sync @remote @local`),
+# then we need to add the path to the beginning of .bashrc, not the
+# end, to avoid:
+#   >> # If not running interactively, don't do anything
+#   >> [ -z "$PS1" ] && return
 chkbashrc=`grep '\(UTILISCRIPTS\|Bash Customizations\)' $HOME/.bashrc`
 if [ "X$chkbashrc" = "X" ] ; then
 cat <<- __END__ >> $HOME/.bashrc
@@ -519,6 +526,9 @@ if [ -n "$g" ] && [ -n "$DISPLAY" ] ; then
   dconf write /org/gnome/gnome-panel/layout/objects/workspace-switcher/instance-config/num-rows 2
   dconf write /org/gnome/gnome-panel/layout/objects/workspace-switcher/instance-config/display-workspace-names true
   dconf write /org/gnome/gnome-panel/layout/objects/workspace-switcher/instance-config/display-all-workspaces true
+
+  # Some panel changes will require:
+  # killall -HUP gnome-panel
 
   # For panel settings, see:
   # dconf dump /org/gnome/gnome-panel/layout/
