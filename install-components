@@ -56,7 +56,9 @@ packages[kde-utils]="konqueror kcalc"
 #
 # Graphic manipulation packages
 #
-packages["graphics"]="gimp inkscape imagemagick graphvis"
+# graphvis
+#
+packages["graphics"]="gimp inkscape imagemagick"
 
 #
 # Sound manipulation packages
@@ -80,7 +82,7 @@ packages["security"]="uif bastille"
 
 packages["network"]="ssh rsh-client nmap davfs2 wireshark curl"
 
-packages["system-gui"]="perl-tk gnome-session-fallback k3b"
+packages["system-gui"]="perl-tk gnome-session-fallback k3b wmctrl"
 
 packages["repository"]="subversion cvs git git-core mercurial"
 
