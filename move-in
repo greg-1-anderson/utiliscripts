@@ -357,7 +357,7 @@ cat << "__END__" > $HOME/.config/sublime-text-2/Packages/User/Preferences.sublim
   "fallback_encoding": "UTF-8",
   "default_line_ending": "unix",
   "shift_tab_unindent": true,
-  "show_full_path": true,
+  "show_full_path": false,
   "highlight_modified_tabs": true,
   "hot_exit": false,
   "remember_open_files": false,
