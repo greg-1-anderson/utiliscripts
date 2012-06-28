@@ -218,7 +218,7 @@ if [ -n "$DISPLAY" ] ; then
   echo "# Check sublime..."
 
   s=`which sublime_text`
-  if [ -z "$s" ] && [ ! -d "$HOME/local/sublime-text-2"]; then
+  if [ -z "$s" ] && [ ! -d "$HOME/local/sublime-text-2" ]; then
 
   	sublime_url=`curl http://www.sublimetext.com/2 2>/dev/null | grep 'a href.*Linux 32' | sed -e 's/.*href="\([^"]*\).*/\1/'`
   	if [ -z "$sublime_url" ] ; then
@@ -339,17 +339,22 @@ mkdir -p $HOME/.config/sublime-text-2/Packages/User
 # Also: http://www.sublimetext.com/forum/viewtopic.php?f=3&t=2704
 cat << "__END__" > $HOME/.config/sublime-text-2/Packages/User/Preferences.sublime-settings
 {
-	"color_scheme": "Packages/Color Scheme - Default/Mac Classic.tmTheme",
-	"rulers": [80],
-	"tab_size": 2,
-	"translate_tabs_to_spaces": true,
-	"use_tab_stops": true,
-	"trim_automatic_white_space": true,
-	"trim_trailing_white_space_on_save": true,
-	"ensure_newline_at_eof_on_save": true,
-	"fallback_encoding": "UTF-8",
-	"default_line_ending": "unix",
-	"shift_tab_unindent": true,
+  "color_scheme": "Packages/Color Scheme - Default/Mac Classic.tmTheme",
+  "rulers": [80],
+  "tab_size": 2,
+  "translate_tabs_to_spaces": true,
+  "use_tab_stops": true,
+  "trim_automatic_white_space": true,
+  "trim_trailing_white_space_on_save": true,
+  "ensure_newline_at_eof_on_save": true,
+  "fallback_encoding": "UTF-8",
+  "default_line_ending": "unix",
+  "shift_tab_unindent": true,
+  "show_full_path": true,
+  "highlight_modified_tabs": true,
+  "hot_exit": false,
+  "remember_open_files": false,
+  "close_windows_when_empty": true,
   // Characters that are considered to separate words
   "word_separators": "./\\()\"'-:,.;<>~!@#%^&*|+=[]{}`~?"
 }
