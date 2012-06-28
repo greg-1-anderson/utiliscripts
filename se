@@ -1,4 +1,6 @@
 #!/bin/bash
+window_cache=$HOME/.se_window_cache
+existing_wids=
 
 # See http://superuser.com/questions/183680/gnome-ubuntu-how-to-bring-a-program-window-to-the-front-using-a-command-line
 for f in "$@" ; do
@@ -6,14 +8,69 @@ for f in "$@" ; do
   if [ -d "$f" ] ; then
     sublime_text -n "$f" &
   else
-    # Test to see if the file is already open in Sublime; if it is, then
-    # bring the focused window frontmost instead of opening a new one.
+    # Break up the full path to the file, $f, into directory name
+    # and base name components, $d and $b, respectively.
     d=$(cd "$(dirname "$f")" 2>/dev/null && pwd | sed -e "s|^$HOME|~|")
     b=$(basename -- "$f")
-    if [ `wmctrl -l | grep -c "$d/$b"` != 0 ] ; then
+    # Test to see if there is a Sublime Text window already open for
+    # this file.  This test will only succeed if the sublime preference
+    # "show_full_path" is set to 'true'.  If we find an open window,
+    # then bring it to the front instead of launching sublime.
+    if [ `wmctrl -l | grep -c "$d/$b[ •-]*Sublime Text"` != 0 ] ; then
       wmctrl -a "$d/$b" &
-    else
-      sublime_text -n "$f" &
+      exit 0
+    elif [ -f $window_cache ] ; then
+      # Check and see if the file that we are opening exists inside
+      # the window cache.  If it does, and wmctrl says that the window
+      # is still open, then raise the existing window to the top instead
+      # of launching sublime text.
+      cached_wid=`grep "^[0-9a-fx]\+ $d/$b\$" $window_cache | cut -s -f 1 -d ' '`
+      if [ -n "$cached_wid" ] && [ `wmctrl -l | grep -c "^$cached_wid"` != 0 ] ; then
+        wmctrl -i -a "$cached_wid"
+        exit 0
+      fi
+      # Clean up window cache
+      if [ `wmctrl -l | grep -c ' - Sublime Text'` == 0 ] ; then
+        # If there are no Sublime windows open, remove all entries from the window cache
+        truncate -s 0 $window_cache
+      else
+        # If there are Sublime windows open, remove any line that ends with " $d/$b"
+        sed -i -e "/ ${d//\//\\/}\/$b\$/d" $window_cache
+      fi
     fi
+    # Find any open Sublime windows where the filename is $b.  We know
+    # that these are -not- the $b we are looking for (otherwise we would
+    # have found an entry for them in the window cache), so we will remove
+    # these from the list of open Sublime files after we launch Sublime Text,
+    # so that we will know which of the windows named $b is the one that just
+    # opened.
+    existing_wids=`wmctrl -l | grep " $b[ •-]*Sublime Text" | cut -s -f 1 -d ' '`
+
+    # Open the requested file
+    sublime_text -n "$f" &
+
+    # Find the window id for the newly-opened window and write it to the
+    # window cache.  We will only find a window if the sublime preference
+    # "show_full_path" is set to 'false'.
+    (
+      for sleep in 0 1 1 2 3 5 8 ; do
+        # Give Sublime a second to open the requested window
+        sleep $sleep
+        # Find all open windows named $b
+        wid=`wmctrl -l | grep " $b[ •-]*Sublime Text" | cut -s -f 1 -d ' '`
+        # Remove the $b we're not looking for
+        for existing in $existing_wids ; do
+          wid=`echo $wid | sed -e "s/$existing//"`
+        done
+        # Get rid of any leftover whitespace in $wid
+        wid=`echo $wid | sed -e "s/ //"`
+        # If we found a window id, write it to the Window cache associated
+        # with the path to our file.
+        if [ -n "$wid" ] ; then
+          echo "$wid $d/$b" >> $window_cache
+          exit 0
+        fi
+      done
+    ) &
   fi
 done
