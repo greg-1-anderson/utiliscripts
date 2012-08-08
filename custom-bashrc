@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Require THREE ^D characters in a row to exit
+export IGNOREEOF=2
+
 #
 # Some aliases and functions that Greg likes:
 #
