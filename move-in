@@ -269,8 +269,8 @@ then
         	fi
         fi
         ln -s -f $HOME/work/config/drushrc.php $HOME/.drush
-        ln -s -f $HOME/work/config/drushrc5.php $HOME/.drush
-        ln -s -f $HOME/work/config/drushrc5.php $HOME/.drush/drushrc6.php
+        ln -s -f $HOME/work/config/drush5rc.php $HOME/.drush
+        ln -s -f $HOME/work/config/drush5rc.php $HOME/.drush/drush6rc.php
 fi
 
 #
