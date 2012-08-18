@@ -52,17 +52,17 @@ needed_mods="rewrite ssl"
 # List of simple unary flags (set var with --flag, clear it with --no-flag)
 #
 flag_list="
-	allow-override 
-	auth-required 
-	auth-cram-md5 
+	allow-override
+	auth-required
+	auth-cram-md5
 	auth-dbm
 	custom-auth
-	separate-error-log 
-	separate-access-log 
-	separate-cgi-bin 
+	separate-error-log
+	separate-access-log
+	separate-cgi-bin
 	use-dns
-	set-hosts 
-	clear-hosts 
+	set-hosts
+	clear-hosts
 	network-available
 "
 
@@ -98,7 +98,7 @@ server_location_country=US
 server_location_state="California"
 server_location_city="San Francisco"
 organization="Self-signed"
-			
+
 #
 # Parse options
 #
@@ -126,7 +126,7 @@ while [ $# -gt 0 ] ; do
 	done
 
 	if ! $option_handled ; then case "$option" in
-		
+
 		#
 		# Default options for a drupal site
 		#
@@ -136,7 +136,7 @@ while [ $# -gt 0 ] ; do
 			configure_http=true
 			configure_https=true
 			;;
-		
+
 		#
 		# Specify the site
 		#
@@ -144,7 +144,7 @@ while [ $# -gt 0 ] ; do
 			site_fqdn=$1
 			shift
 			;;
-		
+
 		#
 		# To have multiple sites with the same
 		# configuration, call this script multiple
@@ -159,7 +159,7 @@ while [ $# -gt 0 ] ; do
 			site_alias=$1
 			shift
 			;;
-		
+
 		#
 		# Use --prefix "zzz-" to make a site load later, or
 		# --prefix "001-" to make it just after default, or
@@ -169,7 +169,7 @@ while [ $# -gt 0 ] ; do
 			prefix=$1
 			shift
 			;;
-		
+
 		#
 		# Use --proxy "site.com" to make this site proxy
 		# to the specified target site.
@@ -179,7 +179,7 @@ while [ $# -gt 0 ] ; do
 			proxy_target=$1
 			shift
 			;;
-			
+
 		#
 		# Specify --static-ip if this site has
 		# a single static IP reserved solely for
@@ -196,7 +196,7 @@ while [ $# -gt 0 ] ; do
 		--static-ip )
 			static_ip=$1
 			;;
-		
+
 		#
 		# Specify the webmaster's email address
 		#
@@ -204,7 +204,7 @@ while [ $# -gt 0 ] ; do
 			admin_email=$1
 			shift
 			;;
-		
+
 		#
 		# Specify the full path to the server root
 		#
@@ -212,7 +212,7 @@ while [ $# -gt 0 ] ; do
 			server_root=$1
 			shift
 			;;
-		
+
 		#
 		# Specify the full path to the document root
 		#
@@ -220,7 +220,7 @@ while [ $# -gt 0 ] ; do
 			documentroot=$1
 			shift
 			;;
-		
+
 		#
 		# If you know you need certain modules enabled,
 		# you can pass --needed-mods on the command line.
@@ -231,28 +231,28 @@ while [ $# -gt 0 ] ; do
 			needed_mods="$needed_mods $1"
 			shift
 			;;
-			
-		
+
+
 		#
 		# Documentroot base is the directory
-		# where the document roots for the 
+		# where the document roots for the
 		# various vhosts are stored
 		#
 		--documentroot-base )
 			documentroot_base=$1
 			shift
 			;;
-			
+
 		--http-port )
 			http_port=$1
 			shift
 			;;
-		
+
 		--https-port )
 			https_port=$1
 			shift
 			;;
-		
+
 		#
 		# Specify where the conf file will be written
 		#
@@ -261,7 +261,7 @@ while [ $# -gt 0 ] ; do
 			vhost_conf_dir=$1
 			shift
 			;;
-		
+
 		#
 		# Specify the full path to the vhost conf file
 		#
@@ -269,12 +269,12 @@ while [ $# -gt 0 ] ; do
 			vhost_conf=$1
 			shift
 			;;
-			
+
 		--log-dir )
 			log_dir=$1
 			shift
 			;;
-		
+
 		#
 		# There are four SSL modes:
 		#
@@ -287,35 +287,35 @@ while [ $# -gt 0 ] ; do
 			configure_http=true
 			configure_https=false
 			;;
-			
+
 		--ssl|--ssl-shared )
 			configure_http=true
 			configure_https=true
 			;;
-		
+
 		--ssl-secure )
 			https_documentroot_postfix='-secure'
 			cgi_bin_ssl_prefix='secure-'
 			configure_http=false
 			configure_https=true
 			;;
-		
+
 		--ssl-only )
 			configure_http=false
 			configure_https=true
 			;;
-		
+
 		--certificate-life )
 			certificate_life=$1
 			shift
 			;;
-		
+
 		--auth-file )
 			auth_required=true
 			auth_file=$1
 			shift
 			;;
-		
+
 		#
 		# Specifying users and passwords on the command line
 		# is not exactly "best practices", but in low-security
@@ -328,13 +328,13 @@ while [ $# -gt 0 ] ; do
 			auth_users=$1
 			shift
 			;;
-		
+
 		--auth-message )
 			auth_required=true
 			auth_message=$1
 			shift
 			;;
-		
+
 		#
 		# Path to file that contains additional
 		# configuration directives that go inside
@@ -344,7 +344,11 @@ while [ $# -gt 0 ] ; do
 			additional_configuration=$1
 			shift
 			;;
-					
+
+		--real )
+		  use_dns=true
+		  ;;
+
 		- )
 			output_to_stdout=true
 			use_dns=true
@@ -357,7 +361,7 @@ while [ $# -gt 0 ] ; do
 			echo "Unknown flag $option"
 			exit 1
 			;;
-		
+
 		* )
 			site_fqdn=$option
 			;;
@@ -476,7 +480,7 @@ https_documentroot=$documentroot$https_documentroot_postfix
 
 #
 # Create a sed script that will create replacement
-# patterns for each of the specified variable names 
+# patterns for each of the specified variable names
 # passed to this function.
 #
 # For every variable name in the provided list, we will generate
@@ -656,7 +660,7 @@ fi
 createReplacementScript $sed_script "
 	site_fqdn
 	site_alias
-	admin_email 
+	admin_email
 	http_ip
 	https_ip
 	http_port
@@ -709,7 +713,7 @@ cat << "__END__" >> $sed_script
 /AuthType/d
 /AuthName/d
 /AuthUserFile/d
-/Require valid-user/d	
+/Require valid-user/d
 __END__
 fi
 
@@ -745,7 +749,7 @@ cat << "__END__" | sed -f $sed_script > $vhost_conf
 	UseCanonicalName Off
 	ServerSignature Off
 	AccessFileName .htaccess
-	
+
 	DocumentRoot __HTTP_DOCUMENTROOT__
 	<Directory />
 		Options FollowSymLinks
@@ -761,7 +765,7 @@ cat << "__END__" | sed -f $sed_script > $vhost_conf
 		AuthName "__AUTH_MESSAGE__"
 		AuthUserFile __AUTH_FILE__
 		Require valid-user
-		
+
 	</Directory>
 
 	ScriptAlias /cgi-bin/ __CGI_BIN_DIR__/__CGI_BIN_PREFIX__cgi-bin/
@@ -783,7 +787,7 @@ cat << "__END__" | sed -f $sed_script > $vhost_conf
 	# ProxyPass configuration:  (deleted for non-proxy configurations)
 	ProxyPass / http://__PROXY_TARGET__:__HTTP_PORT__/
 	ProxyPassReverse / http://__PROXY_TARGET__:__HTTP_PORT__/
-	ProxyPreserveHost Off 
+	ProxyPreserveHost Off
 
 	# Additional configuration directives
 
@@ -796,7 +800,7 @@ else
 #
 # Template for HTTP redirecting configuration file.
 #
-# This template is used to send requests for 
+# This template is used to send requests for
 # "http://www.site-domain.com" to "https://site-domain.com"
 # for websites that are configures --ssl-only.
 #
@@ -814,7 +818,7 @@ cat << "__END__" | sed -f $sed_script > $vhost_conf
 	RewriteEngine on
 	RewriteRule ^$ https://__SITE_FQDN__
 	RewriteRule (.*) https://__SITE_FQDN__/$1
-	
+
 	DocumentRoot __HTTP_DOCUMENTROOT__
 	<Directory />
 		Options None
@@ -848,7 +852,7 @@ if [ "x$site_alias" != "x$site_fqdn" ] ; then
 #
 # Template for HTTPS redirecting configuration file.
 #
-# This template is used to send requests for 
+# This template is used to send requests for
 # "https://www.site-domain.com" to "https://site-domain.com".
 # We do this because we can only have one certificate per IP address,
 # and we write "site-domain.com" into the certificate.  If we served
@@ -870,7 +874,7 @@ cat << "__END__" | sed -f $sed_script >> $vhost_conf
 	RewriteEngine on
 	RewriteRule ^$ https://__SITE_FQDN__
 	RewriteRule (.*) https://__SITE_FQDN__/$1
-	
+
 	DocumentRoot __HTTP_DOCUMENTROOT__
 	<Directory />
 		Options None
@@ -914,7 +918,7 @@ cat << "__END__" | sed -f $sed_script >> $vhost_conf
 	UseCanonicalName Off
 	ServerSignature Off
 	AccessFileName .htaccess
-	
+
 	DocumentRoot __HTTPS_DOCUMENTROOT__
 	<Directory />
 		Options FollowSymLinks
@@ -925,11 +929,11 @@ cat << "__END__" | sed -f $sed_script >> $vhost_conf
 		AllowOverride All
 		Order allow,deny
 		allow from all
-		
+
 		AuthType Basic
 		AuthName "__AUTH_MESSAGE__"
 		AuthUserFile __AUTH_FILE__
-		Require valid-user		
+		Require valid-user
 	</Directory>
 
 	ScriptAlias /cgi-bin/ __CGI_BIN_DIR__/__CGI_BIN_PREFIX____CGI_BIN_SSL_PREFIX__cgi-bin/
@@ -1076,7 +1080,7 @@ cat << "__END__" | sed -f $sed_script >> $vhost_conf
 	SSLProxyEngine on
 	ProxyPass / https://__PROXY_TARGET__:__HTTPS_PORT__/
 	ProxyPassReverse / https://__PROXY_TARGET__:__HTTPS_PORT__/
-	ProxyPreserveHost Off 
+	ProxyPreserveHost Off
 
 	# Additional configuration directives
 
@@ -1108,7 +1112,7 @@ else
 	mkdir -p $https_documentroot"/"
 	mkdir -p $cgi_bin_dir/$cgi_bin_prefix"cgi-bin""/"
 	mkdir -p $cgi_bin_dir/$cgi_bin_prefix$cgi_bin_ssl_prefix"cgi-bin""/"
-	
+
 	#
 	# If $vhost_conf is inside a folder called
 	# "sites-available", then call a2ensite to
@@ -1118,11 +1122,11 @@ else
 		vhost_conf_file=`echo $vhost_conf | sed -e 's|.*/||'`
 		a2ensite $vhost_conf_file
 	fi
-	
+
 	#
 	# If the 'clear hosts' flag is set, then get rid of any
 	# entry to this site in /etc/hosts.  If 'set hosts' is set,
-	# then write "127.0.0.1 $site_alias" into /etc/hosts 
+	# then write "127.0.0.1 $site_alias" into /etc/hosts
 	# so that we can test the site without setting up DNS
 	#
 	if $clear_hosts ; then
@@ -1134,7 +1138,7 @@ else
                 	echo "127.0.0.1 $site_alias" >> /etc/hosts
                 fi
 	fi
-	
+
 	#
 	# If apache has mods-availalbe and mods-enabled folders,
 	# then make sure that the mods we need are enabled
@@ -1179,7 +1183,7 @@ else
 			fi
 			certificate_serial=`date "+%Y%m%d"`"$z$s"
 			echo "certificate serial is $certificate_serial"
-                        
+
 			#
 			# Create the Certificate Authority [CA] key
 			#
@@ -1192,10 +1196,10 @@ else
 				$site_fqdn
 				ca@$site_fqdn
 			__END__
-			
+
                         echo "ca params ($certificate_dir/${site_fqdn}-ca-params.txt) are:"
                         cat $certificate_dir/${site_fqdn}-ca-params.txt
-                        
+
                         openssl genrsa $certificate_password_option -out $certificate_dir/${site_fqdn}-ca.key 4096
 			openssl req -new -x509 -days $certificate_life -key $certificate_dir/${site_fqdn}-ca.key -out $certificate_dir/${site_fqdn}-ca.crt < $certificate_dir/${site_fqdn}-ca-params.txt
 
@@ -1214,37 +1218,37 @@ else
 				$organization
 			__END__
 
-			
+
                         echo "csr params ($certificate_dir/${site_fqdn}-csr-params.txt) are:"
                         cat $certificate_dir/${site_fqdn}-csr-params.txt
 
 			openssl genrsa $certificate_password_option -out $server_private_key 4096
 			openssl req -new -key $server_private_key -out $signing_request < $certificate_dir/${site_fqdn}-csr-params.txt
 			openssl x509 -req -days $certificate_life -in $signing_request -CA $certificate_dir/${site_fqdn}-ca.crt -CAkey $certificate_dir/${site_fqdn}-ca.key -set_serial $certificate_serial -out $server_certificate
-		fi	
+		fi
 
 	fi
-	
+
 	#
 	# Make an http password file if necessary
 	#
 	if [ "x$auth_file" != "x" ] ; then
-	
+
 		if [ ! -f $auth_file ] ; then
-			
+
 			if [ "x$auth_backup" != "x" ] ; then
 				cp $auth_backup $auth_file
 			else
 				touch $auth_file
 			fi
-	
+
 			chown root:www-data $auth_file
-			chmod 640 $auth_file	
-			
+			chmod 640 $auth_file
+
 			if $auth_cram_md5 && [ -f /etc/cram-md5.pwd ] ; then
 				auth_users=$auth_users" "`sed -e 's/\t/:/' /etc/cram-md5.pwd`
 			fi
-			
+
 			if [ "x$auth_users" != "x" ] ; then
 				for user_pw in $auth_users ; do
 					u=`echo $user_pw | sed -e 's|:.*||'`
@@ -1257,7 +1261,7 @@ else
 					fi
 				done
 			fi
-			
+
 			if [ ! -s $auth_file ] ; then
 				echo
 				echo "Empty authentication file for $site_fqdn created."
@@ -1269,7 +1273,7 @@ else
 				echo
 				echo "    htpasswd -b $auth_file USER PW"
 				echo
-			fi			
+			fi
 		fi
 	fi
 
