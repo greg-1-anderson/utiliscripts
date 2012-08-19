@@ -3,7 +3,7 @@
 #
 # internet-sharing
 #
-# This script sets up NAT and masquerading on a gateway server to 
+# This script sets up NAT and masquerading on a gateway server to
 # share internet resources on a local network.
 #
 # Usage:
@@ -32,7 +32,7 @@ external_dns=`grep "^nameserver" /etc/resolv.conf | head -n 1 | cut -f 2 -d ' '`
 NETWORK_INTERFACES=/etc/network/interfaces
 SYS_CONTROL=/etc/sysctl.conf
 RC_LOCAL=/etc/rc.local
-DHCPD_CONF=/etc/dhcp3/dhcpd.conf
+DHCPD_CONF=/etc/dhcp/dhcpd.conf
 
 #
 # Parse command line args
@@ -48,21 +48,21 @@ while [ $# -gt 0 ] ; do
 			internal_network=$1
 			shift
 			;;
-		
+
 		--fqdn )
 			internal_fqdn=$1
 			shift
 			;;
-		
+
 		--dns )
 			external_dns=$1
 			shift
 			;;
-		
+
 		--internal-dns )
 			external_dns=
 			;;
-	
+
 	esac
 done
 
@@ -121,7 +121,7 @@ esac
 # If the network ends in ".0", then make the internal ip end in ".1"
 #
 if [ "x`echo $internal_ip | cut -f 4 -d '.'`" = "x0" ] ; then
-	internal_ip=`echo $internal_ip | cut -f '1-3' -d '.'`".1"	
+	internal_ip=`echo $internal_ip | cut -f '1-3' -d '.'`".1"
 fi
 
 #
@@ -147,7 +147,7 @@ gateway=`route -n | grep '^0\.0\.0\.0' | sed -e 's/  */ /g' |  cut -f 2 -d ' '`
 
 #
 # If we don't have a specified external dns server,
-# then tell our dhcp clients to use this server for dns. 
+# then tell our dhcp clients to use this server for dns.
 #
 if [ "x$external_dns" = "x" ] ; then
 	external_dns=$internal_ip
@@ -206,7 +206,7 @@ __END__
 #
 if [ "x$gateway_if" != "x" ] ; then
 	cat <<- __END__ >> $NETWORK_INTERFACES_NEW
-		
+
 		auto $gateway_if
 		iface $gateway_if inet dhcp
 	__END__
@@ -217,7 +217,7 @@ fi
 #
 if [ "x$internal_if" != "x" ] ; then
 	cat <<- __END__  >> $NETWORK_INTERFACES_NEW
-		
+
 		auto $internal_if
 		iface $internal_if inet static
 		address $internal_ip
@@ -290,12 +290,12 @@ echo
 read -p "Apply patch file above? [y/N]? " input
 
 if [ "x$input" = "xy" ] ; then
-	
+
 	echo
 	echo "Patching..."
-	
+
 	(cd / && patch -Np0 < $PATCH_FILE)
-	
+
 	#
 	# When we're all done:  if the hostname hasn't been set in /etc/hostname,
 	# then do that now.
@@ -307,9 +307,9 @@ if [ "x$input" = "xy" ] ; then
 
 	sysctl -p
 	/etc/init.d/networking restart
-	/etc/init.d/dhcp3-server restart
+	#/etc/init.d/dhcp3-server restart
 	sysv-rc-conf dhcpd3 on
-	
+
 	source $RC_LOCAL
 
 else
