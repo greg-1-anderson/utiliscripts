@@ -3,6 +3,10 @@
 # Require THREE ^D characters in a row to exit
 export IGNOREEOF=2
 
+# Locale settings
+export LANGUAGE=en_US.UTF-8
+export LANG=en_US.UTF-8
+
 #
 # Some aliases and functions that Greg likes:
 #
