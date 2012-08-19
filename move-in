@@ -255,7 +255,7 @@ fi
 # Put in uniform drushrc.php
 
 mkdir -p $HOME/.drush
-if [ -f $HOME/work/config/drushrc.php ]
+if [ -f $HOME/local/config/drushrc.php ]
 then
 	if [ -f  $HOME/.drush/drushrc.php ]
         then
@@ -268,9 +268,9 @@ then
                 	rm $HOME/.drush/drushrc.php
         	fi
         fi
-        ln -s -f $HOME/work/config/drushrc.php $HOME/.drush
-        ln -s -f $HOME/work/config/drush5rc.php $HOME/.drush
-        ln -s -f $HOME/work/config/drush5rc.php $HOME/.drush/drush6rc.php
+        ln -s -f $HOME/local/config/drushrc.php $HOME/.drush
+        ln -s -f $HOME/local/config/drush5rc.php $HOME/.drush
+        ln -s -f $HOME/local/config/drush5rc.php $HOME/.drush/drush6rc.php
 fi
 
 #
