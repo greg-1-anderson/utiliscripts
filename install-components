@@ -97,7 +97,13 @@ groups["programming"]="compile-build dev-docs webservices debug ide repository c
 
 packages["compile-build"]="g++ autoconf automake1.9 libtool libc6 flex bison libncurses5-dev"
 
-packages["dev-docs"]="manpages-dev php-doc openjdk-7-doc"
+# php-doc not available on lucid.
+# http://tronprog.blogspot.com/2010/05/package-php-doc-missing-in-ubuntu-lucid.html
+if [ "$ubuntuRevision" != "lucid" ] ; then
+  packages["dev-docs"]="manpages-dev php-doc"
+else
+  packages["dev-docs"]="manpages-dev"
+fi
 
 packages["kernel"]="build-essential linux-headers-generic"
 # linux-kernel-devel
@@ -258,7 +264,7 @@ done
 # If there is no $DISPLAY, then skip packages that depend on it.
 if [ -z "$DISPLAY" ] ; then
   $verbose && echo "Automatically de-select gui packages on headless system (--no-gui implied)."
-  no_list="$no_list gui"
+  no_list="$no_list gui nvidia"
 fi
 
 #
