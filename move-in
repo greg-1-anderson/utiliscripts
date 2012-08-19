@@ -185,7 +185,7 @@ echo "# Check drush extensions..."
 
 mkdir -p $HOME/local/drupal/drush_extensions
 
-for drush_extension in drush_sup drush_extras dbtng_migrator registry_rebuild sublime_completion ; do
+for drush_extension in drush_sup drush_iq drush_extras dbtng_migrator registry_rebuild sublime_completion ; do
 
 	if [ ! -d "$HOME/local/drupal/drush_extensions/$drush_extension" ] ; then
 		(
@@ -281,22 +281,31 @@ fi
 # write it to $HOME/.bashrc.  Only do this once, in case
 # the user might care to change it.
 #
-# TODO: To make this work right with non-login shells (e.g.
+# To make this work right with non-login shells (e.g.
 # `ssh user@host 'command'` or `drush sql-sync @remote @local`),
 # then we need to add the path to the beginning of .bashrc, not the
-# end, to avoid:
+# end, so that we run before this part:
 #   >> # If not running interactively, don't do anything
 #   >> [ -z "$PS1" ] && return
 chkbashrc=`grep '\(UTILISCRIPTS\|Bash Customizations\)' $HOME/.bashrc`
 if [ "X$chkbashrc" = "X" ] ; then
+sed -e '/^ *$/,$ d' $HOME/.bashrc > $HOME/.bashrc-head
+sed -e '1,/^ *$/ d' $HOME/.bashrc > $HOME/.bashrc-body
+cp $HOME/.bashrc-head $HOME/.bashrc
 cat <<- __END__ >> $HOME/.bashrc
+
+# Add Utiliscripts to the path and export location environment variables
 export UTILISCRIPTS=$UTILISCRIPTS
 export SSH_KEY_ARCHIVE=$SSH_KEY_ARCHIVE
 if [ "x\`echo \$PATH | grep \$UTILISCRIPTS\`" == "x" ]
 then
 	export PATH=\$PATH:\$UTILISCRIPTS
 fi
+
 __END__
+cat $HOME/.bashrc-body >> $HOME/.bashrc
+rm $HOME/.bashrc-head
+rm $HOME/.bashrc-body
 fi
 
 # If we have not set the location of the drush yet,
@@ -304,12 +313,21 @@ fi
 # the user might care to change it.
 chkbashrc=`grep '\(drush\|Bash Customizations\)' $HOME/.bashrc`
 if [ "X$chkbashrc" = "X" ] ; then
+sed -e '/^ *$/,$ d' $HOME/.bashrc > $HOME/.bashrc-head
+sed -e '1,/^ *$/ d' $HOME/.bashrc > $HOME/.bashrc-body
+cp $HOME/.bashrc-head $HOME/.bashrc
 cat <<- __END__ >> $HOME/.bashrc
+
+# Add drush to the path
 if [ "x\`echo \$PATH | grep drush\`" == "x" ]
 then
 	export PATH=\$PATH:\$HOME/local/drupal/drush
 fi
+
 __END__
+cat $HOME/.bashrc-body >> $HOME/.bashrc
+rm $HOME/.bashrc-head
+rm $HOME/.bashrc-body
 fi
 
 # Rewrite the "Bash Customizations" section
@@ -493,7 +511,8 @@ git config --global url."ssh://git@git.drupal.org/sandbox/".insteadOf sandbox:
 
 # If we can find gconftool-2, AND we have a $DISPLAY, then set up some GUI prefs
 g=`which gconftool-2`
-if [ -n "$g" ] && [ -n "$DISPLAY" ] ; then
+d=`which dconf`
+if [ -n "$g" ] && [ -n "$d" ] && [ -n "$DISPLAY" ] ; then
   host=`uname -n`
   if [ -d $DESKTOP_BACKGROUND_DIR ] ; then
     #
