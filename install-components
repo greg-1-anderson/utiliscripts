@@ -17,7 +17,7 @@
 # just a couple of groups early in the process of configuring a new
 # machine.
 #
-ubuntuRevision=`grep '^#deb.*\[' /etc/apt/sources.list | sed -e 's/.*\][^ ]* *\([^ ]*\).*/\1/'`
+ubuntuRevision=`grep '^deb http://' /etc/apt/sources.list | head -n 1 | sed -e 's/^deb http:[^ ]* *\([^ ]*\).*/\1/'`
 
 host=`uname -n`
 
