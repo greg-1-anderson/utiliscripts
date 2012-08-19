@@ -80,9 +80,9 @@ packages["intl"]="i8kutils"
 
 packages["security"]="uif bastille"
 
-packages["network"]="ssh rsh-client nmap davfs2 wireshark curl"
+packages["network"]="ssh rsh-client nmap davfs2 curl"
 
-packages["system-gui"]="perl-tk gnome-session-fallback k3b wmctrl"
+packages["system-gui"]="perl-tk gnome-session-fallback k3b wmctrl wireshark"
 
 packages["repository"]="subversion cvs git-core mercurial"
 
