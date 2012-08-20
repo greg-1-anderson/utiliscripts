@@ -800,6 +800,39 @@ cat << "__END__" | sed -f $sed_script > $vhost_conf
 	# Additional configuration directives
 
 </VirtualHost>
+<VirtualHost __HTTP_IP__:__HTTP_PORT__>
+	ServerAdmin __ADMIN_EMAIL__
+	ServerName www.__SITE_ALIAS__
+
+	HostnameLookups Off
+	UseCanonicalName Off
+	ServerSignature Off
+
+	RewriteEngine on
+	RewriteRule ^$ http://__SITE_FQDN__
+	RewriteRule (.*) http://__SITE_FQDN__/$1
+
+	DocumentRoot __HTTP_DOCUMENTROOT__
+	<Directory />
+		Options None
+		AllowOverride None
+		deny from all
+	</Directory>
+	<Directory __HTTP_DOCUMENTROOT__>
+		Options None
+		AllowOverride None
+		Order allow,deny
+		deny from all
+	</Directory>
+
+	ErrorLog __LOG_DIR__/__ERR_PREFIX__error.log
+
+	# Possible values include: debug, info, notice, warn, error, crit,
+	# alert, emerg.
+	LogLevel warn
+
+	CustomLog __LOG_DIR__/__ACCESS_PREFIX__access.log combined
+</VirtualHost>
 __END__
 
 else
