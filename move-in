@@ -72,44 +72,44 @@ fi
 if [ ! -f "$HOME/.ssh/id_$keytype" ]
 then
 	if [ -f "$archive_key" ] && [ -f "${archive_key}.pub" ]
-        then
-        	echo "Restoring public / private key pair for $host"
-                cp -f "$archive_key" "$HOME/.ssh/id_${keytype}"
-                cp -f "${archive_key}.pub" "$HOME/.ssh/id_${keytype}.pub"
-        else
+  then
+    echo "Restoring public / private key pair for $host"
+      cp -f "$archive_key" "$HOME/.ssh/id_${keytype}"
+      cp -f "${archive_key}.pub" "$HOME/.ssh/id_${keytype}.pub"
+  else
 		echo "Generating a public / private key pair for this system; please protect it with a password."
 		ssh-keygen -t $keytype -f $HOME/.ssh/id_$keytype
-        fi
+  fi
 fi
 
 # If we have an archive of the public / private key pair for this machine, make sure it is accurate.
 # If the key has not been archived yet, then archive it.
 if [ -f "$archive_key" ] && [ -f "${archive_key}.pub" ]
 then
-        diff -q "$HOME/.ssh/id_${keytype}" "$archive_key"
-        if [ $? != 0 ]
-        then
-        	echo "WARNING: The archived key for $host is different than the current public / private key pair."
-                echo "Remove one of the following pairs, then run this script again to fix:"
-                echo "        rm \"$archive_key\" \"${archive_key}.pub\""
-                echo " - OR -"
-                echo "        rm \"$HOME/.ssh/id_$keytype\" \"$HOME/.ssh/id_${keytype}.pub\""
-        else
+  diff -q "$HOME/.ssh/id_${keytype}" "$archive_key"
+  if [ $? != 0 ]
+  then
+  	echo "WARNING: The archived key for $host is different than the current public / private key pair."
+    echo "Remove one of the following pairs, then run this script again to fix:"
+    echo "        rm \"$archive_key\" \"${archive_key}.pub\""
+    echo " - OR -"
+    echo "        rm \"$HOME/.ssh/id_$keytype\" \"$HOME/.ssh/id_${keytype}.pub\""
+  else
 		echo "Public and private key already archived as ${archive_key##*/}"
 	fi
 else
-        echo "Archiving public / private key pair for $host"
-        cp -f "$HOME/.ssh/id_${keytype}" "$archive_key"
-        cp -f "$HOME/.ssh/id_${keytype}.pub" "${archive_key}.pub"
+  echo "Archiving public / private key pair for $host"
+  cp -f "$HOME/.ssh/id_${keytype}" "$archive_key"
+  cp -f "$HOME/.ssh/id_${keytype}.pub" "${archive_key}.pub"
 
-        # Try to give the private key a new password, using empty for
-        # the current password.  If this works, then balk.
-        ssh-keygen -p -P "" -N "empty_passwords_are_bad" -f "$archive_key" > /dev/null 2>&1
-        if [ $? == 0 ]
-        then
-        	echo "WARNING: The password for id_${keytype} for $host is empty; private key REMOVED from archive."
-                rm -f "$archive_key"
-        fi
+  # Try to give the private key a new password, using empty for
+  # the current password.  If this works, then balk.
+  ssh-keygen -p -P "" -N "empty_passwords_are_bad" -f "$archive_key" > /dev/null 2>&1
+  if [ $? == 0 ]
+  then
+  	echo "WARNING: The password for id_${keytype} for $host is empty; private key REMOVED from archive."
+    rm -f "$archive_key"
+  fi
 fi
 
 if [ -f "$HOME/.ssh/id_$keytype.pub" ] ; then
@@ -129,22 +129,22 @@ echo "# Check utiliscripts..."
 
 if [ ! -d $UTILISCRIPTS ] ; then
 
-        (
-                cd $UTILISCRIPTS_DIR
-                # read+write for ga, read-only for everyone else
-                if [ "$USER" == "ga" ]
-                then
-                	git clone git@github.com:greg-1-anderson/utiliscripts.git
-                        if [ $? <> 0 ]
-                        then
-                        	echo "Could not clone a r/w copy of utiliscripts; cloning a r/o copy instead."
-                        fi
-                fi
+  (
+    cd $UTILISCRIPTS_DIR
+    # read+write for ga, read-only for everyone else
+    if [ "$USER" == "ga" ]
+    then
+    	git clone git@github.com:greg-1-anderson/utiliscripts.git
+      if [ $? <> 0 ]
+      then
+      	echo "Could not clone a r/w copy of utiliscripts; cloning a r/o copy instead."
+      fi
+    fi
 
-                if [ ! -d $UTILISCRIPTS ] ; then
-                	git clone git://github.com/greg-1-anderson/utiliscripts.git
-                fi
-        )
+    if [ ! -d $UTILISCRIPTS ] ; then
+    	git clone git://github.com/greg-1-anderson/utiliscripts.git
+    fi
+  )
 
 fi
 
@@ -161,23 +161,23 @@ echo "# Check drush..."
 d=`which drush`
 if [ -z "$d" ] && [ ! -d  $HOME/local/drupal/drush ] ; then
 
-        (
-                mkdir -p $HOME/local/drupal
-                cd $HOME/local/drupal
-                # read+write for ga, read-only for everyone else
-                if [ "$USER" == "ga" ]
-                then
-                        git clone --branch master greg1anderson@git.drupal.org:project/drush.git
-                        if [ ! -d drush ]
-                        then
-                        	echo "Could not clone a r/w copy of drush; cloning a r/o copy instead."
-                        fi
-                fi
+  (
+    mkdir -p $HOME/local/drupal
+    cd $HOME/local/drupal
+    # read+write for ga, read-only for everyone else
+    if [ "$USER" == "ga" ]
+    then
+      git clone --branch master greg1anderson@git.drupal.org:project/drush.git
+      if [ ! -d drush ]
+      then
+      	echo "Could not clone a r/w copy of drush; cloning a r/o copy instead."
+      fi
+    fi
 
-                if [ ! -d drush ] ; then
-			                  git clone --branch master http://git.drupal.org/project/drush.git
-                fi
-        )
+    if [ ! -d drush ] ; then
+      git clone --branch master http://git.drupal.org/project/drush.git
+    fi
+  )
 
 fi
 
@@ -258,19 +258,19 @@ mkdir -p $HOME/.drush
 if [ -f $HOME/local/config/drushrc.php ]
 then
 	if [ -f  $HOME/.drush/drushrc.php ]
-        then
-        	# Back up the old drushrc.php, unless it is a symbolic link, in which case we just get rid of it.
-        	drushrctype="`stat --printf='%F' $HOME/.drush/drushrc.php`"
+  then
+    # Back up the old drushrc.php, unless it is a symbolic link, in which case we just get rid of it.
+    drushrctype="`stat --printf='%F' $HOME/.drush/drushrc.php`"
 		if [ "$drushrctype" != "symbolic link" ]
-                then
-	        	mv $HOME/.drush/drushrc.php "$HOME/.drush/drushrc.php-"`date "+%s"`
-                else
-                	rm $HOME/.drush/drushrc.php
-        	fi
-        fi
-        ln -s -f $HOME/local/config/drushrc.php $HOME/.drush
-        ln -s -f $HOME/local/config/drush5rc.php $HOME/.drush
-        ln -s -f $HOME/local/config/drush5rc.php $HOME/.drush/drush6rc.php
+    then
+	    mv $HOME/.drush/drushrc.php "$HOME/.drush/drushrc.php-"`date "+%s"`
+    else
+      rm $HOME/.drush/drushrc.php
+    fi
+  fi
+  ln -s -f $HOME/local/config/drushrc.php $HOME/.drush
+  ln -s -f $HOME/local/config/drush5rc.php $HOME/.drush
+  ln -s -f $HOME/local/config/drush5rc.php $HOME/.drush/drush6rc.php
 fi
 
 #
