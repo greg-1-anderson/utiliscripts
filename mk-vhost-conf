@@ -131,7 +131,8 @@ while [ $# -gt 0 ] ; do
 		# Default options for a drupal site
 		#
 		--drupal )
-                	drupal=true
+      drupal=true
+      documentroot="_BASE_/_FQDN_/htdocs"
 			allow_override=true
 			configure_http=true
 			configure_https=true
@@ -401,8 +402,15 @@ fi
 # we will set it to the site fqdn
 #
 if [ "x$documentroot" = "x" ] ; then
-	documentroot=$documentroot_base/$site_fqdn
+	documentroot="_BASE_/_FQDN_"
 fi
+
+site_shortname="${site_fqdn/.*/}"
+
+#
+# Rewrite the documentroot replacing any substitutions
+#
+documentroot="`echo $documentroot | sed -e 's|_BASE_|$documentroot_base|g' -e 's|_FQDN_|$site_fqdn|g' -e 's|_SITE_|$site_shortname|g'`"
 
 # Drupal we often put the document root inside the project folder, so that
 # we can collect files not served by the webserver with the drupal root.
