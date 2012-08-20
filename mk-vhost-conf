@@ -410,7 +410,7 @@ site_shortname="${site_fqdn/.*/}"
 #
 # Rewrite the documentroot replacing any substitutions
 #
-documentroot="`echo $documentroot | sed -e 's|_BASE_|$documentroot_base|g' -e 's|_FQDN_|$site_fqdn|g' -e 's|_SITE_|$site_shortname|g'`"
+documentroot="`echo $documentroot | sed -e 's|_BASE_|'"$documentroot_base"'|g' -e 's|_FQDN_|'"$site_fqdn"'|g' -e 's|_SITE_|'"$site_shortname"'|g'`"
 
 # Drupal we often put the document root inside the project folder, so that
 # we can collect files not served by the webserver with the drupal root.
