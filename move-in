@@ -185,7 +185,7 @@ echo "# Check drush extensions..."
 
 mkdir -p $HOME/local/drupal/drush_extensions
 
-for drush_extension in drush_sup drush_iq drush_extras dbtng_migrator registry_rebuild sublime_completion ; do
+for drush_extension in drush_sup drush_iq drush_extras dbtng_migrator registry_rebuild sublime_completion grn-6.x module_builder drush_deploy cacheaudit ; do
 
 	if [ ! -d "$HOME/local/drupal/drush_extensions/$drush_extension" ] ; then
 		(
