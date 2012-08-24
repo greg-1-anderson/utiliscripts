@@ -25,6 +25,7 @@ alias rmrej='rm `find -name "*.rej"` `find -name "*.orig"`'
 alias rot13='tr a-zA-Z n-za-mN-ZA-M'
 alias findtabs="find -not -regex '..*/\..*' -exec grep -HP '\t' {} \;"
 alias histt='HISTTIMEFORMAT="[%m/%d@%H:%M:%S]  " history'
+alias pull-all='for x in * ; do if [ -d $x/.git ] ; then ( cd $x ; s=$(git status -s); if [ -z "$s" ] ; then echo "Update $x." ; git pull ; else echo "$x is modified; skipping update." ; fi ) fi done'
 
 function tolower() { tr A-Z a-z <<<$@; }
 
