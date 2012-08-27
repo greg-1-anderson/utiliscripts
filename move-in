@@ -290,9 +290,12 @@ if [ -z "$DRUSH" ] && [ ! -d  $HOME/local/drupal/drush ] ; then
     if [ ! -d drush ] ; then
       git clone --branch master http://git.drupal.org/project/drush.git
     fi
-    DRUSH=$HOME/local/drupal/drush/drush
   )
+fi
 
+if [ -z "$DRUSH" ] && [ -d  $HOME/local/drupal/drush ]
+then
+  DRUSH=$HOME/local/drupal/drush/drush
 fi
 
 echo "# Check drush extensions..."
