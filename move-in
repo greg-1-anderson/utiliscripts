@@ -13,6 +13,11 @@
 #
 # + Sets up bash settings and other system preferences.
 #
+# Note that it is safe to move-in to machines with no
+# GUI (graphic tool configuration skipped if X not available),
+# and it is safe to run move-in multiple times (e.g. to update
+# configuration when move-in script is modified).
+#
 # Good follow-up commands include:
 #
 #	install-components
@@ -256,8 +261,18 @@ echo "# Check drush..."
 
 # If we do not already have drush, then get the master branch with git
 
-d=`which drush`
-if [ -z "$d" ] && [ ! -d  $HOME/local/drupal/drush ] ; then
+DRUSH=
+if [ -n "$DRUPALORG_USERNAME" ] && [ "${MAINTAINER}" != "${MAINTAINER/drush/}" ]
+then
+  DRUSH="$(which drush)"
+  drush_version=$(drush status version --pipe)
+  if [ ${drush_version%.*} -lt 5 ]
+  then
+    DRUSH=
+  fi
+fi
+
+if [ -z "$DRUSH" ] && [ ! -d  $HOME/local/drupal/drush ] ; then
 
   (
     mkdir -p $HOME/local/drupal
@@ -275,6 +290,7 @@ if [ -z "$d" ] && [ ! -d  $HOME/local/drupal/drush ] ; then
     if [ ! -d drush ] ; then
       git clone --branch master http://git.drupal.org/project/drush.git
     fi
+    DRUSH=$HOME/local/drupal/drush/drush
   )
 
 fi
@@ -319,7 +335,7 @@ for drush_extension in \
         fi
       fi
 			if [ ! -d "$extension_destination" ] ; then
-        $HOME/local/drupal/drush/drush --yes pm-download $drush_extension --destination="$extension_destination"
+        $DRUSH --yes pm-download $drush_extension --destination="$extension_destination"
       fi
 		)
 	fi
