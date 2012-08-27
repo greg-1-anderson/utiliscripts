@@ -305,15 +305,21 @@ for drush_extension in \
       # read+write if "extension_shortname" is in $MAINTAINER, read-only otherwise
       if [ -n "$DRUPALORG_USERNAME" ] && [ "${MAINTAINER}" != "${MAINTAINER/$extension_shortname/}" ]
       then
-        # TODO: we need to figure out what which branch to select (e.g. --branch 7.x-2.x)
-        git clone --recursive ${DRUPALORG_USERNAME}@git.drupal.org:project/$extension_shortname.git
-        if [ ! -d $extension_shortname ]
+        # Figure out what which branch to select (e.g. --branch 7.x-2.x)
+        branch=$(drush pm-releases drush_iq | grep '\-dev' | head -n 1 | sed -e 's|^ *||' -e 's|-dev.*||')
+        if [ -z "$branch" ]
         then
-          echo "Could not clone a r/w copy of $extension_shortname; cloning a r/o copy instead."
+          echo "Could not determine default branch for $extension_shortname"
+        else
+          git clone --recursive --branch "$branch" ${DRUPALORG_USERNAME}@git.drupal.org:project/$extension_shortname.git
+          if [ ! -d $extension_shortname ]
+          then
+            echo "Could not clone a r/w copy of $extension_shortname; cloning a r/o copy instead."
+          fi
         fi
       fi
 			if [ ! -d "$extension_destination" ] ; then
-        $HOME/local/drupal/drush/drush pm-download $drush_extension --destination="$extension_destination"
+        $HOME/local/drupal/drush/drush --yes pm-download $drush_extension --destination="$extension_destination"
       fi
 		)
 	fi
