@@ -480,6 +480,8 @@ __END__
 #
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
+if [ -n "$g" ] && [ -n "$d" ] && [ -n "$DISPLAY" ] ; then
+
 echo "# Check preferences and configuration..."
 
 #
@@ -624,6 +626,7 @@ else
 	nedit.tabDistance: 8
 	__END__
 
+fi
 fi
 
 echo "# Check git settings..."
