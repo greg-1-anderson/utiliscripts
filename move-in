@@ -18,6 +18,7 @@
 #	install-components
 #	repair-ubuntu
 #
+SELF_DIRNAME="`dirname -- "$0"`"
 
 
 # Don't allow this as root unless you have logged in as root.
@@ -135,7 +136,13 @@ fi
 
 echo "# Check ssh key archive..."
 
+CREATE_KEY_ARCHIVE=false
+if [ ! -d "$(dirname $SSH_KEY_ARCHIVE)" ]
+then
+  CREATE_KEY_ARCHIVE=true
+fi
 mkdir -p $SSH_KEY_ARCHIVE
+
 # If we have an archive of the public / private key pair for this machine, make sure it is accurate.
 # If the key has not been archived yet, then archive it.
 if [ -f "$archive_key" ] && [ -f "${archive_key}.pub" ]
@@ -174,6 +181,17 @@ else
       )
     fi
   fi
+fi
+
+if $CREATE_KEY_ARCHIVE
+then
+  cp $SELF_DIRNAME/example.moveinrc $(dirname $SSH_KEY_ARCHIVE)/moveinrc
+  (
+    cd $(dirname $SSH_KEY_ARCHIVE)
+    git init
+    git add .
+    git commit -m "Automatically create an installdata project to store key pairs in"
+  )
 fi
 
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
