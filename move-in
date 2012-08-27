@@ -30,7 +30,11 @@ fi
 
 # Set up some default locations
 if [ -z "$UTILISCRIPTS" ] ; then
-	export UTILISCRIPTS=$HOME/local/utiliscripts
+  export UTILISCRIPTS=$HOME/local/utiliscripts
+fi
+
+if [ -z "$CONFIG" ] ; then
+  export CONFIG=$HOME/local/config
 fi
 
 if [ -z "$INSTALLATION_DATA" ] ; then
@@ -45,6 +49,14 @@ if [ -z "$DESKTOP_BACKGROUND_DIR" ] ; then
   DESKTOP_BACKGROUND_DIR=$INSTALLATION_DATA/DesktopBackgrounds
 fi
 
+# Location of per-user repositories
+if [ -z "$CONFIG_REPO" ] ; then
+  if [ "$USER" == "ga" ]
+  then
+    export CONFIG_REPO=git@vps.greenknowe.org:config.git
+  fi
+fi
+
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #
 #  I N S U R E   S S H   K E Y   P A I R S   A R E   S E T   U P
@@ -56,10 +68,12 @@ echo "# Check ssh keys..."
 host=`hostname -s`
 keytype=rsa
 UTILISCRIPTS_DIR=${UTILISCRIPTS%/*}
+CONFIG_DIR=${UTILISCRIPTS%/*}
 
 mkdir -p $HOME/.ssh
 mkdir -p $SSH_KEY_ARCHIVE
 mkdir -p $UTILISCRIPTS_DIR
+mkdir -p $CONFIG_DIR
 
 archive_key="$SSH_KEY_ARCHIVE/${host}_id_rsa"
 if [ -f "${archive_key%rsa}"dsa ]
@@ -134,16 +148,36 @@ if [ ! -d $UTILISCRIPTS ] ; then
     # read+write for ga, read-only for everyone else
     if [ "$USER" == "ga" ]
     then
-    	git clone git@github.com:greg-1-anderson/utiliscripts.git
+      git clone git@github.com:greg-1-anderson/utiliscripts.git
       if [ $? <> 0 ]
       then
-      	echo "Could not clone a r/w copy of utiliscripts; cloning a r/o copy instead."
+        echo "Could not clone a r/w copy of utiliscripts; cloning a r/o copy instead."
       fi
     fi
 
     if [ ! -d $UTILISCRIPTS ] ; then
-    	git clone git://github.com/greg-1-anderson/utiliscripts.git
+      git clone git://github.com/greg-1-anderson/utiliscripts.git
     fi
+  )
+
+fi
+
+
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#
+#  G E T   C O N F I G
+#
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+echo "# Check utiliscripts..."
+
+# If we do not already have the config project, then get it with git
+
+if [ ! -d $CONFIG ] && [ -n "$CONFIG_REPO" ] ; then
+
+  (
+    cd $CONFIG_DIR
+    git clone $CONFIG_REPO
   )
 
 fi
@@ -183,14 +217,28 @@ fi
 
 echo "# Check drush extensions..."
 
-mkdir -p $HOME/local/drupal/drush_extensions
+DRUSH_EXTENSIONS=$HOME/local/drupal/drush_extensions
+mkdir -p $DRUSH_EXTENSIONS
 
-for drush_extension in drush_sup drush_iq drush_extras dbtng_migrator registry_rebuild sublime_completion grn-6.x module_builder drush_deploy cacheaudit ; do
+for drush_extension in \
+    drush_sup \
+    drush_iq \
+    drush_extras \
+    dbtng_migrator \
+    registry_rebuild \
+    sublime_completion \
+    grn-6.x \
+    module_builder \
+    drush_deploy \
+    cacheaudit \
+  ; do
 
-	if [ ! -d "$HOME/local/drupal/drush_extensions/$drush_extension" ] ; then
+	extension_shortname=$(echo $drush_extension | sed -e 's|-[0-9]*\.x-*[0-9]*\.*[0-9x]*$||');
+  extension_destination=$DRUSH_EXTENSIONS/$extension_shortname
+  if [ ! -d "$extension_destination" ] ; then
 		(
-			cd $HOME/local/drupal/drush_extensions
-			$HOME/local/drupal/drush/drush pm-download $drush_extension --destination=$HOME/local/drupal/drush_extensions
+			cd $DRUSH_EXTENSIONS
+			$HOME/local/drupal/drush/drush pm-download $drush_extension --destination="$extension_destination"
 		)
 	fi
 
