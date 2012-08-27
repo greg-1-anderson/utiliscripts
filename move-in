@@ -25,29 +25,59 @@
 if [ "$USER" == "root" ] && [ $HOME != "/root" ]
 then
 	echo "Do not run this script via sudo root"
-        exit 1
+  exit 1
 fi
+
+# Default location to pull installation data from.  Before running this script,
+# define:
+#
+#     export INSTALLATION_DATA_REPO=user@my.server.com:my_installdata.git
+
+[ -z "$INSTALLATION_DATA" ] && export INSTALLATION_DATA=$HOME/local/installdata
+if [ -z "$INSTALLATION_DATA_REPO" ] ; then
+  if [ "$USER" == "ga" ]
+  then
+    export INSTALLATION_DATA_REPO=ga@vps.greenknowe.org:installdata.git
+  fi
+fi
+
+
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#
+#  G E T   I N S T A L L   D A T A
+#
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+echo "# Check install data..."
+
+# If we do not already have the installation data, then get it with git
+
+if [ ! -d $INSTALLATION_DATA ] && [ -n "$INSTALLATION_DATA_REPO" ] ; then
+
+  (
+    cd $(dirname $INSTALLATION_DATA)
+    git clone $INSTALLATION_DATA_REPO
+
+  )
+
+fi
+
+if [ -f $INSTALLATION_DATA/moveinrc ] ; then
+  source $INSTALLATION_DATA/moveinrc
+fi
+
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#
+#  S E T   D E F A U L T   L O C A T I O N S
+#
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
 
 # Set up some default locations
-if [ -z "$UTILISCRIPTS" ] ; then
-  export UTILISCRIPTS=$HOME/local/utiliscripts
-fi
-
-if [ -z "$CONFIG" ] ; then
-  export CONFIG=$HOME/local/config
-fi
-
-if [ -z "$INSTALLATION_DATA" ] ; then
-	export INSTALLATION_DATA=$HOME/Documents/Installation/InstallData
-fi
-
-if [ -z "$SSH_KEY_ARCHIVE" ] ; then
-	export SSH_KEY_ARCHIVE=$INSTALLATION_DATA/ssh_key_archive
-fi
-
-if [ -z "$DESKTOP_BACKGROUND_DIR" ] ; then
-  DESKTOP_BACKGROUND_DIR=$INSTALLATION_DATA/DesktopBackgrounds
-fi
+[ -z "$UTILISCRIPTS" ]            && export UTILISCRIPTS=$HOME/local/utiliscripts
+[ -z "$CONFIG" ]                  && export CONFIG=$HOME/local/config
+[ -z "$SSH_KEY_ARCHIVE" ]         && export SSH_KEY_ARCHIVE=$INSTALLATION_DATA/ssh_key_archive
+[ -z "$DESKTOP_BACKGROUND_DIR" ]  && export DESKTOP_BACKGROUND_DIR=$INSTALLATION_DATA/DesktopBackgrounds
 
 # Location of per-user repositories
 if [ -z "$CONFIG_REPO" ] ; then
@@ -56,6 +86,7 @@ if [ -z "$CONFIG_REPO" ] ; then
     export CONFIG_REPO=git@vps.greenknowe.org:config.git
   fi
 fi
+
 
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #
@@ -67,19 +98,14 @@ echo "# Check ssh keys..."
 
 host=`hostname -s`
 keytype=rsa
-UTILISCRIPTS_DIR=${UTILISCRIPTS%/*}
-CONFIG_DIR=${UTILISCRIPTS%/*}
 
 mkdir -p $HOME/.ssh
-mkdir -p $SSH_KEY_ARCHIVE
-mkdir -p $UTILISCRIPTS_DIR
-mkdir -p $CONFIG_DIR
 
 archive_key="$SSH_KEY_ARCHIVE/${host}_id_rsa"
 if [ -f "${archive_key%rsa}"dsa ]
 then
 	archive_key="${archive_key%rsa}"dsa
-        keytype=dsa
+  keytype=dsa
 fi
 
 # If we do not have a public/private key pair for this machine, then generate or restore one
@@ -96,6 +122,20 @@ then
   fi
 fi
 
+if [ -f "$HOME/.ssh/id_$keytype.pub" ] ; then
+	echo "ssh key fingerprint for public key:"
+	ssh-keygen -lf "$HOME/.ssh/id_$keytype.pub"
+fi
+
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#
+#  A R C H I V E   K E Y   P A I R S
+#
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+echo "# Check ssh key archive..."
+
+mkdir -p $SSH_KEY_ARCHIVE
 # If we have an archive of the public / private key pair for this machine, make sure it is accurate.
 # If the key has not been archived yet, then archive it.
 if [ -f "$archive_key" ] && [ -f "${archive_key}.pub" ]
@@ -103,16 +143,17 @@ then
   diff -q "$HOME/.ssh/id_${keytype}" "$archive_key"
   if [ $? != 0 ]
   then
-  	echo "WARNING: The archived key for $host is different than the current public / private key pair."
+    echo "WARNING: The archived key for $host is different than the current public / private key pair."
     echo "Remove one of the following pairs, then run this script again to fix:"
     echo "        rm \"$archive_key\" \"${archive_key}.pub\""
     echo " - OR -"
     echo "        rm \"$HOME/.ssh/id_$keytype\" \"$HOME/.ssh/id_${keytype}.pub\""
+    exit 1
   else
-		echo "Public and private key already archived as ${archive_key##*/}"
-	fi
+    echo "# Public and private key already archived as ${archive_key##*/}"
+  fi
 else
-  echo "Archiving public / private key pair for $host"
+  echo "# Archiving public / private key pair for $host..."
   cp -f "$HOME/.ssh/id_${keytype}" "$archive_key"
   cp -f "$HOME/.ssh/id_${keytype}.pub" "${archive_key}.pub"
 
@@ -121,14 +162,38 @@ else
   ssh-keygen -p -P "" -N "empty_passwords_are_bad" -f "$archive_key" > /dev/null 2>&1
   if [ $? == 0 ]
   then
-  	echo "WARNING: The password for id_${keytype} for $host is empty; private key REMOVED from archive."
+    echo "WARNING: The password for id_${keytype} for $host is empty; private key REMOVED from archive."
     rm -f "$archive_key"
+  else
+    if [ -d "$INSTALLATION_DATA/.git" ] ; then
+      (
+        cd $SSH_KEY_ARCHIVE
+        git add .
+        git commit -m "Add new keypair for ${host}"
+        git push
+      )
+    fi
   fi
 fi
 
-if [ -f "$HOME/.ssh/id_$keytype.pub" ] ; then
-	echo "ssh key fingerprint for public key:"
-	ssh-keygen -lf "$HOME/.ssh/id_$keytype.pub"
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#
+#  G E T   C O N F I G
+#
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+echo "# Check config..."
+
+# If we do not already have the config project, then get it with git
+
+if [ ! -d $CONFIG ] && [ -n "$CONFIG_REPO" ] ; then
+
+  (
+    mkdir -p $(dirname $CONFIG)
+    cd $(dirname $CONFIG)
+    git clone $CONFIG_REPO
+  )
+
 fi
 
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -144,9 +209,10 @@ echo "# Check utiliscripts..."
 if [ ! -d $UTILISCRIPTS ] ; then
 
   (
-    cd $UTILISCRIPTS_DIR
-    # read+write for ga, read-only for everyone else
-    if [ "$USER" == "ga" ]
+    mkdir -p $(dirname $UTILISCRIPTS)
+    cd $(dirname $UTILISCRIPTS)
+    # read+write if "utiliscripts" is in $MAINTAINER, read-only otherwise
+    if [ "${MAINTAINER}" != "${MAINTAINER/utiliscripts/}" ]
     then
       git clone git@github.com:greg-1-anderson/utiliscripts.git
       if [ $? <> 0 ]
@@ -158,26 +224,6 @@ if [ ! -d $UTILISCRIPTS ] ; then
     if [ ! -d $UTILISCRIPTS ] ; then
       git clone git://github.com/greg-1-anderson/utiliscripts.git
     fi
-  )
-
-fi
-
-
-#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-#
-#  G E T   C O N F I G
-#
-#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
-echo "# Check utiliscripts..."
-
-# If we do not already have the config project, then get it with git
-
-if [ ! -d $CONFIG ] && [ -n "$CONFIG_REPO" ] ; then
-
-  (
-    cd $CONFIG_DIR
-    git clone $CONFIG_REPO
   )
 
 fi
@@ -198,10 +244,10 @@ if [ -z "$d" ] && [ ! -d  $HOME/local/drupal/drush ] ; then
   (
     mkdir -p $HOME/local/drupal
     cd $HOME/local/drupal
-    # read+write for ga, read-only for everyone else
-    if [ "$USER" == "ga" ]
+    # read+write if "drush" is in $MAINTAINER, read-only otherwise
+    if [ -n "$DRUPALORG_USERNAME" ] && [ "${MAINTAINER}" != "${MAINTAINER/drush/}" ]
     then
-      git clone --branch master greg1anderson@git.drupal.org:project/drush.git
+      git clone --branch master ${DRUPALORG_USERNAME}@git.drupal.org:project/drush.git
       if [ ! -d drush ]
       then
       	echo "Could not clone a r/w copy of drush; cloning a r/o copy instead."
@@ -238,7 +284,19 @@ for drush_extension in \
   if [ ! -d "$extension_destination" ] ; then
 		(
 			cd $DRUSH_EXTENSIONS
-			$HOME/local/drupal/drush/drush pm-download $drush_extension --destination="$extension_destination"
+      # read+write if "extension_shortname" is in $MAINTAINER, read-only otherwise
+      if [ -n "$DRUPALORG_USERNAME" ] && [ "${MAINTAINER}" != "${MAINTAINER/$extension_shortname/}" ]
+      then
+        # TODO: we need to figure out what which branch to select (e.g. --branch 7.x-2.x)
+        git clone --recursive ${DRUPALORG_USERNAME}@git.drupal.org:project/$extension_shortname.git
+        if [ ! -d $extension_shortname ]
+        then
+          echo "Could not clone a r/w copy of $extension_shortname; cloning a r/o copy instead."
+        fi
+      fi
+			if [ ! -d "$extension_destination" ] ; then
+        $HOME/local/drupal/drush/drush pm-download $drush_extension --destination="$extension_destination"
+      fi
 		)
 	fi
 
@@ -566,7 +624,7 @@ if [ -n "$g" ] && [ -n "$d" ] && [ -n "$DISPLAY" ] ; then
     #
     # Select and apply a desktop background
     #
-    DESKTOP_BACKGROUND=$DESKTOP_BACKGROUND_DIR/Ubuntu-Ubuntu_Grass_1280x1024.jpg
+    DESKTOP_BACKGROUND=`ls -1 "$DESKTOP_BACKGROUND_DIR" | grep -i "default-" | head -n 1`
 
     check_host_bg=`ls -1 "$DESKTOP_BACKGROUND_DIR" | grep -i "$host" | head -n 1`
     if [ -n "$check_host_bg" ] ; then

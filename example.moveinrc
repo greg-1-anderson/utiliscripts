@@ -1,0 +1,52 @@
+# moveinrc:  Define per-user installation info such as config repository
+# and installation directory locations
+#
+# Instructions:
+#
+# 1. Create a new "installdata" project
+#
+#    On server my.server.git:
+#
+#       mkdir installdata.git
+#       cd installdata.git
+#       git init --bare
+#
+#    Locally:
+#
+#       mkdir installdata
+#       cd installdata
+#       git init
+#       git add .
+#       git commit -m "Initial commit"
+#
+# 2. Copy this file there, and rename it to moveinrc
+#
+#       cp example.moveinrc installdata/moveinrc
+#
+# 3. Customize variables below
+#
+# 4. Commit it to your remote repository
+#
+#       git remote add origin user@my.server.com:installdata.git
+#       git config branch.master.merge refs/heads/master
+#       git config branch.master.remote origin
+#       git push
+#
+# 5. Tell utiliscripts how to find your data
+#
+#       export INSTALLATION_DATA_REPO=user@my.server.com:installdata.git
+#
+# 6. Run move-in script.
+#
+
+export CONFIG_REPO=user@my.server.com:config.git
+export DRUPALORG_USERNAME=drupalorgusername
+
+# List any project checked out by the move-in script that you
+# would like to check out read/write from git here.
+#export MAINTAINER="projecta projectb"
+
+export UTILISCRIPTS=$HOME/local/utiliscripts
+export CONFIG=$HOME/local/config
+export SSH_KEY_ARCHIVE=$INSTALLATION_DATA/ssh_key_archive
+export DESKTOP_BACKGROUND_DIR=$INSTALLATION_DATA/DesktopBackgrounds
