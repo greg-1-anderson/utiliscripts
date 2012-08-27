@@ -313,7 +313,7 @@ for drush_extension in \
         fi
       fi
 			if [ ! -d "$extension_destination" ] ; then
-        $HOME/local/drupal/drush/drush pm-download $drush_extension --destination="$extension_destination"
+        $HOME/local/drupal/drush/drush --yes pm-download $drush_extension --destination="$extension_destination"
       fi
 		)
 	fi
