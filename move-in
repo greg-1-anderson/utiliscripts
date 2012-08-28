@@ -499,9 +499,17 @@ __END__
 #
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-if [ -n "$g" ] && [ -n "$d" ] && [ -n "$DISPLAY" ] ; then
+if [ -n "$DISPLAY" ] ; then
 
 echo "# Check preferences and configuration..."
+
+#
+# Copy sublime license file, if one exists in installdata
+#
+if [ ! -f $HOME/.config/sublime-text-2/Settings/License.sublime_license ] && [ -f $INSTALLATION_DATA/Licenses/License.sublime_license ] ; then
+  mkdir -p $HOME/.config/sublime-text-2/Settings
+  cp $INSTALLATION_DATA/Licenses/License.sublime_license $HOME/.config/sublime-text-2/Settings/License.sublime_license
+fi
 
 #
 # Set up sublime default preferences
