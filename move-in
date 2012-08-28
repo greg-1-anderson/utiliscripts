@@ -266,7 +266,7 @@ if [ -n "$DRUPALORG_USERNAME" ] && [ "${MAINTAINER}" != "${MAINTAINER/drush/}" ]
 then
   DRUSH="$(which drush)"
   drush_version=$(drush status version --pipe)
-  if [ ${drush_version%.*} -lt 5 ]
+  if [ "${drush_version%.*}" -lt 5 ]
   then
     DRUSH=
   fi
@@ -388,11 +388,11 @@ fi
 
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #
-#  S E T   U P   B A S H   A N D   E N V I R O N M E N T
+#  S E T   U P   B A S H   A N D   D R U S H   E N V I R O N M E N T S
 #
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-echo "# Check bash environment..."
+echo "# Check bash and drush environments..."
 
 #
 # Get rid of the old .bash_customizations file if it exists
@@ -404,22 +404,80 @@ fi
 # Put in uniform drushrc.php
 
 mkdir -p $HOME/.drush
-if [ -f $HOME/local/config/drushrc.php ]
+
+if [ -f  $HOME/.drush/drushrc.php ]
 then
-	if [ -f  $HOME/.drush/drushrc.php ]
+  # If the old drushrc.php is a symbolic link, then get rid of it.
+  drushrctype="`stat --printf='%F' $HOME/.drush/drushrc.php`"
+  if [ "$drushrctype" == "symbolic link" ]
   then
-    # Back up the old drushrc.php, unless it is a symbolic link, in which case we just get rid of it.
-    drushrctype="`stat --printf='%F' $HOME/.drush/drushrc.php`"
-		if [ "$drushrctype" != "symbolic link" ]
+    rm -f $HOME/.drush/drushrc.php
+  else
+    # If the old drushrc.php is not a symbolic link, then move it
+    # to the new config location
+    if [ ! -f $CONFIG/drushrc.php ]
     then
-	    mv $HOME/.drush/drushrc.php "$HOME/.drush/drushrc.php-"`date "+%s"`
-    else
-      rm $HOME/.drush/drushrc.php
+      mkdir -p $CONFIG
+      mv -f "$(dirname $DRUSH)/examples/example.drushrc.php" "$CONFIG/drushrc.php"
     fi
   fi
-  ln -s -f $HOME/local/config/drushrc.php $HOME/.drush
-  ln -s -f $HOME/local/config/drush5rc.php $HOME/.drush
-  ln -s -f $HOME/local/config/drush5rc.php $HOME/.drush/drush6rc.php
+else
+  # If there was no drushrc config file in either location, then copy the
+  # example drushrc.php file to provide a starting point.
+  if [ ! -f $CONFIG/drushrc.php ]
+  then
+    mkdir -p $CONFIG
+    cp -f "$(dirname $DRUSH)/examples/example.drushrc.php" "$CONFIG/drushrc.php"
+  fi
+fi
+
+# At this point, there should not be a drushrc.php file in the
+# $HOME directory unless both $HOME/.drush and the config location
+# both had drushrc.php files.  If there is none, then make an empty file.
+if [ ! -f  $HOME/.drush/drushrc.php ]
+then
+  echo << __EOT__ > $HOME/.drush/drushrc.php
+<?php
+
+__EOT__
+fi
+
+# At this point we will always have something in the .drush directory.
+# Add our template to the beginning of whatever was there, unless it
+# has already been added.
+checkdrushrc="$(grep '\(/local/drupal/drush_extensions\)' $HOME/.drush/drushrc.php)"
+if [ -z "$checkdrushrc" ]
+then
+  cat << __EOT__ > $HOME/.drush/drushrc.php-update
+<?php
+
+\$home = drush_server_home();
+
+\$options['include'][] = \$home . '/local/drupal/drush_extensions';
+\$options['config'][] = \$home . '/local/config';
+__EOT__
+  grep -v '<\?php' $HOME/.drush/drushrc.php >> $HOME/.drush/drushrc.php-update
+  mv -f $HOME/.drush/drushrc.php-update $HOME/.drush/drushrc.php
+fi
+
+# Get rid of old drushrc5rc.php and drushrc6rc.php symlinks, if they exist.
+if [ -f  $HOME/.drush/drush5rc.php ]
+then
+  # If the old drushrc.php is a symbolic link, then get rid of it.
+  drushrctype="`stat --printf='%F' $HOME/.drush/drush5rc.php`"
+  if [ "$drushrctype" == "symbolic link" ]
+  then
+    rm -f $HOME/.drush/drush5rc.php
+  fi
+fi
+if [ -f  $HOME/.drush/drush6rc.php ]
+then
+  # If the old drushrc.php is a symbolic link, then get rid of it.
+  drushrctype="`stat --printf='%F' $HOME/.drush/drush6rc.php`"
+  if [ "$drushrctype" == "symbolic link" ]
+  then
+    rm -f $HOME/.drush/drush6rc.php
+  fi
 fi
 
 #
@@ -436,31 +494,25 @@ fi
 # end, so that we run before this part:
 #   >> # If not running interactively, don't do anything
 #   >> [ -z "$PS1" ] && return
-chkbashrc=`grep '\(UTILISCRIPTS\|Bash Customizations\)' $HOME/.bashrc`
+chkbashrc=`grep '\(UTILISCRIPTS\)' $HOME/.bashrc`
 if [ "X$chkbashrc" = "X" ] ; then
-sed -e '/^ *$/,$ d' $HOME/.bashrc > $HOME/.bashrc-head
-sed -e '1,/^ *$/ d' $HOME/.bashrc > $HOME/.bashrc-body
-cp $HOME/.bashrc-head $HOME/.bashrc
-cat <<- __END__ >> $HOME/.bashrc
+sed -e '/^ *$/,$ d' $HOME/.bashrc > $HOME/.bashrc-update
+cat <<- __END__ >> $HOME/.bashrc-update
 
 # Add Utiliscripts to the path and export location environment variables
 export UTILISCRIPTS=$UTILISCRIPTS
 export SSH_KEY_ARCHIVE=$SSH_KEY_ARCHIVE
-if [ "x\`echo \$PATH | grep \$UTILISCRIPTS\`" == "x" ]
-then
-	export PATH=\$PATH:\$UTILISCRIPTS
-fi
+[ \$PATH == \${PATH/utiliscripts/} ] && export PATH=\$PATH:\$UTILISCRIPTS
 
 __END__
-cat $HOME/.bashrc-body >> $HOME/.bashrc
-rm $HOME/.bashrc-head
-rm $HOME/.bashrc-body
+sed -e '1,/^ *$/ d' $HOME/.bashrc >> $HOME/.bashrc-update
+mv -f $HOME/.bashrc-update $HOME/.bashrc
 fi
 
 # If we have not set the location of the drush yet,
 # write it to $HOME/.bashrc.  Only do this once, in case
 # the user might care to change it.
-chkbashrc=`grep '\(drush\|Bash Customizations\)' $HOME/.bashrc`
+chkbashrc=`grep '\(drush\)' $HOME/.bashrc`
 if [ "X$chkbashrc" = "X" ] ; then
 sed -e '/^ *$/,$ d' $HOME/.bashrc > $HOME/.bashrc-head
 sed -e '1,/^ *$/ d' $HOME/.bashrc > $HOME/.bashrc-body
@@ -468,10 +520,7 @@ cp $HOME/.bashrc-head $HOME/.bashrc
 cat <<- __END__ >> $HOME/.bashrc
 
 # Add drush to the path
-if [ "x\`echo \$PATH | grep drush\`" == "x" ]
-then
-	export PATH=\$PATH:\$HOME/local/drupal/drush
-fi
+[ \$PATH == \${PATH/drush/} ] && export PATH=\$PATH:\$HOME/local/drupal/drush
 
 __END__
 cat $HOME/.bashrc-body >> $HOME/.bashrc
@@ -484,7 +533,7 @@ sed -i -e '/Include Bash Customizations/,/End Bash Customizations/ d' $HOME/.bas
 cat <<- __END__ >> $HOME/.bashrc
 # Include Bash Customizations
 if [ -d "$HOME/local/sublime-text-2" ] ; then
-  export PATH=\$PATH:\$HOME/local/sublime-text-2
+  [ \$PATH == \${PATH/sublime-text-2/} ] && export PATH=\$PATH:\$HOME/local/sublime-text-2
 fi
 if [ -f $UTILISCRIPTS/custom-bashrc ]; then
 	. $UTILISCRIPTS/custom-bashrc
