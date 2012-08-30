@@ -652,11 +652,9 @@ __END__
 fi
 
 # Install Sublime Code Intel plugin
-if [ ! -d "$HOME/.config/sublime-text-2/Packages/SublimeCodeIntel" ] ; then
-
-  git clone git://github.com/Kronuz/SublimeCodeIntel.git "$HOME/.config/sublime-text-2/Packages/SublimeCodeIntel"
-
-fi
+#if [ ! -d "$HOME/.config/sublime-text-2/Packages/SublimeCodeIntel" ] ; then
+#  git clone git://github.com/Kronuz/SublimeCodeIntel.git "$HOME/.config/sublime-text-2/Packages/SublimeCodeIntel"
+#fi
 
 # Install Sublime PhpDoc plugin
 if [ ! -d "$HOME/.config/sublime-text-2/Packages/PhpDoc" ] ; then
@@ -675,10 +673,10 @@ fi
 
 # Install Sublime zen coding plugin (if mercurial is available)
 # See: http://code.google.com/p/zen-coding/downloads/detail?name=ZenCodingCheatSheet.pdf
-hg=`which hg`
-if [ ! -z "$hg" ] && [ ! -d "$HOME/.config/sublime-text-2/Packages/sublime-2-zencoding" ] ; then
-  hg clone https://bitbucket.org/sublimator/sublime-2-zencoding "$HOME/.config/sublime-text-2/Packages/sublime-2-zencoding"
-fi
+#hg=`which hg`
+#if [ ! -z "$hg" ] && [ ! -d "$HOME/.config/sublime-text-2/Packages/sublime-2-zencoding" ] ; then
+#  hg clone https://bitbucket.org/sublimator/sublime-2-zencoding "$HOME/.config/sublime-text-2/Packages/sublime-2-zencoding"
+#fi
 
 #
 # Set up nedit default preferences
