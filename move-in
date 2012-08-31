@@ -496,12 +496,14 @@ fi
 #   >> [ -z "$PS1" ] && return
 chkbashrc=`grep '\(UTILISCRIPTS\)' $HOME/.bashrc`
 if [ "X$chkbashrc" = "X" ] ; then
+UTILISCRIPTS_RELATIVE=$(echo $UTILISCRIPTS | sed -e 's|/home/[^/]*/||')
+SSH_KEY_ARCHIVE_RELATIVE=$(echo $SSH_KEY_ARCHIVE| sed -e 's|/home/[^/]*/||')
 sed -e '/^ *$/,$ d' $HOME/.bashrc > $HOME/.bashrc-update
 cat <<- __END__ >> $HOME/.bashrc-update
 
 # Add Utiliscripts to the path and export location environment variables
-export UTILISCRIPTS=$UTILISCRIPTS
-export SSH_KEY_ARCHIVE=$SSH_KEY_ARCHIVE
+export UTILISCRIPTS=\$HOME/$UTILISCRIPTS_RELATIVE
+export SSH_KEY_ARCHIVE=\$HOME/$SSH_KEY_ARCHIVE_RELATIVE
 [ \$PATH == \${PATH/utiliscripts/} ] && export PATH=\$PATH:\$UTILISCRIPTS
 
 __END__
@@ -532,11 +534,11 @@ fi
 sed -i -e '/Include Bash Customizations/,/End Bash Customizations/ d' $HOME/.bashrc
 cat <<- __END__ >> $HOME/.bashrc
 # Include Bash Customizations
-if [ -d "$HOME/local/sublime-text-2" ] ; then
+if [ -d "\$HOME/local/sublime-text-2" ] ; then
   [ \$PATH == \${PATH/sublime-text-2/} ] && export PATH=\$PATH:\$HOME/local/sublime-text-2
 fi
-if [ -f $UTILISCRIPTS/custom-bashrc ]; then
-	. $UTILISCRIPTS/custom-bashrc
+if [ -f \$UTILISCRIPTS/custom-bashrc ]; then
+	. \$UTILISCRIPTS/custom-bashrc
 fi
 # End Bash Customizations
 __END__
