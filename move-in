@@ -717,6 +717,8 @@ git config --global push.default tracking
 git config --global url."ssh://git@git.drupal.org/project/".insteadOf d.o:
 git config --global url."ssh://git@git.drupal.org/sandbox/".insteadOf sandbox:
 
+# http://chuva-inc.com/blog/2012/09/fast-tip-enable-git-rerere-right-now
+git config --global rerere.enabled 1
 
 # If we can find gconftool-2, AND we have a $DISPLAY, then set up some GUI prefs
 g=`which gconftool-2`
