@@ -601,7 +601,7 @@ __END__
 
 fi
 
-if [ ! -f "$HOME/.config/sublime-text-2/Packages/User/Default (Linux).sublime-keymap" ] || [ "`stat --printf='%s' \"$HOME/.config/sublime-text-2/Packages/User/Default (Linux).sublime-keymap\"`" -lt 10 ] ; then
+if [ ! -f "$HOME/.config/sublime-text-2/Packages/User/Default (Linux).sublime-keymap" ] || [ "`ls -l \"$HOME/.config/sublime-text-2/Packages/User/Default (Linux).sublime-keymap\" | awk '{ print $5 }'`" -lt 10 ] ; then
 
 mkdir -p $HOME/.config/sublime-text-2/Packages/User
 
