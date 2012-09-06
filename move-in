@@ -265,10 +265,13 @@ DRUSH=
 if [ -n "$DRUPALORG_USERNAME" ] && [ "${MAINTAINER}" != "${MAINTAINER/drush/}" ]
 then
   DRUSH="$(which drush)"
-  drush_version=$(drush status version --pipe)
-  if [ "${drush_version%.*}" -lt 5 ]
+  if [ -n "$DRUSH" ]
   then
-    DRUSH=
+    drush_version=$(drush status version --pipe)
+    if [ "${drush_version%.*}" -lt 5 ]
+    then
+      DRUSH=
+    fi
   fi
 fi
 
@@ -306,6 +309,7 @@ mkdir -p $DRUSH_EXTENSIONS
 for drush_extension in \
     drush_sup \
     drush_iq \
+    drupalcs \
     drush_extras \
     dbtng_migrator \
     registry_rebuild \
@@ -325,7 +329,7 @@ for drush_extension in \
       if [ -n "$DRUPALORG_USERNAME" ] && [ "${MAINTAINER}" != "${MAINTAINER/$extension_shortname/}" ]
       then
         # Figure out what which branch to select (e.g. --branch 7.x-2.x)
-        branch=$(drush pm-releases drush_iq | grep '\-dev' | head -n 1 | sed -e 's|^ *||' -e 's|-dev.*||')
+        branch=$($DRUSH pm-releases $extension_shortname | grep '\-dev' | head -n 1 | sed -e 's|^ *||' -e 's|-dev.*||')
         if [ -z "$branch" ]
         then
           echo "Could not determine default branch for $extension_shortname"
@@ -408,8 +412,8 @@ mkdir -p $HOME/.drush
 if [ -f  $HOME/.drush/drushrc.php ]
 then
   # If the old drushrc.php is a symbolic link, then get rid of it.
-  drushrctype="`stat --printf='%F' $HOME/.drush/drushrc.php`"
-  if [ "$drushrctype" == "symbolic link" ]
+  drushrctype="`readlink $HOME/.drush/drushrc.php`"
+  if [ -n "$drushrctype" ]
   then
     rm -f $HOME/.drush/drushrc.php
   else
@@ -464,8 +468,8 @@ fi
 if [ -f  $HOME/.drush/drush5rc.php ]
 then
   # If the old drushrc.php is a symbolic link, then get rid of it.
-  drushrctype="`stat --printf='%F' $HOME/.drush/drush5rc.php`"
-  if [ "$drushrctype" == "symbolic link" ]
+  drushrctype="`readlink $HOME/.drush/drush5rc.php`"
+  if [ -n "$drushrctype" ]
   then
     rm -f $HOME/.drush/drush5rc.php
   fi
@@ -473,8 +477,8 @@ fi
 if [ -f  $HOME/.drush/drush6rc.php ]
 then
   # If the old drushrc.php is a symbolic link, then get rid of it.
-  drushrctype="`stat --printf='%F' $HOME/.drush/drush6rc.php`"
-  if [ "$drushrctype" == "symbolic link" ]
+  drushrctype="`readlink $HOME/.drush/drush6rc.php`"
+  if [ -n "$drushrctype" ]
   then
     rm -f $HOME/.drush/drush6rc.php
   fi
