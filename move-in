@@ -265,10 +265,13 @@ DRUSH=
 if [ -n "$DRUPALORG_USERNAME" ] && [ "${MAINTAINER}" != "${MAINTAINER/drush/}" ]
 then
   DRUSH="$(which drush)"
-  drush_version=$(drush status version --pipe)
-  if [ "${drush_version%.*}" -lt 5 ]
+  if [ -n "$DRUSH" ]
   then
-    DRUSH=
+    drush_version=$(drush status version --pipe)
+    if [ "${drush_version%.*}" -lt 5 ]
+    then
+      DRUSH=
+    fi
   fi
 fi
 
@@ -306,6 +309,7 @@ mkdir -p $DRUSH_EXTENSIONS
 for drush_extension in \
     drush_sup \
     drush_iq \
+    drupalcs \
     drush_extras \
     dbtng_migrator \
     registry_rebuild \
@@ -325,7 +329,7 @@ for drush_extension in \
       if [ -n "$DRUPALORG_USERNAME" ] && [ "${MAINTAINER}" != "${MAINTAINER/$extension_shortname/}" ]
       then
         # Figure out what which branch to select (e.g. --branch 7.x-2.x)
-        branch=$(drush pm-releases drush_iq | grep '\-dev' | head -n 1 | sed -e 's|^ *||' -e 's|-dev.*||')
+        branch=$($DRUSH pm-releases $extension_shortname | grep '\-dev' | head -n 1 | sed -e 's|^ *||' -e 's|-dev.*||')
         if [ -z "$branch" ]
         then
           echo "Could not determine default branch for $extension_shortname"
@@ -408,8 +412,8 @@ mkdir -p $HOME/.drush
 if [ -f  $HOME/.drush/drushrc.php ]
 then
   # If the old drushrc.php is a symbolic link, then get rid of it.
-  drushrctype="`stat --printf='%F' $HOME/.drush/drushrc.php`"
-  if [ "$drushrctype" == "symbolic link" ]
+  drushrctype="`readlink $HOME/.drush/drushrc.php`"
+  if [ -n "$drushrctype" ]
   then
     rm -f $HOME/.drush/drushrc.php
   else
@@ -464,8 +468,8 @@ fi
 if [ -f  $HOME/.drush/drush5rc.php ]
 then
   # If the old drushrc.php is a symbolic link, then get rid of it.
-  drushrctype="`stat --printf='%F' $HOME/.drush/drush5rc.php`"
-  if [ "$drushrctype" == "symbolic link" ]
+  drushrctype="`readlink $HOME/.drush/drush5rc.php`"
+  if [ -n "$drushrctype" ]
   then
     rm -f $HOME/.drush/drush5rc.php
   fi
@@ -473,8 +477,8 @@ fi
 if [ -f  $HOME/.drush/drush6rc.php ]
 then
   # If the old drushrc.php is a symbolic link, then get rid of it.
-  drushrctype="`stat --printf='%F' $HOME/.drush/drush6rc.php`"
-  if [ "$drushrctype" == "symbolic link" ]
+  drushrctype="`readlink $HOME/.drush/drush6rc.php`"
+  if [ -n "$drushrctype" ]
   then
     rm -f $HOME/.drush/drush6rc.php
   fi
@@ -496,12 +500,14 @@ fi
 #   >> [ -z "$PS1" ] && return
 chkbashrc=`grep '\(UTILISCRIPTS\)' $HOME/.bashrc`
 if [ "X$chkbashrc" = "X" ] ; then
+UTILISCRIPTS_RELATIVE=$(echo $UTILISCRIPTS | sed -e 's|/home/[^/]*/||')
+SSH_KEY_ARCHIVE_RELATIVE=$(echo $SSH_KEY_ARCHIVE| sed -e 's|/home/[^/]*/||')
 sed -e '/^ *$/,$ d' $HOME/.bashrc > $HOME/.bashrc-update
 cat <<- __END__ >> $HOME/.bashrc-update
 
 # Add Utiliscripts to the path and export location environment variables
-export UTILISCRIPTS=$UTILISCRIPTS
-export SSH_KEY_ARCHIVE=$SSH_KEY_ARCHIVE
+export UTILISCRIPTS=\$HOME/$UTILISCRIPTS_RELATIVE
+export SSH_KEY_ARCHIVE=\$HOME/$SSH_KEY_ARCHIVE_RELATIVE
 [ \$PATH == \${PATH/utiliscripts/} ] && export PATH=\$PATH:\$UTILISCRIPTS
 
 __END__
@@ -532,11 +538,11 @@ fi
 sed -i -e '/Include Bash Customizations/,/End Bash Customizations/ d' $HOME/.bashrc
 cat <<- __END__ >> $HOME/.bashrc
 # Include Bash Customizations
-if [ -d "$HOME/local/sublime-text-2" ] ; then
+if [ -d "\$HOME/local/sublime-text-2" ] ; then
   [ \$PATH == \${PATH/sublime-text-2/} ] && export PATH=\$PATH:\$HOME/local/sublime-text-2
 fi
-if [ -f $UTILISCRIPTS/custom-bashrc ]; then
-	. $UTILISCRIPTS/custom-bashrc
+if [ -f \$UTILISCRIPTS/custom-bashrc ]; then
+	. \$UTILISCRIPTS/custom-bashrc
 fi
 # End Bash Customizations
 __END__
@@ -595,7 +601,7 @@ __END__
 
 fi
 
-if [ ! -f "$HOME/.config/sublime-text-2/Packages/User/Default (Linux).sublime-keymap" ] || [ "`stat --printf='%s' \"$HOME/.config/sublime-text-2/Packages/User/Default (Linux).sublime-keymap\"`" -lt 10 ] ; then
+if [ ! -f "$HOME/.config/sublime-text-2/Packages/User/Default (Linux).sublime-keymap" ] || [ "`ls -l \"$HOME/.config/sublime-text-2/Packages/User/Default (Linux).sublime-keymap\" | awk '{ print $5 }'`" -lt 10 ] ; then
 
 mkdir -p $HOME/.config/sublime-text-2/Packages/User
 
@@ -652,11 +658,9 @@ __END__
 fi
 
 # Install Sublime Code Intel plugin
-if [ ! -d "$HOME/.config/sublime-text-2/Packages/SublimeCodeIntel" ] ; then
-
-  git clone git://github.com/Kronuz/SublimeCodeIntel.git "$HOME/.config/sublime-text-2/Packages/SublimeCodeIntel"
-
-fi
+#if [ ! -d "$HOME/.config/sublime-text-2/Packages/SublimeCodeIntel" ] ; then
+#  git clone git://github.com/Kronuz/SublimeCodeIntel.git "$HOME/.config/sublime-text-2/Packages/SublimeCodeIntel"
+#fi
 
 # Install Sublime PhpDoc plugin
 if [ ! -d "$HOME/.config/sublime-text-2/Packages/PhpDoc" ] ; then
@@ -675,10 +679,10 @@ fi
 
 # Install Sublime zen coding plugin (if mercurial is available)
 # See: http://code.google.com/p/zen-coding/downloads/detail?name=ZenCodingCheatSheet.pdf
-hg=`which hg`
-if [ ! -z "$hg" ] && [ ! -d "$HOME/.config/sublime-text-2/Packages/sublime-2-zencoding" ] ; then
-  hg clone https://bitbucket.org/sublimator/sublime-2-zencoding "$HOME/.config/sublime-text-2/Packages/sublime-2-zencoding"
-fi
+#hg=`which hg`
+#if [ ! -z "$hg" ] && [ ! -d "$HOME/.config/sublime-text-2/Packages/sublime-2-zencoding" ] ; then
+#  hg clone https://bitbucket.org/sublimator/sublime-2-zencoding "$HOME/.config/sublime-text-2/Packages/sublime-2-zencoding"
+#fi
 
 #
 # Set up nedit default preferences
@@ -717,6 +721,8 @@ git config --global push.default tracking
 git config --global url."ssh://git@git.drupal.org/project/".insteadOf d.o:
 git config --global url."ssh://git@git.drupal.org/sandbox/".insteadOf sandbox:
 
+# http://chuva-inc.com/blog/2012/09/fast-tip-enable-git-rerere-right-now
+git config --global rerere.enabled 1
 
 # If we can find gconftool-2, AND we have a $DISPLAY, then set up some GUI prefs
 g=`which gconftool-2`
