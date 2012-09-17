@@ -538,6 +538,11 @@ fi
 sed -i -e '/Include Bash Customizations/,/End Bash Customizations/ d' $HOME/.bashrc
 cat <<- __END__ >> $HOME/.bashrc
 # Include Bash Customizations
+if [ -n "\$(locale -a | grep -i 'en_US.utf8')" ] ; then
+  export LC_ALL=en_US.utf8
+else
+  export LC_ALL=POSIX
+fi
 if [ -d "\$HOME/local/sublime-text-2" ] ; then
   [ \$PATH == \${PATH/sublime-text-2/} ] && export PATH=\$PATH:\$HOME/local/sublime-text-2
 fi
