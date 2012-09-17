@@ -1,0 +1,42 @@
+#!/bin/bash
+
+#
+# This script maintains a list migrated repositories in the form:
+#
+#   git@oldserver.domain.com:repo.git ==> git@newserver.domain.com:repo.git
+#
+# Run with a git repository to check and correct at the cwd; if the current
+# repository's origin is tracking one of the old repositories, it will be
+# switched to track the new repository instead.
+#
+# TO DO:
+#
+# Move list of migrated repositories to a data file (e.g. in config)
+#
+
+for x in \
+    'git@reetstreet.com:net.git ==> git@vps2.greenknowe.org:net.git' \
+    'ga@vps.greenknowe.org:installdata.git ==> ga@vps2.greenknowe.org:installdata.git' \
+    'git@vps.greenknowe.org:afterlife.git ==> git@vps2.greenknowe.org:afterlife.git' ; do
+    'git@vps.greenknowe.org:cc.git ==> git@vps2.greenknowe.org:cc.git' ; do
+    'git@vps.greenknowe.org:df.git ==> git@vps2.greenknowe.org:df.git' ; do
+    'git@vps.greenknowe.org:gk.git ==> git@vps2.greenknowe.org:gk.git' ; do
+    'git@vps.greenknowe.org:sosbsd.git ==> git@vps2.greenknowe.org:sosbsd.git' ; do
+    'git@vps.greenknowe.org:config.git ==> git@vps2.greenknowe.org:config.git' ; do
+  from=${x/ ==> */}
+  to=${x/* ==> /}
+  if [ -n "$(git remote show -n origin | grep $from)" ] ; then
+    echo "Change origin from $from to $to"
+    if [ -n "$(git status -s)" ] ; then
+      echo "Bad news: local copy dirty.  Aborting."
+      exit 1
+    fi
+    git pull
+    git remote rm origin
+    git remote add origin $to
+    git branch --set-upstream master origin/master
+    exit 0
+  fi
+done
+
+echo "Nothing to do"
