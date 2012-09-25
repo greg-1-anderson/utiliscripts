@@ -1,0 +1,116 @@
+#!/bin/bash
+
+project=
+project_path=
+local_dir=
+standard_layout=
+check_standard=true
+svn_repository=https://geni.rintra.net/svn
+do=
+debug=false
+
+#
+# Parse command line args
+#
+while [ $# -gt 0 ] ; do
+
+  option="$1"
+  shift
+
+  case "$option" in
+    -d|--debug)
+      debug=true
+      do=echo
+      ;;
+
+    -s)
+      standard_layout=-s
+      check_standard=false
+      ;;
+
+    -*)
+      echo "Unknown option $option"
+      exit 1;
+      ;;
+
+    *)
+      if [ -z "$project" ] ; then
+        project="$option"
+      elif [ -z "$local_dir" ] ; then
+        local_dir="$option"
+      else
+        echo "Too many arguments"
+        exit 1
+      fi
+      ;;
+  esac
+done
+
+if [ -z "$project" ] ; then
+  echo "No project specified"
+  exit 1;
+fi
+
+# If 'project' contains "://", then split the
+# project into 'svn_repository' and 'project'.
+if [ "$project" != "${project/*:\/\//}" ] ; then
+  protocol="${project/:\/\/*/}"
+  server_and_project="${project/*:\/\//}"
+  server="${server_and_project%%/*}"
+  project="${server_and_project#*/}"
+  svn_repository="${protocol}://$server"
+fi
+
+full_project="$project"
+
+# If 'project' contains a "/", then assign
+# everything after the first "/" to 'project_path',
+# and remove the first "/" and everything after
+# it from 'project'
+if [ "$project" != "${project%%/*}" ] ; then
+  project_path="${project#*/}"
+  project="${project%%/*}"
+fi
+
+if [ -z "$local_dir" ] ; then
+  if [ -z "$project_path" ] || [ "$project_path" == "trunk" ] ; then
+    local_dir="$project"
+    [ -z "$project_path" ] || check_standard=false
+  else
+    local_dir="$project_path"
+    if [ "${local_dir##*/}" == "trunk" ] ; then
+      local_dir="${local_dir%/*}"
+      check_standard=false
+    fi
+    local_dir="${local_dir##*/}"
+  fi
+fi
+
+# Check to see if the project uses a standard repository layout
+# i.e., contains a "trunk"
+if $check_standard ; then
+  echo "# Checking to see if '$svn_repository/$full_project' uses a standard layout."
+  svn list "$svn_repository/$full_project/trunk" >/dev/null 2>&1
+  if [ $? = 0 ] ; then
+    echo "# Yes -- 'trunk' directory exists."
+    standard_layout=-s
+  else
+    echo "# No -- 'trunk' directory not found."
+  fi
+fi
+
+echo "# Checking out '$svn_repository/$full_project' to '$local_dir' ..."
+$do git svn clone $standard_layout "$svn_repository/$full_project" "$local_dir"
+
+$do cd $local_dir
+if [ ! -f .gitignore ] ; then
+  echo "# Creating a default .gitignore file..."
+  $debug || git svn show-ignore > .gitignore
+  $debug && echo git svn show-ignore \> .gitignore
+  $do git add .gitignore
+  $do git commit -m "Commit default .gitignore file."
+  $do git svn dcommit
+fi
+
+echo "# Done!  Use 'git svn dcommit' to commit changes back"
+echo "# to subversion, and 'git svn rebase' to update."
