@@ -1,0 +1,96 @@
+#!/bin/bash
+#
+# Usage:
+#
+#    drupal-backup-all site1 site2 site3
+#
+# For each site named as a command argument, it is assumed that
+# you have a site1.aliases.drushrc.php file, and that it contains
+# site records for both a 'live' and a 'backup' site.
+
+# Start with an empty backup list.
+backup_list=
+
+#
+# Parse command line args
+#
+while [ $# -gt 0 ] ; do
+
+  option=$1
+  shift
+
+  case "$option" in
+
+    -* )
+      echo "Unknown option $option"
+      exit 1;
+      ;;
+
+    * )
+      # Test to see if we have site aliases defined for the specified site.
+      # TODO: We assume 'live' is remote and 'backup' is local.  Confirm this?
+      site=$option
+      if [ -z "$(drush sa --short @$site.live)" ] || [ -z "$(drush sa --short @$site.backup)" ] ; then
+        (
+          echo "The site alias @$option is either not defined, or is missing"
+          echo "'live' and/or 'backup' site records."
+        ) 1>&2
+        exit 1
+      fi
+      backup_list="$backup_list $site"
+      ;;
+
+    esac
+done
+
+if [ -z "$backup_list" ] ; then
+  echo "No backup sites listed." 1>&2
+  exit 1
+fi
+
+
+# Loop over all of the sites, backing up each in turn.
+for site in ${backup_list} ; do
+  backup_dir=/data/archive/drupal/$site
+  mkdir -p "$backup_dir"
+  hash_file=$backup_dir/${site}.hash
+  cur_hash_file=$backup_dir/${site}-cur.hash
+  diff_file=$backup_dir/${site}.hash
+  dump_file=$backup_dir/${site}.sql
+  echo "Checking ${site} for changes..."
+  drush @$site.live sql-hash --tables-list='users,permission,node' --strict=0 > $cur_hash_file
+  if [ ! -f $hash_file ] || [ "x`diff $cur_hash_file $hash_file`" != "x" ] ; then
+    echo "=== Begin backup of $site ==="
+
+    # Show which tables changed last time.
+    diff -U 0 $hash_file $cur_hash_file > $diff_file
+    mv -f $cur_hash_file $hash_file
+
+    # First, insure that the git repository is clean on the live site.
+    live_root=$(drush sa @$site.live --component=root)
+    drush @$site.live ssh "cd $live_root && git add -A && git commit -m 'Automatic commit by drupal-backup-all script' && git push"
+    # Next, make sure backup site has most recent code.
+    (
+      cd $(drush drupal-directory @$site.backup)
+      git pull
+    )
+    # Get current commit tag and write it into live database
+    head_commithash=$(drush @$site.live ssh 'git rev-parse HEAD')
+    drush -v @$site.live vset --always-set -y git-commithash "$head_commithash"
+
+    # Sync the sql database from the live site to the backup site,
+    # Drop the database into place in the backup folder by using it
+    # as the target-dump.
+    drush -y -v sql-sync --target-dump="$dump_file" @$site.live @$site.backup
+
+    # TODO: What about rolling backups?  Should we use migratehistories, or
+    # just try committing the sql dump file to a get repository?
+
+    # TODO: Backup would be a good time to test to see if there are updates
+    # (pm-updatecode -n --pipe); if there are, we should copy the code and
+    # database to another location where we could do a trial update & send
+    # email notification to someone.
+  else
+    rm -f $cur_hash_file
+  fi
+done

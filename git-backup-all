@@ -1,0 +1,28 @@
+#!/bin/bash
+#
+# Usage:
+#
+#   git-backup-all git@myvcs.com
+#
+# This script will clone all repositories `git @myvcs.com:*.git`
+# to the current working directory.  All repositories are cloned
+# bare, for archival purposes.  If there are any repositories at
+# the destination that have already been cloned, then they will
+# each be pulled in turn.
+
+vcs_server=$1
+repos=$(ssh $vcs_server ls -d '*.git')
+
+for r in $repos ; do
+  if [ -d "$r" ] ; then
+    (
+      echo '`git fetch origin`' $r
+      cd $r
+      git fetch origin
+    )
+  else
+    echo '`git clone --bare '"$vcs_server:$r"'`'
+    git clone --bare $vcs_server:$r
+  fi
+done
+

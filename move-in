@@ -43,7 +43,7 @@ fi
 if [ -z "$INSTALLATION_DATA_REPO" ] ; then
   if [ "$USER" == "ga" ]
   then
-    export INSTALLATION_DATA_REPO=ga@vps.greenknowe.org:installdata.git
+    export INSTALLATION_DATA_REPO=ga@vps2.greenknowe.org:installdata.git
   fi
 fi
 
@@ -89,7 +89,7 @@ fi
 if [ -z "$CONFIG_REPO" ] ; then
   if [ "$USER" == "ga" ]
   then
-    export CONFIG_REPO=git@vps.greenknowe.org:config.git
+    export CONFIG_REPO=git@vps2.greenknowe.org:config.git
   fi
 fi
 
@@ -538,6 +538,11 @@ fi
 sed -i -e '/Include Bash Customizations/,/End Bash Customizations/ d' $HOME/.bashrc
 cat <<- __END__ >> $HOME/.bashrc
 # Include Bash Customizations
+if [ -n "\$(locale -a | grep -i 'en_US.utf8')" ] ; then
+  export LC_ALL=en_US.utf8
+else
+  export LC_ALL=POSIX
+fi
 if [ -d "\$HOME/local/sublime-text-2" ] ; then
   [ \$PATH == \${PATH/sublime-text-2/} ] && export PATH=\$PATH:\$HOME/local/sublime-text-2
 fi
