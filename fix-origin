@@ -15,14 +15,18 @@
 #
 
 for x in \
-    'git@reetstreet.com:net.git ==> git@vps2.greenknowe.org:net.git' \
-    'ga@vps.greenknowe.org:installdata.git ==> ga@vps2.greenknowe.org:installdata.git' \
-    'git@vps.greenknowe.org:afterlife.git ==> git@vps2.greenknowe.org:afterlife.git' ; do
-    'git@vps.greenknowe.org:cc.git ==> git@vps2.greenknowe.org:cc.git' ; do
-    'git@vps.greenknowe.org:df.git ==> git@vps2.greenknowe.org:df.git' ; do
-    'git@vps.greenknowe.org:gk.git ==> git@vps2.greenknowe.org:gk.git' ; do
-    'git@vps.greenknowe.org:sosbsd.git ==> git@vps2.greenknowe.org:sosbsd.git' ; do
-    'git@vps.greenknowe.org:config.git ==> git@vps2.greenknowe.org:config.git' ; do
+    'git@vps.reetstreet.com:net.git ==> git@vps.greenknowe.org:net.git' \
+    'git@vps2.greenknowe.org:net.git ==> git@vps.greenknowe.org:net.git' \
+    'ga@vps2.greenknowe.org:installdata.git ==> ga@vps.greenknowe.org:installdata.git' \
+    'ga@vps.reetstreet.com:installdata.git ==> ga@vps.greenknowe.org:installdata.git' \
+    'git@vps2.greenknowe.org:afterlife.git ==> git@vps.greenknowe.org:afterlife.git' ; do
+    'git@vps.reetstreet.com:afterlife.git ==> git@vps.greenknowe.org:afterlife.git' ; do
+    'git@vps2.greenknowe.org:cc.git ==> git@vps.greenknowe.org:cc.git' ; do
+    'git@vps2.greenknowe.org:df.git ==> git@vps.greenknowe.org:df.git' ; do
+    'git@vps2.greenknowe.org:gk.git ==> git@vps.greenknowe.org:gk.git' ; do
+    'git@vps2.greenknowe.org:sosbsd.git ==> git@vps.greenknowe.org:sosbsd.git' ; do
+    'git@vps2.greenknowe.org:config.git ==> git@vps.greenknowe.org:config.git' ; do
+    'git@vps.reetstreet.com:config.git ==> git@vps.greenknowe.org:config.git' ; do
   from=${x/ ==> */}
   to=${x/* ==> /}
   if [ -n "$(git remote show -n origin | grep $from)" ] ; then
