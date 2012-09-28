@@ -508,11 +508,14 @@ cat <<- __END__ >> $HOME/.bashrc-update
 # Add Utiliscripts to the path and export location environment variables
 export UTILISCRIPTS=\$HOME/$UTILISCRIPTS_RELATIVE
 export SSH_KEY_ARCHIVE=\$HOME/$SSH_KEY_ARCHIVE_RELATIVE
-[ \$PATH == \${PATH/utiliscripts/} ] && export PATH=\$PATH:\$UTILISCRIPTS
+[ \$PATH == \${PATH/utiliscripts/} ] && export PATH=\$UTILISCRIPTS:\$PATH
 
 __END__
 sed -e '1,/^ *$/ d' $HOME/.bashrc >> $HOME/.bashrc-update
 mv -f $HOME/.bashrc-update $HOME/.bashrc
+else
+# At one time we added utiliscripts to the end of the path; now move it to the beginning
+sed -i -e 's|\[ $PATH == ${PATH/utiliscripts/} \] \&\& export PATH=$PATH:$UTILISCRIPTS|[ $PATH == ${PATH/utiliscripts/} ] \&\& export PATH=$UTILISCRIPTS:$PATH|' $HOME/.bashrc
 fi
 
 # If we have not set the location of the drush yet,
