@@ -419,8 +419,8 @@ for postscript in "${POSTSCRIPTS[@]}" ; do
       ;;
 
     push)
-      echo git svn push
-      $simulate || git svn push
+      echo git push
+      $simulate || git push
       ;;
   esac
 done
