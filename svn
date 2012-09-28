@@ -1,0 +1,426 @@
+#!/bin/bash
+#
+# SVN to GIT adapter
+#
+# This tool allows users to enter many of the most svn commands using
+# the svn syntax that they are used to; the corresponding git command
+# to do the same thing is echo'ed to stdout and then executed.
+#
+# This behavior is only enabled when the cwd is inside a local
+# git repository.  When using svn inside a local subversion repository,
+# the adapter calls through to the standard svn tool.
+#
+# Supported subcommands:
+#   add
+#   blame (praise, annotate, ann)
+#   commit (ci)
+#   diff (di)
+#   log
+#   move (mv, rename, ren)
+#   revert
+#   status (stat, st)
+#   update (up)
+#
+# Todo:
+#   checkout (co)
+#   delete (del, remove, rm)
+#   copy (cp)
+#   help (h)
+#   resolve
+#   resolved
+#
+# Not supported:
+#   Property lists (proplist, propget, propset, propedit, propdel)
+#   Change sets (changelist)
+#   Branching and locking (lock, merge, mergeinfo, switch, unlock)
+#   Creating new projects (import)
+#   Remote operations (cat, export, info, list, mkdir)
+#   cleanup
+#
+
+# Find the standard svn via `which svn` after removing our
+# directory from the PATH
+self_dir=$(dirname $0)
+path_without_self=$(echo $PATH | sed -e "s|$self_dir:*||")
+SVN=$(PATH=$path_without_self which svn)
+
+# Check to see if we are inside a git repository. If we are,
+# then we will enter 'svn-git-adapter' mode.
+git_dir=$(git rev-parse --git-dir 2> /dev/null)
+
+# If we are NOT inside a local git repository, then call through
+# to the standard SVN tool
+if [ -z "$git_dir" ] ; then
+  $SVN "$@"
+  exit $?
+fi
+
+# Process global options before the svn command
+SVN_COMMAND=
+debug=false
+simulate=false
+do=
+while [ -z "$SVN_COMMAND" ] && [ $# -gt 0 ] ; do
+  option="$1"
+  shift
+  case "$option" in
+    # Debug mode (not currently used)
+    -d|--debug)
+      debug=true
+      ;;
+
+    # Simulated mode -- do not actually execute the git command
+    -s|--simulate)
+      simulate=true
+      do=echo
+      ;;
+
+    # Ignore certain unary global svn options.
+    --username|--password|--no-auth-cache|--trust-server-cert|--non-interactive)
+      ;;
+
+    # Ignore certain global svn options and their arguments.
+    --config-dir|--config-option)
+      shift
+      ;;
+
+    -*)
+      echo "Error: flag $option cannot appear before subversion command in svn-to-git adapter."
+      exit 1
+      ;;
+
+    *)
+      SVN_COMMAND="$option"
+      ;;
+  esac
+done
+
+#
+# First figure out which git command corresponds to the svn command
+# selected.  Exit with an error if the command is not recognized.
+#
+GIT_COMMAND=
+GIT_OPTIONS=()
+GIT_ARGS=()
+REQUIREMENTS=()
+POSTSCRIPTS=()
+use_arg_separator=true
+
+case "$SVN_COMMAND" in
+  # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+  # svn add
+  # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+  add)
+    GIT_COMMAND=add
+    ;;
+
+  # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+  # svn blame
+  # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+  blame|praise|annotate|ann)
+    GIT_COMMAND=annotate
+    ;;
+
+  # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+  # svn commit
+  # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+  commit|ci)
+    GIT_COMMAND=commit
+
+    # Check to see if the working tree was cloned from an svn repository
+    if [ -n "$(git log -1 2>/dev/null | grep 'git-svn-id')" ] ; then
+      POSTSCRIPTS+=("dcommit")
+    else
+      POSTSCRIPTS+=("push")
+    fi
+
+    REQUIREMENTS+=(master-branch)
+    ;;
+
+  # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+  # svn diff
+  # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+  diff|di)
+    GIT_COMMAND=diff
+    ;;
+
+  # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+  # svn log
+  # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+  log)
+    GIT_COMMAND=log
+    ;;
+
+  # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+  # svn move
+  # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+  move|mv|rename|ren)
+    GIT_COMMAND=mv
+    # Todo: this likely needs a commit and push too
+    ;;
+
+  # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+  # svn revert
+  # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+  revert)
+    GIT_COMMAND=checkout
+    REQUIREMENTS+=(args-required)
+    ;;
+
+  # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+  # svn status
+  # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+  status|stat|st)
+    GIT_COMMAND=status
+    ;;
+
+  # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+  # svn update
+  # ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+  update|up)
+    GIT_COMMAND=pull
+    # Check to see if the working tree was cloned from an svn repository
+    if [ -n "$(git log -1 2>/dev/null | grep 'git-svn-id')" ] ; then
+      GIT_COMMAND="svn rebase"
+    fi
+    REQUIREMENTS+=(master-branch)
+    ;;
+
+  *)
+    echo "Error: svn command $SVN_COMMAND is not supported by the svn-to-git adapter."
+    exit 1
+    ;;
+esac
+
+#
+# Once we have determined the command, go on to parse and convert options
+#
+R=
+OLD=
+NEW=
+CHANGE=
+negative=false
+while [ $# -gt 0 ] ; do
+  option="$1"
+  shift
+  case "$option::$GIT_COMMAND" in
+    --accept::pull|"--accept::svn rebase")
+      case "$1" in
+        postpone|base|mine-full|theirs-full|edit|launch)
+          echo "--accept $1 strategy not supported in svn-to-git adapter."
+          ;;
+        mine-conflict)
+          GIT_OPTIONS+=("--strategy=recursive" "-Xours")
+          ;;
+        theirs-conflict)
+          GIT_OPTIONS+=("--strategy=recursive" "-Xtheirs")
+          ;;
+        # Also accept git merge strategies here
+        resolve|octopus|ours|subtree)
+          GIT_OPTIONS+=("--strategy=$1")
+          ;;
+      esac
+      shift
+      ;;
+
+    -c::diff|--change::diff|-c::log|--change::log)
+      CHANGE="$1"
+      shift
+      ;;
+
+    -f::commit|--file::commit)
+      GIT_OPTIONS+=("-F" "$1")
+      shift
+      ;;
+
+    --force::update|--force::mv)
+      GIT_OPTIONS+=("-f")
+      ;;
+
+    --force::add)
+      GIT_OPTIONS+=("--ignore-errors")
+      ;;
+
+    --incremental::annotate)
+      GIT_OPTIONS+=("--incremental")
+      ;;
+
+    --l::log|--limit::log)
+      GIT_OPTIONS+=("-$1")
+      shift
+      ;;
+
+    -m::commit|--message::commit)
+      GIT_OPTIONS+=("-m" "$1")
+      shift
+      ;;
+
+    --new::diff|--new::log)
+      NEW="$1"
+      shift
+      ;;
+
+    --no-diff-deleted::diff)
+      GIT_OPTIONS+=("--diff-filter=ACMRTUXB")
+      ;;
+
+    --old::diff|--old::log)
+      OLD="$1"
+      shift
+      ;;
+
+    -r::diff|--revision::diff|-r::log|--revision::log)
+      R="$1"
+      shift
+      ;;
+
+    --summarize::diff)
+      GIT_OPTIONS+=("--summary")
+      ;;
+
+    -*)
+      echo "$option not supported in svn-to-git adapter for \`svn $SVN_COMMAND\`.; see \`git help ${GIT_COMMAND}\`"
+      exit 1
+      ;;
+    *)
+      if [ "$option" != "${option/*:\/\//}" ] ; then
+        echo "Error: path / url options to svn $SVN_COMMAND not supported in svn-to-git adapter."
+        exit 1
+      fi
+      GIT_ARGS+=("$option")
+      ;;
+  esac
+done
+# Convert -r 123:122 into --old 123 --new 122
+if [ -n "$R" ] ; then
+  OLD="${R#*:}"
+  NEW="${R%%:*}"
+fi
+# Convert -c 123 into appropriate form
+if [ -n "$CHANGE" ] ; then
+  if [ "${CHANGE:0:1}" == "-" ] ; then
+    CHANGE="${CHANGE:1}"
+    negative=true
+  fi
+  NEW="$CHANGE"
+  OLD="$CHANGE"
+  if $negative ; then
+    NEW="$(($NEW-1))"
+  else
+    OLD="$(($OLD-1))"
+  fi
+fi
+# TODO: Support, or at least test for HEAD, BASE, COMMITTED and PREV
+# Can we handle {DATE} as well?
+if [ -n "$OLD" ] && [ -n "$NEW" ] ; then
+  OLD_HASHTAG=$(git svn find-rev "r$OLD")
+  if [ -z "$OLD_HASHTAG" ] ; then
+    # We will also allow hashtags to be used with 'svn diff -r', since
+    # that is what 'log' shows.
+    if [ ${#OLD} -gt 4 ] && [ -n "$(git log -1 $OLD 2>/dev/null)" ] ; then
+      OLD_HASHTAG="$OLD"
+    else
+      echo "Error: unknown revision $OLD"
+      exit 1
+    fi
+  else
+    REQUIREMENTS+=(checked-out-via-git-svn)
+  fi
+  NEW_HASHTAG=$(git svn find-rev "r$NEW")
+  if [ -z "$NEW_HASHTAG" ] ; then
+    if [ ${#NEW} -gt 4 ] && [ -n "$(git log -1 $NEW 2>/dev/null)" ] ; then
+      NEW_HASHTAG="$NEW"
+    else
+      echo "Error: unknown revision $NEW"
+      exit 1
+    fi
+  fi
+  if [ "$GIT_COMMAND" == "diff" ] ; then
+    GIT_OPTIONS+=("$OLD_HASHTAG" "$NEW_HASHTAG")
+  elif [ "$GIT_COMMAND" == "log" ] ; then
+    GIT_OPTIONS+=("${OLD_HASHTAG}..${NEW_HASHTAG}")
+  else
+    echo "Revision range operations not supported svn-to-git adapter for \`svn $SVN_COMMAND\`."
+  fi
+fi
+
+#
+# Take another look at the git command and see if any
+# additional adjustments are needed.
+#
+case "$GIT_COMMAND" in
+  commit)
+    # Run `git add -- <files>` prior to commit when `svn commit <files>` is used
+    # Run `git add -u` prior to commit when `svn commit` is used w/out any filespecs
+    if [ -n "${GIT_ARGS[*]}" ] ; then
+      echo git add -- "${GIT_ARGS[*]}"
+      $simulate || git add -- "${GIT_ARGS[@]}"
+      GIT_ARGS=()
+    else
+      echo git add -u
+      $simulate || git add -u
+    fi
+    ;;
+esac
+
+#
+# If there are arguments, separate them from the options with "--"
+#
+if $use_arg_separator && [ -n "${GIT_ARGS[*]}" ] ; then
+  GIT_OPTIONS+=("--")
+fi
+
+#
+# Check requirements
+#
+for requirement in "${REQUIREMENTS[@]}" ; do
+  case "$requirement" in
+    master-branch)
+      branch=$(git branch 2>/dev/null| sed -n '/^\*/s/^\* //p')
+      if [ "x$branch" != "xmaster" ] ; then
+        echo "Error: \`svn $SVN_COMMAND\` is for use on the master branch only."
+        echo " * use 'git commit ...' to commit on the current branch ($branch)."
+        echo " * use 'git checkout master' to return to the main branch."
+        exit 1
+      fi
+      ;;
+
+    checked-out-via-git-svn)
+      # Check to see if the working tree was cloned from an svn repository
+      if [ -z "$(git log -1 2>/dev/null | grep 'git-svn-id')" ] ; then
+        echo "\`svn $SVN_COMMAND\` requires a local repository that was checked out with \`git svn\`."
+        exit 1
+      fi
+      ;;
+
+    args-required)
+      if [ -z "${GIT_ARGS[*]}" ] ; then
+        echo "\`svn $SVN_COMMAND\` has required arguments."
+        exit 1
+      fi
+      ;;
+  esac
+done
+
+#
+# Execute the primary git command
+#
+echo git $GIT_COMMAND "${GIT_OPTIONS[@]}" "${GIT_ARGS[@]}"
+$simulate || git $GIT_COMMAND "${GIT_OPTIONS[@]}" "${GIT_ARGS[@]}"
+
+#
+# Handle the postscript, if any
+#
+for postscript in "${POSTSCRIPTS[@]}" ; do
+  case "$postscript" in
+    dcommit)
+      echo git svn dcommit
+      $simulate || git svn dcommit
+      ;;
+
+    push)
+      echo git svn push
+      $simulate || git svn push
+      ;;
+  esac
+done
