@@ -152,11 +152,12 @@ fi
 shopt -s histappend
 shopt -s histreedit
 mkdir -p $HOME/.history
-if [ -z "$HISTFILE" ]
+# If $HISTFILE is in the home directory, then make a new history file unique to this tty
+if [ $(dirname "$HISTFILE") == "$HOME" ]
 then
   TTY=$(tty | tr / _)
   HOSTNAME=$(hostname -s)
-  export HISTFILE="$HOME/.history/bash_${HOSTNAME}_$TTY"
+  export HISTFILE="$HOME/.history/bash_${HOSTNAME}${TTY}"
   if [ -f "$HISTFILE" ]
   then
     history -r
