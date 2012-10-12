@@ -3,6 +3,9 @@
 # Require THREE ^D characters in a row to exit
 export IGNOREEOF=2
 
+# Prevent Control-S from freezing terminal output
+stty stop undef
+
 # Locale settings
 export LANGUAGE=en_US.UTF-8
 export LANG=en_US.UTF-8
