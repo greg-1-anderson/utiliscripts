@@ -27,13 +27,13 @@ alias openports='portscan localhost'
 alias rmrej='rm `find -name "*.rej"` `find -name "*.orig"`'
 alias rot13='tr a-zA-Z n-za-mN-ZA-M'
 alias findtabs="find -not -regex '..*/\..*' -exec grep -HP '\t' {} \;"
-alias histt='HISTTIMEFORMAT="[%m/%d@%H:%M:%S]  " history'
 alias pull-all='for x in * ; do if [ -d $x/.git ] ; then ( cd $x ; s=$(git status -s); if [ -z "$s" ] ; then echo "Update $x." ; git pull ; else echo "$x is modified; skipping update." ; fi ) fi done'
 alias geni-commit='git svn dcommit'
 alias geni-update='git svn rebase'
 
 function tolower() { tr A-Z a-z <<<$@; }
 
+# Prompt configuration
 c_red='0;31m'
 c_green='0;32m'
 c_blue='0;34m'
@@ -100,8 +100,8 @@ if [ "`type __drush_ps1 2> /dev/null`" == "" ] ; then
   }
 fi
 
-PROMPT_COMMAND='p=$(__prompt_info)'
-PS1='${p:0:1}\[\e[$(__prompt_color)\]${p:1:$((${#p}-3))}\[\e[$c_reset\]${p#"${p%??}"}\[\e[$c_blue\]\u@\h:\w\[\e[$c_reset\]\[\e[$c_green\]$(__drush_ps1)\[\e[$c_reset\]$ '
+PROMPT_COMMAND='_p=$(__prompt_info)'
+PS1='${_p:0:1}\[\e[$(__prompt_color)\]${_p:1:$((${#_p}-3))}\[\e[$c_reset\]${_p#"${_p%??}"}\[\e[$c_blue\]\u@\h:\w\[\e[$c_reset\]\[\e[$c_green\]$(__drush_ps1)\[\e[$c_reset\]$ '
 
 # Assume that we will use vi
 export EDITOR=vi
@@ -146,6 +146,200 @@ if [ -n "$d" ] ; then
     fi
   fi
 fi
+
+# History configuration
+# c.f. http://www.catonmat.net/blog/the-definitive-guide-to-bash-command-line-history/
+shopt -s histappend
+shopt -s histreedit
+mkdir -p $HOME/.history
+if [ -z "$HISTFILE" ]
+then
+  TTY=$(tty | tr / _)
+  HOSTNAME=$(hostname -s)
+  export HISTFILE="$HOME/.history/bash_${HOSTNAME}_$TTY"
+  if [ -f "$HISTFILE" ]
+  then
+    history -r
+  fi
+fi
+export HISTIGNORE="&:[ ]*:ls:hist.*:exit"
+export PROMPT_COMMAND="$PROMPT_COMMAND"'; HISTTIMEFORMAT="[%m/%d@%H:%M:%S] " history -a'
+
+# Print command history including execution times, for this run of 'history' only
+alias histt='HISTTIMEFORMAT="[%m/%d@%H:%M:%S]  " history'
+
+# Make a note in command history
+# Usage:
+#   $ note COMMAND // comment
+#   command output
+#   $ recall comment
+#   command output
+# The 'note' command embeds the output of the supplied command
+# into the bash history file. This command output may be printed
+# out again verbatim later with the 'recall' command.
+function note {
+  t=$(date "+%s")
+  p=();
+  c=false
+  for a in "$@";
+  do
+    if $c || [ "x$a" == "x//" ]
+    then
+      c=true
+    else
+      p[${#p[@]}]="$a";
+    fi
+  done
+  echo "#$t >>" $* >> $HISTFILE
+  COLUMNS=$((COLUMNS-5-${#t})) "${p[@]}" | sed -e "s/^/#$t :: /" | tee -a $HISTFILE | sed -e 's/^#[^:]*:: //'
+}
+
+# Begin a new task: switch to a new command history
+# file, and make a note in it.  We'll copy existing
+# history over, just in case we did some stuff relevant
+# to the current task before declaring it.
+# Usage:
+#   $ task Install whizzy-fu pro
+#   begin task: Install whizzy-fu pro
+#   $ sudu apt-get install whizzyfu libwhizzyfu-dev
+#   $ ... lots of other stuff
+#   $ finished
+#   finished task: Install whizzy-fu pro
+#
+#   ... a few days later, in a different terminal:
+#   $ recall whizzy
+#   # Fri Oct 12 11:06:43 PDT 2012
+#   recalled task: Install whizzy-fu pro
+#   $ ^Rapt-get
+#   (reverse-i-search)`sudo apt-get': sudo apt-get install whizzyfu libwhizzyfu-dev
+function task {
+  t=$(date "+%s")
+  task=$(echo $* | tr A-Z a-z | sed -e 's/ /_/g' -e 's/[^a-z0-9_]//g')
+  taskfile="$HOME/.history/task_$task"
+  history -a
+  histpush "$taskfile"
+  note echo "begin task: $*" // $HISTFILE
+  echo "HISTFILE is now $HISTFILE"
+}
+
+# Complete a task and go back to previous HISTFILE.  Optional.
+function finished {
+  l=$(grep "^#[0-9]\+ :: begin task:" $HISTFILE | tail -n 1)
+  if [ -z "$l" ]
+  then
+    echo "finished: no task in progress"
+  else
+    m=$(echo $l | sed -e 's/^#[^>]*:: begin/finished/')
+    echo $m
+    histpop
+  fi
+}
+
+# Show all active nested tasks in this terminal
+function tasks {
+  for f in $HISTFILE $(echo $HISTFILES | tr : ' ') ; do
+    if [ ${f:0:1} != '/' ]
+    then
+      f="$HOME/.history/$f"
+    fi
+    l=$(grep -Hm 1 "^#[0-9]\+ >>.*$*" $f)
+    t=$(echo $l | sed -e 's/^[^#]*#\([0-9]\+\).*/\1/')
+    c=$(echo $l | sed -e 's/^[^>]*>> *//')
+    d=$(date --date="@$t")
+    n=${c#*:}
+    sn=${n%% //*}
+    echo "$(basename $f):$sn // $d"
+  done
+}
+
+# grep all history files for a command pattern
+function hgrep {
+  (
+    cd $HOME/.history
+    grep $* $HISTFILE $(ls -t | grep -v $(basename $HISTFILE)) | grep -v '^[^:]*:#'
+  )
+}
+
+# Show the output of a command passed to 'note', or switch back to a
+# task (and corresponding history file) from the past.
+function recall {
+  l=$(cd  $HOME/.history && grep "^#[0-9]\+ >>.*$*" $HISTFILE $(ls -t) | tail -n 1)
+  if [ -z "$l" ]
+  then
+    echo "recall: cannot find $*: No such note or task"
+  else
+    f=$(echo $l | sed -e 's/^\([^:]*\):#.*/\1/')
+    if [ ${f:0:1} != '/' ]
+    then
+      f="$HOME/.history/$f"
+    fi
+    t=$(echo $l | sed -e 's/^[^#]*#\([0-9]\+\).*/\1/')
+    c=$(echo $l | sed -e 's/^[^>]*>> *//')
+    d=$(date --date="@$t")
+    if [ "${c%%:*}" == "echo begin task" ]
+    then
+      n=${c#*:}
+      if [ "$HISTFILE" == "$f" ]
+      then
+        echo "# $d"
+        echo "${c#* }"
+      else
+        echo "# $d"
+        echo "resume task: $n"
+        histpush "$f"
+        echo "HISTFILE is now $HISTFILE"
+      fi
+    else
+      if [ "$HISTFILE" != "$f" ]
+      then
+        echo "recall: found note in $f"
+      fi
+      if [ "${c%% *}" == "echo" ]
+      then
+        echo "# $d"
+        echo "${c#* }"
+      else
+        echo "# $d"
+        echo "\$ $c"
+        grep "#$t :: " $HISTFILE | sed -e 's/^#[0-9]* :: //'
+      fi
+    fi
+  fi
+}
+
+# Start using a new history file.  Keep a stack of previous
+# history files so they may be returned to at a later time.
+function histpush {
+  if [ -n "$1" ]
+  then
+    if [ -n "$HISTFILES" ]
+    then
+      export HISTFILES="$HISTFILE"
+    else
+      export HISTFILES="$HISTFILES:$HISTFILE"
+    fi
+    export HISTFILE="$1"
+    history -r
+  fi
+}
+
+# Resume using a history file that was in use in the past.
+function histpop {
+  if [ -n "$HISTFILES" ]
+  then
+    export HISTFILE="${HISTFILES%%:*}"
+    history -r
+    if [ "${HISTFILES/:/}" == "$HISTFILES" ]
+    then
+      export HISTFILES=
+    else
+      export HISTFILES="${HISTFILES#*:}"
+    fi
+  else
+    echo "histpop: HISTFILES is empty"
+  fi
+  echo "HISTFILE restored to $HISTFILE"
+}
 
 # Start up ssh-agent.  From http://mah.everybody.org/docs/ssh
 SSH_ENV="$HOME/.ssh/environment"
