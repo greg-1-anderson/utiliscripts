@@ -61,6 +61,7 @@ echo "# Check install data..."
 if [ ! -d $INSTALLATION_DATA ] && [ -n "$INSTALLATION_DATA_REPO" ] ; then
 
   (
+    mkdir -p $(dirname $INSTALLATION_DATA)
     cd $(dirname $INSTALLATION_DATA)
     git clone $INSTALLATION_DATA_REPO
 
