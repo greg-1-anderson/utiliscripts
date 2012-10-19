@@ -8,6 +8,8 @@
 # you have a site1.aliases.drushrc.php file, and that it contains
 # site records for both a 'live' and a 'backup' site.
 
+force=false
+
 # Start with an empty backup list.
 backup_list=
 
@@ -20,6 +22,9 @@ while [ $# -gt 0 ] ; do
   shift
 
   case "$option" in
+    --force)
+      force=true
+      ;;
 
     -* )
       echo "Unknown option $option"
@@ -48,6 +53,8 @@ if [ -z "$backup_list" ] ; then
   exit 1
 fi
 
+# Keep a list of sites updated
+update_list=
 
 # Loop over all of the sites, backing up each in turn.
 for site in ${backup_list} ; do
@@ -57,19 +64,26 @@ for site in ${backup_list} ; do
   cur_hash_file=$backup_dir/${site}-cur.hash
   diff_file=$backup_dir/${site}.hash
   dump_file=$backup_dir/${site}.sql
-  echo "Checking ${site} for changes..."
+  update_list_file=$backup_dir/${site}.updates
+  cur_update_list_file=$backup_dir/${site}-cur.updates
+  msg="=== Checking ${site} for changes ==="
+  $force && msg="=== Backup forced for ${site} ==="
+  echo $msg
   drush @$site.live sql-hash --tables-list='users,permission,node' --strict=0 > $cur_hash_file
-  if [ ! -f $hash_file ] || [ "x`diff $cur_hash_file $hash_file`" != "x" ] ; then
-    echo "=== Begin backup of $site ==="
+  if [ ! -f $hash_file ] || [ "x`diff $cur_hash_file $hash_file`" != "x" ] || $force ; then
+    echo "Begin backup of $site"
 
-    # Show which tables changed last time.
+    # Show which tables changed since last time.
     diff -U 0 $hash_file $cur_hash_file > $diff_file
     mv -f $cur_hash_file $hash_file
 
     # First, insure that the git repository is clean on the live site.
+    # We expect that changes to code should not be made on the live site,
+    # but if there are any dirty files in the git repository, we will
+    # autocommit them.
     live_root=$(drush sa @$site.live --component=root)
     drush @$site.live ssh "cd $live_root && git add -A && git commit -m 'Automatic commit by drupal-backup-all script' && git push"
-    # Next, make sure backup site has most recent code.
+    # Next, make sure backup site has the most recent code.
     (
       cd $(drush drupal-directory @$site.backup)
       git pull
@@ -81,16 +95,94 @@ for site in ${backup_list} ; do
     # Sync the sql database from the live site to the backup site,
     # Drop the database into place in the backup folder by using it
     # as the target-dump.
-    drush -y -v sql-sync --target-dump="$dump_file" @$site.live @$site.backup
+    drush -y sql-sync --target-dump="$dump_file" @$site.live @$site.backup
+
+    # Check to see if %files has been committed to the git repository.
+    # If it has not, then the log line will be empty.
+    files_dir=$(drush dd @$site.backup:%files)
+    log_line=$(cd $(drush dd @$site.backup:%files); git log -1 --oneline $files_dir)
+    # If %files are not in the repository, then copy them via rsync
+    if [ -z "$log_line" ] ; then
+      drush -y rsync @$site.live:%files @$site.backup:%files
+    fi
+
+    # Do the same operation with %private
+    private_dir=$(drush dd @$site.backup:%private)
+    if [ -n "$private_dir" ] ; then
+      log_line=$(cd $(drush dd @$site.backup:%private); git log -1 --oneline $private_dir)
+      # If %private are not in the repository, then copy them via rsync
+      if [ -z "$log_line" ] ; then
+        drush -y rsync @$site.live:%private @$site.backup:%private
+      fi
+    fi
 
     # TODO: What about rolling backups?  Should we use migratehistories, or
     # just try committing the sql dump file to a get repository?
 
-    # TODO: Backup would be a good time to test to see if there are updates
-    # (pm-updatecode -n --pipe); if there are, we should copy the code and
-    # database to another location where we could do a trial update & send
-    # email notification to someone.
+    echo "Backup complete for $site"
   else
+    echo "Backup not needed for $site"
     rm -f $cur_hash_file
+  fi
+
+  # Check to see if any updates are available.
+  echo "=== Checking ${site} for updates ==="
+  drush @$site.backup pm-updatecode -n --pipe > $cur_update_list_file 2>/dev/null
+  if [ -s $cur_update_list_file ] ; then
+    if [ ! -f $update_list_file ] || [ "x`diff $cur_update_list_file $update_list_file`" != "x" ] ; then
+      update_list="${update_list} $site"
+      # If there is a @site.update alias defined, then automatically
+      # perform a pm-update, so the result will be available for testing.
+      if [ -n "$(drush sa --short @$site.update)" ] ; then
+        # TODO: If we preserved the creation date of $update_list_file,
+        # then we could output how long this site has been waiting for an
+        # update below.
+        mv -f $cur_update_list_file $update_list_file
+        echo "Begin update of $site"
+
+        # Show which available module updates changed since last time?
+        # diff -U 0 $update_list_file $cur_update_list_file > $update_diff_file
+        mv -f $cur_update_list_file $update_list_file
+
+        # Make sure update site has the most recent code.
+        (
+          cd $(drush drupal-directory @$site.update)
+          git pull
+        )
+        # Sync the database
+        drush -y sql-sync --source-dump="$dump_file" @$site.backup @$site.update
+
+        # Again, copy %files and %private for convenience
+        files_dir=$(drush dd @$site.update:%files)
+        log_line=$(cd $(drush dd @$site.update:%files); git log -1 --oneline $files_dir)
+        if [ -z "$log_line" ] ; then
+          drush -y rsync @$site.backup:%files @$site.update:%files
+        fi
+        private_dir=$(drush dd @$site.update:%private)
+        if [ -n "$private_dir" ] ; then
+          log_line=$(cd $(drush dd @$site.update:%private); git log -1 --oneline $private_dir)
+          # If %private are not in the repository, then copy them via rsync
+          if [ -z "$log_line" ] ; then
+            drush -y rsync @$site.backup:%private @$site.update:%private
+          fi
+        fi
+
+        # Run the update
+        drush -y @$site.update pm-update
+        echo "Update complete for $site"
+      else
+        echo "Update needed for $site; please make an .update site alias"
+        # Add content to the update list so that it will be different, and
+        # we will try again next time.
+        date >> $update_list_file
+      fi
+    else
+      echo "No update needed for $site; successfully updated last backup"
+      rm -f $cur_update_list_file
+    fi
+  else
+    echo "No update needed for $site; live site is up-to-date"
+    rm -f $cur_update_list_file
+    rm -f $update_list_file
   fi
 done
