@@ -43,7 +43,7 @@ fi
 if [ -z "$INSTALLATION_DATA_REPO" ] ; then
   if [ "$USER" == "ga" ]
   then
-    export INSTALLATION_DATA_REPO=ga@vps2.greenknowe.org:installdata.git
+    export INSTALLATION_DATA_REPO=ga@vps.greenknowe.org:installdata.git
   fi
 fi
 
@@ -61,6 +61,7 @@ echo "# Check install data..."
 if [ ! -d $INSTALLATION_DATA ] && [ -n "$INSTALLATION_DATA_REPO" ] ; then
 
   (
+    mkdir -p $(dirname $INSTALLATION_DATA)
     cd $(dirname $INSTALLATION_DATA)
     git clone $INSTALLATION_DATA_REPO
 
@@ -89,7 +90,7 @@ fi
 if [ -z "$CONFIG_REPO" ] ; then
   if [ "$USER" == "ga" ]
   then
-    export CONFIG_REPO=git@vps2.greenknowe.org:config.git
+    export CONFIG_REPO=git@vps.greenknowe.org:config.git
   fi
 fi
 
@@ -731,6 +732,10 @@ git config --global url."ssh://git@git.drupal.org/sandbox/".insteadOf sandbox:
 
 # http://chuva-inc.com/blog/2012/09/fast-tip-enable-git-rerere-right-now
 git config --global rerere.enabled 1
+
+
+# GUI pref configuration dubious; disabling (again) for now
+exit 0
 
 # If we can find gconftool-2, AND we have a $DISPLAY, then set up some GUI prefs
 g=`which gconftool-2`
