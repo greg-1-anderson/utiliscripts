@@ -66,6 +66,7 @@ for site in ${backup_list} ; do
   dump_file=$backup_dir/${site}.sql
   update_list_file=$backup_dir/${site}.updates
   cur_update_list_file=$backup_dir/${site}-cur.updates
+  update_log_file=$backup_dir/${site}-updatelog
   msg="=== Checking ${site} for changes ==="
   $force && msg="=== Backup forced for ${site} ==="
   echo $msg
@@ -168,7 +169,7 @@ for site in ${backup_list} ; do
         fi
 
         # Run the update
-        drush -y @$site.update pm-update
+        drush -y @$site.update pm-update > $update_log_file 2>&1
         echo "Update complete for $site"
       else
         echo "Update needed for $site; please make an .update site alias"
@@ -184,5 +185,6 @@ for site in ${backup_list} ; do
     echo "No update needed for $site; live site is up-to-date"
     rm -f $cur_update_list_file
     rm -f $update_list_file
+    rm -f $update_log_file
   fi
 done
