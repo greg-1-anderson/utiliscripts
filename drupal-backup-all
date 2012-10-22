@@ -7,6 +7,8 @@
 # For each site named as a command argument, it is assumed that
 # you have a site1.aliases.drushrc.php file, and that it contains
 # site records for both a 'live' and a 'backup' site.
+#
+# c.f. http://groups.drupal.org/node/263458#comment-840478
 
 force=false
 
