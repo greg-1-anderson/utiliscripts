@@ -99,6 +99,7 @@ for site in ${backup_list} ; do
     # Drop the database into place in the backup folder by using it
     # as the target-dump.
     drush -y sql-sync --target-dump="$dump_file" @$site.live @$site.backup
+    drush -y @$site.backup cc all
 
     # Check to see if %files has been committed to the git repository.
     # If it has not, then the log line will be empty.
@@ -154,6 +155,7 @@ for site in ${backup_list} ; do
         )
         # Sync the database
         drush -y sql-sync --source-dump="$dump_file" @$site.backup @$site.update
+        drush -y @$site.update cc all
 
         # Again, copy %files and %private for convenience
         files_dir=$(drush dd @$site.update:%files)
