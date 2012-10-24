@@ -4,13 +4,70 @@
 #
 #    drupal-backup-all site1 site2 site3
 #
-# For each site named as a command argument, it is assumed that
-# you have a site1.aliases.drushrc.php file, and that it contains
-# site records for both a 'live' and a 'backup' site.
+# Alternate example - backup each site daily at 3am from cron:
 #
-# c.f. http://groups.drupal.org/node/263458#comment-840478
+#    0  3  *  *  *  /usr/bin/env PATH=/usr/local/bin:/usr/bin:/bin drupal-backup-all site1 site2 site3
+#
+# Configuration:
+#
+# Each site named in the commandline arguments must have a Drush site alias
+# file named, for example, site1.aliases.drushrc.php, and it must have alias
+# records named live, backup and update.  The live site is usually remote,
+# while the backup and update sites must be local.
+#
+# Example alias file site1.aliases.drushrc.php:
+#
+# $aliases['live'] = array (
+#   'remote-host' => 'vps.myisp.com',
+#   'remote-user' => 'www-admin',
+#   'uri' => 'http://site1.org',
+#   'root' => '/srv/www/site1.org/htdocs',
+# );
+#
+# $aliases['backup'] = array (
+#   'root' => '/srv/www/backup.site1.org/htdocs',
+#   'uri' => 'http://site1.org',
+#   'target-command-specific' => array (
+#     'sql-sync' => array (
+#       'enable' => array ('environment_indicator'),
+#       'permission' => array (
+#         'authenticated user' => array (
+#           'add' => array('access environment indicator'),
+#         ),
+#         'anonymous user' => array (
+#           'add' => 'access environment indicator',
+#         ),
+#       ),
+#     ),
+#   ),
+# );
+#
+# $aliases['update'] = array (
+#   'root' => '/srv/www/backup.site1.org/htdocs',
+#   'uri' => 'http://site1.org',
+#   'target-command-specific' => array (
+#     'sql-sync' => array (
+#       'enable' => array ('stage_file_proxy'),
+#     ),
+#   ),
+# );
+#
+# You must manually set up the 'backup' and 'update' sites; this script
+# will not create them for you.  The sql-sync enable configuration shown
+# above is an example; for this site, environment indicator is enabled on
+# the backup site, and stage_file_proxy is enabled on the update site. You
+# do not need to enable these modules, and you may wish to enable others.
+# If you use this feature, you must copy the sync-enable script to your
+# ~/.drush folder.  For more information on sync-enable, see:
+#
+#   http://drupalcode.org/project/drush.git/blob/HEAD:/examples/sync_enable.drush.inc
+#
+# See also: http://groups.drupal.org/node/263458#comment-840478
+#
 
-force=false
+FORCE=false
+VERBOSE=false
+QUIET='>/dev/null 2>&1'
 
 # Start with an empty backup list.
 backup_list=
@@ -24,8 +81,13 @@ while [ $# -gt 0 ] ; do
   shift
 
   case "$option" in
-    --force)
-      force=true
+    --force|-f)
+      FORCE=true
+      ;;
+
+    --verbose|-v)
+      VERBOSE=true
+      QUIET=
       ;;
 
     -* )
@@ -70,11 +132,11 @@ for site in ${backup_list} ; do
   cur_update_list_file=$backup_dir/${site}-cur.updates
   update_log_file=$backup_dir/${site}-updatelog
   msg="=== Checking ${site} for changes ==="
-  $force && msg="=== Backup forced for ${site} ==="
-  echo $msg
-  drush @$site.live sql-hash --tables-list='users,permission,node' --strict=0 > $cur_hash_file
-  if [ ! -f $hash_file ] || [ "x`diff $cur_hash_file $hash_file`" != "x" ] || $force ; then
-    echo "Begin backup of $site"
+  $FORCE && msg="=== Backup forced for ${site} ==="
+  echo $msg 1>&2
+  drush @$site.live sql-hash --tables-list='users,permission,node' --strict=0 > $cur_hash_file 2>/dev/null
+  if [ ! -f $hash_file ] || [ "x`diff $cur_hash_file $hash_file`" != "x" ] || $FORCE ; then
+    echo "Begin backup of $site" 1>&2
 
     # Show which tables changed since last time.
     diff -U 0 $hash_file $cur_hash_file > $diff_file
@@ -85,11 +147,11 @@ for site in ${backup_list} ; do
     # but if there are any dirty files in the git repository, we will
     # autocommit them.
     live_root=$(drush sa @$site.live --component=root)
-    drush @$site.live ssh "cd $live_root && git add -A && git commit -m 'Automatic commit by drupal-backup-all script' && git push"
+    drush @$site.live ssh "cd $live_root && git add -A && git commit -m 'Automatic commit by drupal-backup-all script' && git push" 1>&2
     # Next, make sure backup site has the most recent code.
     (
       cd $(drush drupal-directory @$site.backup)
-      git pull
+      git pull 1>&2
     )
     # Get current commit tag and write it into live database
     head_commithash=$(drush @$site.live ssh 'git rev-parse HEAD')
@@ -98,8 +160,8 @@ for site in ${backup_list} ; do
     # Sync the sql database from the live site to the backup site,
     # Drop the database into place in the backup folder by using it
     # as the target-dump.
-    drush -y sql-sync --target-dump="$dump_file" @$site.live @$site.backup
-    drush -y @$site.backup cc all
+    drush -y sql-sync --target-dump="$dump_file" @$site.live @$site.backup $QUIET
+    drush -y @$site.backup cc all 1>&2
 
     # Check to see if %files has been committed to the git repository.
     # If it has not, then the log line will be empty.
@@ -107,30 +169,30 @@ for site in ${backup_list} ; do
     log_line=$(cd $(drush dd @$site.backup:%files); git log -1 --oneline $files_dir)
     # If %files are not in the repository, then copy them via rsync
     if [ -z "$log_line" ] ; then
-      drush -y rsync @$site.live:%files @$site.backup:%files
+      drush -y rsync @$site.live:%files @$site.backup:%files $QUIET
     fi
 
     # Do the same operation with %private
-    private_dir=$(drush dd @$site.backup:%private)
+    private_dir=$(drush dd @$site.backup:%private 2>/dev/null)
     if [ -n "$private_dir" ] ; then
       log_line=$(cd $(drush dd @$site.backup:%private); git log -1 --oneline $private_dir)
       # If %private are not in the repository, then copy them via rsync
       if [ -z "$log_line" ] ; then
-        drush -y rsync @$site.live:%private @$site.backup:%private
+        drush -y rsync @$site.live:%private @$site.backup:%private $QUIET
       fi
     fi
 
     # TODO: What about rolling backups?  Should we use migratehistories, or
     # just try committing the sql dump file to a get repository?
 
-    echo "Backup complete for $site"
+    echo "Backup complete for $site" 1>&2
   else
-    echo "Backup not needed for $site"
+    echo "Backup not needed for $site" 1>&2
     rm -f $cur_hash_file
   fi
 
   # Check to see if any updates are available.
-  echo "=== Checking ${site} for updates ==="
+  echo "=== Checking ${site} for updates ===" 1>&2
   drush @$site.backup pm-updatecode -n --pipe > $cur_update_list_file 2>/dev/null
   if [ -s $cur_update_list_file ] ; then
     if [ ! -f $update_list_file ] || [ "x`diff $cur_update_list_file $update_list_file`" != "x" ] ; then
@@ -142,51 +204,47 @@ for site in ${backup_list} ; do
         # then we could output how long this site has been waiting for an
         # update below.
         mv -f $cur_update_list_file $update_list_file
-        echo "Begin update of $site"
-
-        # Show which available module updates changed since last time?
-        # diff -U 0 $update_list_file $cur_update_list_file > $update_diff_file
-        mv -f $cur_update_list_file $update_list_file
+        echo "Begin update of $site" 1>&2
 
         # Make sure update site has the most recent code.
         (
           cd $(drush drupal-directory @$site.update)
-          git pull
+          git pull 1>&2
         )
         # Sync the database
-        drush -y sql-sync --source-dump="$dump_file" @$site.backup @$site.update
-        drush -y @$site.update cc all
+        drush -y sql-sync --source-dump="$dump_file" @$site.backup @$site.update $QUIET
+        drush -y @$site.update cc all 1>&2
 
         # Again, copy %files and %private for convenience
         files_dir=$(drush dd @$site.update:%files)
         log_line=$(cd $(drush dd @$site.update:%files); git log -1 --oneline $files_dir)
         if [ -z "$log_line" ] ; then
-          drush -y rsync @$site.backup:%files @$site.update:%files
+          drush -y rsync @$site.backup:%files @$site.update:%files $QUIET
         fi
-        private_dir=$(drush dd @$site.update:%private)
+        private_dir=$(drush dd @$site.update:%private 2>/dev/null)
         if [ -n "$private_dir" ] ; then
           log_line=$(cd $(drush dd @$site.update:%private); git log -1 --oneline $private_dir)
           # If %private are not in the repository, then copy them via rsync
           if [ -z "$log_line" ] ; then
-            drush -y rsync @$site.backup:%private @$site.update:%private
+            drush -y rsync @$site.backup:%private @$site.update:%private $QUIET
           fi
         fi
 
         # Run the update
         drush -y @$site.update pm-update > $update_log_file 2>&1
-        echo "Update complete for $site"
+        echo "Update complete for $site" 1>&2
       else
-        echo "Update needed for $site; please make an .update site alias"
+        echo "Update needed for $site; please make an .update site alias" 1>&2
         # Add content to the update list so that it will be different, and
         # we will try again next time.
         date >> $update_list_file
       fi
     else
-      echo "No update needed for $site; successfully updated last backup"
+      echo "No update needed for $site; successfully updated last backup" 1>&2
       rm -f $cur_update_list_file
     fi
   else
-    echo "No update needed for $site; live site is up-to-date"
+    echo "No update needed for $site; live site is up-to-date" 1>&2
     rm -f $cur_update_list_file
     rm -f $update_list_file
     rm -f $update_log_file
