@@ -107,6 +107,7 @@ host=`hostname -s`
 keytype=rsa
 
 mkdir -p $HOME/.ssh
+chmod 700 $HOME/.ssh
 
 archive_key="$SSH_KEY_ARCHIVE/${host}_id_rsa"
 if [ -f "${archive_key%rsa}"dsa ]
@@ -123,6 +124,8 @@ then
     echo "Restoring public / private key pair for $host"
       cp -f "$archive_key" "$HOME/.ssh/id_${keytype}"
       cp -f "${archive_key}.pub" "$HOME/.ssh/id_${keytype}.pub"
+      chmod 600 "$HOME/.ssh/id_${keytype}"
+      chmod 600 "$HOME/.ssh/id_${keytype}.pub"
   else
 		echo "Generating a public / private key pair for this system; please protect it with a password."
 		ssh-keygen -t $keytype -f $HOME/.ssh/id_$keytype
@@ -499,11 +502,11 @@ fi
 # end, so that we run before this part:
 #   >> # If not running interactively, don't do anything
 #   >> [ -z "$PS1" ] && return
-chkbashrc=`grep '\(UTILISCRIPTS\)' $HOME/.bashrc`
+chkbashrc=$([ -f $HOME/.bashrc ] && grep '\(UTILISCRIPTS\)' $HOME/.bashrc)
 if [ "X$chkbashrc" = "X" ] ; then
 UTILISCRIPTS_RELATIVE=$(echo $UTILISCRIPTS | sed -e 's|/home/[^/]*/||')
 SSH_KEY_ARCHIVE_RELATIVE=$(echo $SSH_KEY_ARCHIVE| sed -e 's|/home/[^/]*/||')
-sed -e '/^ *$/,$ d' $HOME/.bashrc > $HOME/.bashrc-update
+([ -f $HOME/.bashrc ] && sed -e '/^ *$/,$ d' $HOME/.bashrc || echo) > $HOME/.bashrc-update
 cat <<- __END__ >> $HOME/.bashrc-update
 
 # Add Utiliscripts to the path and export location environment variables
@@ -512,7 +515,7 @@ export SSH_KEY_ARCHIVE=\$HOME/$SSH_KEY_ARCHIVE_RELATIVE
 [ \$PATH == \${PATH/utiliscripts/} ] && export PATH=\$UTILISCRIPTS:\$PATH
 
 __END__
-sed -e '1,/^ *$/ d' $HOME/.bashrc >> $HOME/.bashrc-update
+[ -f $HOME/.bashrc ] && sed -e '1,/^ *$/ d' $HOME/.bashrc >> $HOME/.bashrc-update
 mv -f $HOME/.bashrc-update $HOME/.bashrc
 else
 # At one time we added utiliscripts to the end of the path; now move it to the beginning
