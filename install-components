@@ -82,18 +82,21 @@ packages["security"]="uif bastille"
 
 packages["network"]="ssh rsh-client nmap davfs2 curl"
 
-packages["system-gui"]="perl-tk gnome-session-fallback k3b wmctrl wireshark"
+packages["system-gui"]="perl-tk k3b wmctrl wireshark"
 
 packages["repository"]="subversion cvs git-core mercurial"
 
 packages["compress"]="sharutils zip p7zip "
 
-packages["nvidia"]="nvidia-settings"
-
+#packages["nvidia"]="nvidia-settings"
 
 groups["database"]="postgres mysql sqlite"
 
-groups["programming"]="compile-build dev-docs webservices debug ide repository compress java python ${groups[database]}"
+# Selecting oracle-java will deselect open-java.  We list both here so that --no-programming will remove both Java flavors.
+groups["programming"]="compile-build dev-docs webservices debug ide repository compress oracle-java open-java python ${groups[database]}"
+
+# Again, to allow --no-java
+groups["java"]="oracle-java open-java"
 
 packages["compile-build"]="g++ autoconf automake1.9 libtool libc6 flex bison libncurses5-dev"
 
@@ -119,7 +122,10 @@ packages["sqlite"]="sqlite php5-sqlite"
 packages["mysql"]="libdbd-mysql-perl libdbd-mysql mysql-client mysql-server php5-mysql"
 # mysql-doc
 
-packages["java"]="openjdk-7-jdk ant java2html"
+# http://www.canato.org/2012/06/install-oracle-jdk-7-on-linux-mint-13-ubuntu-12-04/
+packages["oracle-java"]="oracle-java7-installer ant java2html"
+
+packages["open-java"]="openjdk-7-jdk ant java2html"
 
 # For phpsh, we need easy_install (python-pip), Python.h (python-dev) and ncurses (libncurses5-dev).
 packages["python"]="python-pip python-dev"
@@ -153,10 +159,9 @@ for option in $* ; do
 	case "$option" in
 		-v | --verbose )
 			verbose=true
-			show=true
 			;;
 
-		--show )
+		--show | --descriptions)
 			show=true
 			;;
 
@@ -267,6 +272,9 @@ if [ -z "$DISPLAY" ] ; then
   no_list="$no_list gui nvidia"
 fi
 
+$verbose && echo "List of items to remove is: $no_list"
+$verbose && echo "List of items to add is: $yes_list"
+
 #
 # Remove all of the --no items
 #
@@ -294,7 +302,23 @@ for add in $yes_list ; do
 		$verbose && echo "Select $add: ${packages[$add]}" >&2
 		install_list[$add]=${packages[$add]}
 	fi
+	# If 'open-java' is explicitly added, then remove oracle-java
+	if [ "$add" == "open-java" ] ; then
+		unset install_list[oracle-java]
+	fi
 done
+
+# If the selected sections include 'java', then add the
+# repository that contains Oracle Java.  Skip this step
+# if Java is already installed
+selected="${!install_list[@]}"
+if [ "${selected}" != "${selected/oracle-java}" ] ; then
+	if [ -z "$(which java)" ] ; then
+		add-apt-repository ppa:webupd8team/java
+		apt-get update
+	fi
+	unset install_list[open-java]
+fi
 
 echo "Package sets selected for installation: ${!install_list[@]}"
 echo ${install_list[@]}
