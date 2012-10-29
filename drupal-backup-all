@@ -161,7 +161,7 @@ for site in ${backup_list} ; do
   if [ ! -f $hash_file ] || [ "x`diff $cur_hash_file $hash_file`" != "x" ] || $FORCE ; then
     msg="$(date "+%Y-%m-%d %H:%M") :: Begin backup of $site"
     echo $msg 1>&2
-    echo $msg > $schedule_log
+    echo $msg >> $schedule_log
 
     # Show which tables changed since last time.
     diff -U 0 $hash_file $cur_hash_file > $diff_file
@@ -232,7 +232,7 @@ for site in ${backup_list} ; do
         mv -f $cur_update_list_file $update_list_file
         msg="$(date "+%Y-%m-%d %H:%M") :: Begin update of $site"
         echo $msg 1>&2
-        echo $msg > $schedule_log
+        echo $msg >> $schedule_log
 
         # Make sure update site has the most recent code.
         (
