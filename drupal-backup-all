@@ -66,11 +66,14 @@
 #
 
 FORCE=false
+FORCE_UPDATE=false
+NOTIFY=
 VERBOSE=false
 QUIET='>/dev/null 2>&1'
 
 # Start with an empty backup list.
 backup_list=
+backup_base_dir=/data/archive/drupal
 
 #
 # Parse command line args
@@ -81,8 +84,26 @@ while [ $# -gt 0 ] ; do
   shift
 
   case "$option" in
+    # Force backup: the live site will always be copied to the backup site
     --force|-f)
       FORCE=true
+      ;;
+
+    # Force update: if an update is needed, it will always be done, even if
+    # the same update was already completed the last time this script executed.
+    --force-update)
+      FORCE_UPDATE=true
+      ;;
+
+    # Notify: email address to send notifications of availabile updates
+    --notify)
+      NOTIFY="$1"
+      shift
+      ;;
+
+    --ssh-relay)
+      ssh_relay=$1
+      shift
       ;;
 
     --verbose|-v)
@@ -119,11 +140,13 @@ fi
 
 # Keep a list of sites updated
 update_list=
+update_notify_file=$(mktemp drupal-backup-notify.XXXXXXXXXX)
 
 # Loop over all of the sites, backing up each in turn.
 for site in ${backup_list} ; do
-  backup_dir=/data/archive/drupal/$site
+  backup_dir=$backup_base_dir/$site
   mkdir -p "$backup_dir"
+  schedule_log=$backup_dir/${site}-schedule.log
   hash_file=$backup_dir/${site}.hash
   cur_hash_file=$backup_dir/${site}-cur.hash
   diff_file=$backup_dir/${site}.hash
@@ -136,7 +159,9 @@ for site in ${backup_list} ; do
   echo $msg 1>&2
   drush @$site.live sql-hash --tables-list='users,permission,node' --strict=0 > $cur_hash_file 2>/dev/null
   if [ ! -f $hash_file ] || [ "x`diff $cur_hash_file $hash_file`" != "x" ] || $FORCE ; then
-    echo "Begin backup of $site" 1>&2
+    msg="$(date "+%Y-%m-%d %H:%M") :: Begin backup of $site"
+    echo $msg 1>&2
+    echo $msg > $schedule_log
 
     # Show which tables changed since last time.
     diff -U 0 $hash_file $cur_hash_file > $diff_file
@@ -154,8 +179,8 @@ for site in ${backup_list} ; do
       git pull 1>&2
     )
     # Get current commit tag and write it into live database
-    head_commithash=$(drush @$site.live ssh 'git rev-parse HEAD')
-    drush -v @$site.live vset --always-set -y git-commithash "$head_commithash"
+    head_commithash=$(drush @$site.live ssh "cd $live_root && git rev-parse HEAD")
+    drush -v @$site.live vset --always-set -y git_commithash "$head_commithash"
 
     # Sync the sql database from the live site to the backup site,
     # Drop the database into place in the backup folder by using it
@@ -169,7 +194,8 @@ for site in ${backup_list} ; do
     log_line=$(cd $(drush dd @$site.backup:%files); git log -1 --oneline $files_dir)
     # If %files are not in the repository, then copy them via rsync
     if [ -z "$log_line" ] ; then
-      drush -y rsync @$site.live:%files @$site.backup:%files $QUIET
+      echo drush -y -v rsync @$site.live:%files @$site.backup:%files $QUIET
+      drush -y -v rsync @$site.live:%files @$site.backup:%files $QUIET
     fi
 
     # Do the same operation with %private
@@ -178,7 +204,8 @@ for site in ${backup_list} ; do
       log_line=$(cd $(drush dd @$site.backup:%private); git log -1 --oneline $private_dir)
       # If %private are not in the repository, then copy them via rsync
       if [ -z "$log_line" ] ; then
-        drush -y rsync @$site.live:%private @$site.backup:%private $QUIET
+        echo drush -y -v rsync @$site.live:%private @$site.backup:%private $QUIET
+        drush -y -v rsync @$site.live:%private @$site.backup:%private $QUIET
       fi
     fi
 
@@ -195,8 +222,7 @@ for site in ${backup_list} ; do
   echo "=== Checking ${site} for updates ===" 1>&2
   drush @$site.backup pm-updatecode -n --pipe > $cur_update_list_file 2>/dev/null
   if [ -s $cur_update_list_file ] ; then
-    if [ ! -f $update_list_file ] || [ "x`diff $cur_update_list_file $update_list_file`" != "x" ] ; then
-      update_list="${update_list} $site"
+    if [ ! -f $update_list_file ] || [ "x`diff $cur_update_list_file $update_list_file`" != "x" ] || $FORCE_UPDATE ; then
       # If there is a @site.update alias defined, then automatically
       # perform a pm-update, so the result will be available for testing.
       if [ -n "$(drush sa --short @$site.update)" ] ; then
@@ -204,11 +230,16 @@ for site in ${backup_list} ; do
         # then we could output how long this site has been waiting for an
         # update below.
         mv -f $cur_update_list_file $update_list_file
-        echo "Begin update of $site" 1>&2
+        msg="$(date "+%Y-%m-%d %H:%M") :: Begin update of $site"
+        echo $msg 1>&2
+        echo $msg > $schedule_log
 
         # Make sure update site has the most recent code.
         (
           cd $(drush drupal-directory @$site.update)
+          # TODO: we could use `git pull backup master 1>&2` here for increased
+          # performance (pull locally rather than remotely) if we were sure that
+          # the git remote 'backup' was defined.
           git pull 1>&2
         )
         # Sync the database
@@ -231,10 +262,17 @@ for site in ${backup_list} ; do
         fi
 
         # Run the update
+        update_list="${update_list} $site"
         drush -y @$site.update pm-update > $update_log_file 2>&1
+        (
+          echo "=== Update log for ${site} ==="
+          echo
+          cat $update_log_file
+          echo
+        ) >> $update_notify_file
         echo "Update complete for $site" 1>&2
       else
-        echo "Update needed for $site; please make an .update site alias" 1>&2
+        echo "Update needed for $site; please make an alias for @site.update" 1>&2
         # Add content to the update list so that it will be different, and
         # we will try again next time.
         date >> $update_list_file
@@ -250,3 +288,14 @@ for site in ${backup_list} ; do
     rm -f $update_log_file
   fi
 done
+
+# If 'notify' was specified, then send email with the update log
+if [ -n "${update_list}" ] && [ -n "$NOTIFY" ] ; then
+  if [ -n "${ssh_relay}" ] ; then
+    (ssh "${ssh_relay} mail -s \"'Drupal update log for ${update_list}'\" $NOTIFY") < $update_notify_file
+  else
+    mail -s "Drupal update log for ${update_list}" $NOTIFY < $update_notify_file
+  fi
+fi
+
+rm -f $update_notify_file
