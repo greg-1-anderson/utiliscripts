@@ -69,7 +69,8 @@ FORCE=false
 FORCE_UPDATE=false
 NOTIFY=
 VERBOSE=false
-QUIET='>/dev/null 2>&1'
+SIMULATE=false
+EXEC=
 
 # Start with an empty backup list.
 backup_list=
@@ -111,6 +112,12 @@ while [ $# -gt 0 ] ; do
       QUIET=
       ;;
 
+    --simulate|-s)
+      SIMULATE=true
+      EXEC=echo
+      backup_base_dir=/tmp/archive/drupal
+      ;;
+
     -* )
       echo "Unknown option $option"
       exit 1;
@@ -137,6 +144,19 @@ if [ -z "$backup_list" ] ; then
   echo "No backup sites listed." 1>&2
   exit 1
 fi
+
+# Send stdout to /dev/null unless in VERBOSE mode.
+# To send data to stdout when not VERBOSE, add 1>&3
+# to the end of command.
+# http://unix.stackexchange.com/questions/28740/bash-use-a-variable-to-store-stderrstdout-redirection
+if $VERBOSE ; then
+  exec 3>&1
+else
+  exec 3>&1
+  exec 1>/dev/null
+fi
+
+echo ":::::::::::::::::::::::::::::: $(date) ::::::::::::::::::::::::::::" 1>&2
 
 # Keep a list of sites updated
 update_list=
@@ -176,17 +196,17 @@ for site in ${backup_list} ; do
     # Next, make sure backup site has the most recent code.
     (
       cd $(drush drupal-directory @$site.backup)
-      git pull 1>&2
+      $EXEC git pull 1>&2
     )
     # Get current commit tag and write it into live database
     head_commithash=$(drush @$site.live ssh "cd $live_root && git rev-parse HEAD")
-    drush -v @$site.live vset --always-set -y git_commithash "$head_commithash"
+    $EXEC drush -v @$site.live vset --always-set -y git_commithash "$head_commithash"
 
     # Sync the sql database from the live site to the backup site,
     # Drop the database into place in the backup folder by using it
     # as the target-dump.
-    drush -y sql-sync --target-dump="$dump_file" @$site.live @$site.backup $QUIET
-    drush -y @$site.backup cc all 1>&2
+    $EXEC drush -y sql-sync --target-dump="$dump_file" @$site.live @$site.backup
+    $EXEC drush -y @$site.backup cc all 1>&2
 
     # Check to see if %files has been committed to the git repository.
     # If it has not, then the log line will be empty.
@@ -194,8 +214,8 @@ for site in ${backup_list} ; do
     log_line=$(cd $(drush dd @$site.backup:%files); git log -1 --oneline $files_dir)
     # If %files are not in the repository, then copy them via rsync
     if [ -z "$log_line" ] ; then
-      echo drush -y -v rsync @$site.live:%files @$site.backup:%files $QUIET
-      drush -y -v rsync @$site.live:%files @$site.backup:%files $QUIET
+      #echo drush -y -v rsync @$site.live:%files @$site.backup:%files
+      $EXEC drush -y -v rsync @$site.live:%files @$site.backup:%files
     fi
 
     # Do the same operation with %private
@@ -204,8 +224,8 @@ for site in ${backup_list} ; do
       log_line=$(cd $(drush dd @$site.backup:%private); git log -1 --oneline $private_dir)
       # If %private are not in the repository, then copy them via rsync
       if [ -z "$log_line" ] ; then
-        echo drush -y -v rsync @$site.live:%private @$site.backup:%private $QUIET
-        drush -y -v rsync @$site.live:%private @$site.backup:%private $QUIET
+        #echo drush -y -v rsync @$site.live:%private @$site.backup:%private
+        $EXEC drush -y -v rsync @$site.live:%private @$site.backup:%private
       fi
     fi
 
@@ -240,30 +260,32 @@ for site in ${backup_list} ; do
           # TODO: we could use `git pull backup master 1>&2` here for increased
           # performance (pull locally rather than remotely) if we were sure that
           # the git remote 'backup' was defined.
-          git pull 1>&2
+          $EXEC git pull 1>&2
         )
         # Sync the database
-        drush -y sql-sync --source-dump="$dump_file" @$site.backup @$site.update $QUIET
-        drush -y @$site.update cc all 1>&2
+        $EXEC drush -y sql-sync --source-dump="$dump_file" @$site.backup @$site.update
+        $EXEC drush -y @$site.update cc all 1>&2
 
         # Again, copy %files and %private for convenience
         files_dir=$(drush dd @$site.update:%files)
         log_line=$(cd $(drush dd @$site.update:%files); git log -1 --oneline $files_dir)
         if [ -z "$log_line" ] ; then
-          drush -y rsync @$site.backup:%files @$site.update:%files $QUIET
+          $EXEC drush -y rsync @$site.backup:%files @$site.update:%files
         fi
         private_dir=$(drush dd @$site.update:%private 2>/dev/null)
         if [ -n "$private_dir" ] ; then
           log_line=$(cd $(drush dd @$site.update:%private); git log -1 --oneline $private_dir)
           # If %private are not in the repository, then copy them via rsync
           if [ -z "$log_line" ] ; then
-            drush -y rsync @$site.backup:%private @$site.update:%private $QUIET
+            $EXEC drush -y rsync @$site.backup:%private @$site.update:%private
           fi
         fi
 
         # Run the update
         update_list="${update_list} $site"
-        drush -y @$site.update pm-update > $update_log_file 2>&1
+        $SIMULATE && echo drush -y @$site.update pm-update 1>&2
+        $SIMULATE && echo drush -n @$site.update pm-updatecode > $update_log_file 2>&1
+        $SIMULATE || drush -y @$site.update pm-update > $update_log_file 2>&1
         (
           echo "=== Update log for ${site} ==="
           echo
@@ -291,11 +313,12 @@ done
 
 # If 'notify' was specified, then send email with the update log
 if [ -n "${update_list}" ] && [ -n "$NOTIFY" ] ; then
-  if [ -n "${ssh_relay}" ] ; then
+  if [ ! $SIMULATE ] && [ -n "${ssh_relay}" ] ; then
     (ssh "${ssh_relay} mail -s \"'Drupal update log for ${update_list}'\" $NOTIFY") < $update_notify_file
   else
-    mail -s "Drupal update log for ${update_list}" $NOTIFY < $update_notify_file
+    $EXEC mail -s "Drupal update log for ${update_list}" $NOTIFY < $update_notify_file
   fi
 fi
 
+$SIMULATE && cat $update_notify_file
 rm -f $update_notify_file
