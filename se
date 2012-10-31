@@ -1,4 +1,11 @@
 #!/bin/bash
+
+# Just call sublime_text on Windows
+if [ "x$TERM" == "xcygwin" ] ; then
+  sublime_text "$@" &
+  exit 0
+fi
+
 window_cache=$HOME/.se_window_cache
 existing_wids=
 
