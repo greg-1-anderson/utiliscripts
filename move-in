@@ -502,24 +502,27 @@ fi
 # end, so that we run before this part:
 #   >> # If not running interactively, don't do anything
 #   >> [ -z "$PS1" ] && return
-chkbashrc=$([ -f $HOME/.bashrc ] && grep '\(UTILISCRIPTS\)' $HOME/.bashrc)
+if [ ! -f "$HOME/.bashrc" ] ; then
+cat <<- __END__ > $HOME/.bashrc
+# If not running interactively, don't do anything
+[ -z "\$PS1" ] && return
+__END__
+fi
+chkbashrc=$(grep '\(UTILISCRIPTS\)' "$HOME/.bashrc")
 if [ "X$chkbashrc" = "X" ] ; then
 UTILISCRIPTS_RELATIVE=$(echo $UTILISCRIPTS | sed -e 's|/home/[^/]*/||')
 SSH_KEY_ARCHIVE_RELATIVE=$(echo $SSH_KEY_ARCHIVE| sed -e 's|/home/[^/]*/||')
-([ -f $HOME/.bashrc ] && sed -e '/^ *$/,$ d' $HOME/.bashrc || echo) > $HOME/.bashrc-update
+sed -e '/^ *$/,$ d' $HOME/.bashrc > $HOME/.bashrc-update
 cat <<- __END__ >> $HOME/.bashrc-update
 
 # Add Utiliscripts to the path and export location environment variables
-export UTILISCRIPTS=\$HOME/$UTILISCRIPTS_RELATIVE
-export SSH_KEY_ARCHIVE=\$HOME/$SSH_KEY_ARCHIVE_RELATIVE
-[ \$PATH == \${PATH/utiliscripts/} ] && export PATH=\$UTILISCRIPTS:\$PATH
+export UTILISCRIPTS="\$HOME/$UTILISCRIPTS_RELATIVE"
+export SSH_KEY_ARCHIVE="\$HOME/$SSH_KEY_ARCHIVE_RELATIVE"
+[ "\$PATH" == "\${PATH/utiliscripts/}" ] && export PATH="\$UTILISCRIPTS:\$PATH"
 
 __END__
-[ -f $HOME/.bashrc ] && sed -e '1,/^ *$/ d' $HOME/.bashrc >> $HOME/.bashrc-update
+sed -e '1,/^ *$/ d' $HOME/.bashrc >> $HOME/.bashrc-update
 mv -f $HOME/.bashrc-update $HOME/.bashrc
-else
-# At one time we added utiliscripts to the end of the path; now move it to the beginning
-sed -i -e 's|\[ $PATH == ${PATH/utiliscripts/} \] \&\& export PATH=$PATH:$UTILISCRIPTS|[ $PATH == ${PATH/utiliscripts/} ] \&\& export PATH=$UTILISCRIPTS:$PATH|' $HOME/.bashrc
 fi
 
 # If we have not set the location of the drush yet,
@@ -533,7 +536,7 @@ cp $HOME/.bashrc-head $HOME/.bashrc
 cat <<- __END__ >> $HOME/.bashrc
 
 # Add drush to the path
-[ \$PATH == \${PATH/drush/} ] && export PATH=\$PATH:\$HOME/local/drupal/drush
+[ "\$PATH" == "\${PATH/drush/}" ] && export PATH="\$PATH:\$HOME/local/drupal/drush"
 
 __END__
 cat $HOME/.bashrc-body >> $HOME/.bashrc
@@ -551,7 +554,7 @@ else
   export LC_ALL=POSIX
 fi
 if [ -d "\$HOME/local/sublime-text-2" ] ; then
-  [ \$PATH == \${PATH/sublime-text-2/} ] && export PATH=\$PATH:\$HOME/local/sublime-text-2
+  [ "\$PATH" == "\${PATH/sublime-text-2/}" ] && export PATH="\$PATH:\$HOME/local/sublime-text-2"
 fi
 if [ -f \$UTILISCRIPTS/custom-bashrc ]; then
 	. \$UTILISCRIPTS/custom-bashrc
