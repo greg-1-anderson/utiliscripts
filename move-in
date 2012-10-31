@@ -504,8 +504,10 @@ fi
 #   >> [ -z "$PS1" ] && return
 if [ ! -f "$HOME/.bashrc" ] ; then
 cat <<- __END__ > $HOME/.bashrc
+
 # If not running interactively, don't do anything
 [ -z "\$PS1" ] && return
+
 __END__
 fi
 chkbashrc=$(grep '\(UTILISCRIPTS\)' "$HOME/.bashrc")
