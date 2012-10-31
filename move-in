@@ -504,6 +504,7 @@ fi
 #   >> [ -z "$PS1" ] && return
 if [ ! -f "$HOME/.bashrc" ] ; then
 cat <<- __END__ > $HOME/.bashrc
+# Default bashrc added by move-in script
 
 # If not running interactively, don't do anything
 [ -z "\$PS1" ] && return
