@@ -536,7 +536,7 @@ cp $HOME/.bashrc-head $HOME/.bashrc
 cat <<- __END__ >> $HOME/.bashrc
 
 # Add drush to the path
-[ "\$PATH" == "\${PATH/drush/}" ] && export PATH="\$PATH:\$HOME/local/drupal/drush"
+[ "\$PATH" == "\${PATH/drush/}" ] && export PATH="\$HOME/local/drupal/drush:\$PATH"
 
 __END__
 cat $HOME/.bashrc-body >> $HOME/.bashrc
