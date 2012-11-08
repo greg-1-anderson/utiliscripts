@@ -82,6 +82,7 @@ fi
 
 # Set up some default locations
 [ -z "$UTILISCRIPTS" ]            && export UTILISCRIPTS=$HOME/local/utiliscripts
+[ -z "$HISTORYRECALL" ]           && export HISTORYRECALL=$HOME/local/history-recall
 [ -z "$CONFIG" ]                  && export CONFIG=$HOME/local/config
 [ -z "$SSH_KEY_ARCHIVE" ]         && export SSH_KEY_ARCHIVE=$INSTALLATION_DATA/ssh_key_archive
 [ -z "$DESKTOP_BACKGROUND_DIR" ]  && export DESKTOP_BACKGROUND_DIR=$INSTALLATION_DATA/DesktopBackgrounds
@@ -253,6 +254,34 @@ if [ ! -d $UTILISCRIPTS ] ; then
     fi
   )
 
+fi
+
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#
+#  G E T   H I S T O R Y   R E C A L L
+#
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+echo "# Check history-recall..."
+
+if [ ! -d $HISTORYRECALL ] ; then
+  (
+    mkdir -p $(dirname $HISTORYRECALL)
+    cd $(dirname $HISTORYRECALL)
+    # read+write if "history-recall" is in $MAINTAINER, read-only otherwise
+    if [ "${MAINTAINER}" != "${MAINTAINER/history-recall/}" ]
+    then
+      git clone git@github.com:greg-1-anderson/history-recall.git
+      if [ $? <> 0 ]
+      then
+        echo "Could not clone a r/w copy of history-recall; cloning a r/o copy instead."
+      fi
+    fi
+
+    if [ ! -d $HISTORYRECALL ] ; then
+      git clone git://github.com/greg-1-anderson/history-recall.git
+    fi
+  )
 fi
 
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -548,6 +577,7 @@ rm $HOME/.bashrc-body
 fi
 
 # Rewrite the "Bash Customizations" section
+HISTORYRECALL_RELATIVE=$(echo $HISTORYRECALL | sed -e 's|/home/[^/]*/||')
 sed -i -e '/Include Bash Customizations/,/End Bash Customizations/ d' $HOME/.bashrc
 cat <<- __END__ >> $HOME/.bashrc
 # Include Bash Customizations
@@ -562,8 +592,13 @@ if [ -d "\$HOME/local/sublime-text-2" ] ; then
   [ "\$PATH" == "\${PATH/sublime-text-2/}" ] && export PATH="\$PATH:\$HOME/local/sublime-text-2"
 fi
 if [ -f \$UTILISCRIPTS/custom-bashrc ]; then
-	. \$UTILISCRIPTS/custom-bashrc
+  . \$UTILISCRIPTS/custom-bashrc
 fi
+export HISTORYRECALL="\$HOME/$HISTORYRECALL_RELATIVE"
+if [ -f \$HISTORYRECALL/historyrc ]; then
+  . \$HISTORYRECALL/historyrc
+fi
+
 # End Bash Customizations
 __END__
 
