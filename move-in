@@ -316,7 +316,7 @@ if [ -z "$DRUSH" ] && [ ! -d  $HOME/local/drupal/drush ] ; then
     # read+write if "drush" is in $MAINTAINER, read-only otherwise
     if [ -n "$DRUPALORG_USERNAME" ] && [ "${MAINTAINER}" != "${MAINTAINER/drush/}" ]
     then
-      git clone --branch master ${DRUPALORG_USERNAME}@git.drupal.org:project/drush.git
+      git clone --branch 8.x-6.x ${DRUPALORG_USERNAME}@git.drupal.org:project/drush.git
       if [ ! -d drush ]
       then
       	echo "Could not clone a r/w copy of drush; cloning a r/o copy instead."
@@ -324,7 +324,7 @@ if [ -z "$DRUSH" ] && [ ! -d  $HOME/local/drupal/drush ] ; then
     fi
 
     if [ ! -d drush ] ; then
-      git clone --branch master http://git.drupal.org/project/drush.git
+      git clone --branch 8.x-6.x http://git.drupal.org/project/drush.git
     fi
   )
 fi
