@@ -32,6 +32,7 @@ alias geni-commit='git svn dcommit'
 alias geni-update='git svn rebase'
 
 function tolower() { tr A-Z a-z <<<$@; }
+function mcd() { mkdir -p "$1" && cd "$1"; }
 
 # Prompt configuration
 c_red='0;31m'
