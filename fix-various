@@ -1,0 +1,24 @@
+#!/bin/bash
+
+#
+# Rename any directory "Various_xxx" to "xxx"
+#
+for d in $(ls -d Various_*) ; do
+  n=${d:8}
+  echo mv $d $n
+  mv $d $n
+done
+
+#
+# Rename any song "Various_Title" to "Artist_Title",
+# where artist and title are extracted from the id3 metadata
+#
+for f in $(find -name "Various*mp3") ; do
+  artist=$(exiftool $f | grep '^Artist' | sed -e 's/^[^:]*: *//' | tr ' ' '_')
+  title=$(exiftool $f | grep '^Title' | sed -e 's/^[^:]*: *//' | tr ' ' '_')
+  if [ -n "$artist" ] && [ -n "$title" ] ; then
+    d=$(dirname $f)
+    echo ${artist}_${title}
+    mv $f $d/${artist}_${title}
+  fi
+done
