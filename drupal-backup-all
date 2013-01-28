@@ -49,6 +49,17 @@
 #     'sql-sync' => array (
 #       'enable' => array ('stage_file_proxy'),
 #     ),
+#     'permission' => array(
+#       'authenticated user' => array(
+#         'add' => array('access environment indicator'),
+#       ),
+#       'anonymous user' => array(
+#         'add' => 'access environment indicator',
+#         'remove' => 'access content',
+#       ),
+#     ),
+#     'sanitize' => TRUE,
+#     'sanitize-password' => 'secretpassword',
 #   ),
 # );
 #
