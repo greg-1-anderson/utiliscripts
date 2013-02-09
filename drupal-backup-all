@@ -86,6 +86,7 @@ EXEC=
 # Start with an empty backup list.
 backup_list=
 backup_base_dir=/data/archive/drupal
+hash_tables=node
 
 #
 # Parse command line args
@@ -189,7 +190,7 @@ for site in ${backup_list} ; do
   msg="=== Checking ${site} for changes ==="
   $FORCE && msg="=== Backup forced for ${site} ==="
   echo $msg 1>&2
-  drush @$site.live sql-hash --tables-list='users,permission,node' --strict=0 > $cur_hash_file 2>/dev/null
+  drush @$site.live sql-hash --tables-list=$hash_tables --strict=0 > $cur_hash_file 2>/dev/null
   if [ ! -f $hash_file ] || [ "x`diff $cur_hash_file $hash_file`" != "x" ] || $FORCE ; then
     msg="$(date "+%Y-%m-%d %H:%M") :: Begin backup of $site"
     echo $msg 1>&2
@@ -241,9 +242,16 @@ for site in ${backup_list} ; do
       fi
     fi
 
-    drush @$site.backup sql-hash --tables-list='users,permission,node' --strict=0 > $backup_hash_file 2>/dev/null
+    drush @$site.backup sql-hash --tables-list=$hash_tables --strict=0 > $backup_hash_file 2>/dev/null
     if [ "x`diff $cur_hash_file $backup_hash_file`" != "x" ] ; then
-      echo "[ERROR] Backup FAILED for $site" 1>&2
+      # We don't want to take the site offline while backing up, but it would be
+      # useful if we could disable editing while backups are in progress.  Maybe
+      # remove edit permissions from all roles before backup, and restore them
+      # when done?  That would have the useful side effect of making the backup
+      # sites uneditable. On the flip side, we'd also have to remember to restore
+      # the permissions correctly if we ever had to restore the live site from
+      # the backup.
+      echo "[ERROR] Backup MIGHT have failed for $site (or someone edited it during the backup)" 1>&2
     else
       echo "[ok] Backup complete for $site" 1>&2
     fi
