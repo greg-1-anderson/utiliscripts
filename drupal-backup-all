@@ -180,6 +180,7 @@ for site in ${backup_list} ; do
   schedule_log=$backup_dir/${site}-schedule.log
   hash_file=$backup_dir/${site}.hash
   cur_hash_file=$backup_dir/${site}-cur.hash
+  backup_hash_file=$backup_dir/${site}-bak.hash
   diff_file=$backup_dir/${site}.hash
   dump_file=$backup_dir/${site}.sql
   update_list_file=$backup_dir/${site}.updates
@@ -240,12 +241,18 @@ for site in ${backup_list} ; do
       fi
     fi
 
+    drush @$site.backup sql-hash --tables-list='users,permission,node' --strict=0 > $backup_hash_file 2>/dev/null
+    if [ "x`diff $cur_hash_file $backup_hash_file`" != "x" ] ; then
+      echo "[ERROR] Backup FAILED for $site" 1>&2
+    else
+      echo "[ok] Backup complete for $site" 1>&2
+    fi
+
     # TODO: What about rolling backups?  Should we use migratehistories, or
     # just try committing the sql dump file to a get repository?
 
-    echo "Backup complete for $site" 1>&2
   else
-    echo "Backup not needed for $site" 1>&2
+    echo "[n/a] Backup not needed for $site" 1>&2
     rm -f $cur_hash_file
   fi
 
