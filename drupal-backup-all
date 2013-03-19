@@ -49,6 +49,17 @@
 #     'sql-sync' => array (
 #       'enable' => array ('stage_file_proxy'),
 #     ),
+#     'permission' => array(
+#       'authenticated user' => array(
+#         'add' => array('access environment indicator'),
+#       ),
+#       'anonymous user' => array(
+#         'add' => 'access environment indicator',
+#         'remove' => 'access content',
+#       ),
+#     ),
+#     'sanitize' => TRUE,
+#     'sanitize-password' => 'secretpassword',
 #   ),
 # );
 #
@@ -75,6 +86,7 @@ EXEC=
 # Start with an empty backup list.
 backup_list=
 backup_base_dir=/data/archive/drupal
+hash_tables=node
 
 #
 # Parse command line args
@@ -166,22 +178,23 @@ update_notify_file=$(mktemp drupal-backup-notify.XXXXXXXXXX)
 for site in ${backup_list} ; do
   backup_dir=$backup_base_dir/$site
   mkdir -p "$backup_dir"
-  schedule_log=$backup_dir/${site}-schedule.log
+  backup_log_file=$backup_dir/${site}-backup.log
   hash_file=$backup_dir/${site}.hash
   cur_hash_file=$backup_dir/${site}-cur.hash
+  backup_hash_file=$backup_dir/${site}-bak.hash
   diff_file=$backup_dir/${site}.hash
   dump_file=$backup_dir/${site}.sql
   update_list_file=$backup_dir/${site}.updates
   cur_update_list_file=$backup_dir/${site}-cur.updates
-  update_log_file=$backup_dir/${site}-updatelog
+  update_log_file=$backup_dir/${site}-update.log
   msg="=== Checking ${site} for changes ==="
   $FORCE && msg="=== Backup forced for ${site} ==="
   echo $msg 1>&2
-  drush @$site.live sql-hash --tables-list='users,permission,node' --strict=0 > $cur_hash_file 2>/dev/null
+  drush @$site.live sql-hash --tables-list=$hash_tables --strict=0 > $cur_hash_file 2>/dev/null
   if [ ! -f $hash_file ] || [ "x`diff $cur_hash_file $hash_file`" != "x" ] || $FORCE ; then
-    msg="$(date "+%Y-%m-%d %H:%M") :: Begin backup of $site"
-    echo $msg 1>&2
-    echo $msg >> $schedule_log
+    msg="$(date "+%Y-%m-%d %H:%M")"
+    echo "$msg :: Begin backup of $site" 1>&2
+    echo $msg >> $backup_log_file
 
     # Show which tables changed since last time.
     diff -U 0 $hash_file $cur_hash_file > $diff_file
@@ -229,12 +242,25 @@ for site in ${backup_list} ; do
       fi
     fi
 
+    drush @$site.backup sql-hash --tables-list=$hash_tables --strict=0 > $backup_hash_file 2>/dev/null
+    if [ "x`diff $hash_file $backup_hash_file`" != "x" ] ; then
+      # We don't want to take the site offline while backing up, but it would be
+      # useful if we could disable editing while backups are in progress.  Maybe
+      # remove edit permissions from all roles before backup, and restore them
+      # when done?  That would have the useful side effect of making the backup
+      # sites uneditable. On the flip side, we'd also have to remember to restore
+      # the permissions correctly if we ever had to restore the live site from
+      # the backup.
+      echo "[ERROR] Backup MIGHT have failed for $site (or someone edited it during the backup)" 1>&2
+    else
+      echo "[ok] Backup complete for $site" 1>&2
+    fi
+
     # TODO: What about rolling backups?  Should we use migratehistories, or
     # just try committing the sql dump file to a get repository?
 
-    echo "Backup complete for $site" 1>&2
   else
-    echo "Backup not needed for $site" 1>&2
+    echo "[n/a] Backup not needed for $site" 1>&2
     rm -f $cur_hash_file
   fi
 
@@ -252,7 +278,6 @@ for site in ${backup_list} ; do
         mv -f $cur_update_list_file $update_list_file
         msg="$(date "+%Y-%m-%d %H:%M") :: Begin update of $site"
         echo $msg 1>&2
-        echo $msg >> $schedule_log
 
         # Make sure update site has the most recent code.
         (
@@ -288,6 +313,8 @@ for site in ${backup_list} ; do
         $SIMULATE || drush -y @$site.update pm-update > $update_log_file 2>&1
         (
           echo "=== Update log for ${site} ==="
+          echo
+          date "+%Y-%m-%d %H:%M"
           echo
           cat $update_log_file
           echo

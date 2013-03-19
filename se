@@ -15,6 +15,21 @@ for f in "$@" ; do
   if [ -d "$f" ] ; then
     sublime_text -n "$f" &
   else
+    # If the filename does not exist, and the filespec does not contain
+    # a slash, then search for the file from the cwd
+    if [ ! -f "$f" ] && [ "x$f" == "x${f/\//}" ] ; then
+      candidates=$(find -type f -name "$f")
+      if [ -z "$candidates" ] ; then
+        echo "$f: File not found" >&2
+        exit 1
+      elif [ $(wc -l <<< "$candidates") == 1 ] ; then
+        f="$candidates"
+      else
+        echo "Perhaps you meant one of these:"
+        echo "$candidates"
+        exit 0
+      fi
+    fi
     # Break up the full path to the file, $f, into directory name
     # and base name components, $d and $b, respectively.
     d=$(cd "$(dirname "$f")" 2>/dev/null && pwd | sed -e "s|^$HOME|~|")
