@@ -257,10 +257,13 @@ for site in ${backup_list} ; do
     fi
 
     # Make sure that the group for the files remains www-data
-    chgrp -R www-data $(drush drupal-directory @$site.backup)
+    $EXEC chgrp -R www-data $(drush drupal-directory @$site.backup)
+
+    # Keep calm and clear the cache, in case any files changed
+    $EXEC drush -y @$site.backup cache-clear all
 
     # TODO: What about rolling backups?  Should we use migratehistories, or
-    # just try committing the sql dump file to a get repository?
+    # just try committing the sql dump file to a git repository?
 
   else
     echo "[n/a] Backup not needed for $site" 1>&2
@@ -324,7 +327,7 @@ for site in ${backup_list} ; do
         ) >> $update_notify_file
 
         # Make sure that the group for the files remains www-data
-        chgrp -R www-data $(drush drupal-directory @$site.update)
+        $EXEC chgrp -R www-data $(drush drupal-directory @$site.update)
 
         echo "Update complete for $site" 1>&2
       else
