@@ -212,6 +212,14 @@ for site in ${backup_list} ; do
       cd $(drush drupal-directory @$site.backup)
       $EXEC git pull 1>&2
     )
+    # Move the previous database dump into the history folder,
+    # after first compressing it with gzip
+    if [ -f "$dump_file" ] ; then
+      mkdir -p $history_dir/daily
+      compressed_dump="$dump_file".gz
+      cat "$dump_file" | gzip > "$compressed_dump"
+      migratehistories --quiet --migrating "$compressed_dump" --history-root "$history_dir" --target-extension .sql.gz
+    fi
     # Get current commit tag and write it into live database
     head_commithash=$(drush @$site.live ssh "cd $live_root && git rev-parse HEAD")
     $EXEC drush -v @$site.live vset --always-set -y git_commithash "$head_commithash"
@@ -220,7 +228,12 @@ for site in ${backup_list} ; do
     # Drop the database into place in the backup folder by using it
     # as the target-dump.
     $EXEC drush -y sql-sync --target-dump="$dump_file" @$site.live @$site.backup
+    # Clear the cache, drop the watchdog entries, and overwrite the backup file
+    # TODO: It would be more efficient to de-select the cache and watchdog
+    # tables in the sql-sync above.
+    $EXEC drush -y @$site.backup watchdog-delete all 1>&2
     $EXEC drush -y @$site.backup cc all 1>&2
+    $EXEC drush -y @$site.backup sql-dump --result-file="$dump_file" 1>&2
 
     # Check to see if %files has been committed to the git repository.
     # If it has not, then the log line will be empty.
@@ -291,14 +304,6 @@ for site in ${backup_list} ; do
           # the git remote 'backup' was defined.
           $EXEC git pull 1>&2
         )
-        # Move the previous database dump into the history folder,
-        # after first compressing it with gzip
-        if [ -f "$dump_file" ] ; then
-          mkdir -p $history_dir/daily
-          compressed_dump="$dump_file".gz
-          cat "$dump_file" | gzip > "$compressed_dump"
-          migratehistories --quiet --migrating "$compressed_dump" --history-root "$history_dir" --target-extension .sql.gz
-        fi
         # Sync the database
         $EXEC drush -y sql-sync --source-dump="$dump_file" @$site.backup @$site.update
         $EXEC drush -y @$site.update cc all 1>&2
