@@ -30,7 +30,7 @@ SORT="/usr/bin/env sort"
 TAIL=/usr/bin/tail
 HEAD=/usr/bin/head
 ROUTE=/sbin/route
-
+OUTPUT=true
 
 targetMachine=
 migratingFolder=previous
@@ -67,6 +67,9 @@ while [ $# -gt 0 ] ; do
 			targetExtension=$1
 			shift
 			;;
+		--quiet )
+			OUTPUT=false
+			;;
 		-* )
 			$ECHO "Unknown option $option" 1>&2
 			exit 1
@@ -91,10 +94,10 @@ fi
 # local machine to format in the form "2007-05-23_11:42".
 #
 statOMigratingFolder=`$REMOTE$STAT -c "%y" $migratingFolder 2> /dev/null`
-$ECHO "Stat of previous is $statOMigratingFolder"
+$OUTPUT && $ECHO "Stat of previous is $statOMigratingFolder"
 if [ "X$statOMigratingFolder" != "X" ]  ; then
 	migratingTimestamp=`$DATE --date="$statOMigratingFolder" "+%Y-%m-%d_%H:%M"`
-	$ECHO "That parses to $migratingTimestamp"
+	$OUTPUT $ECHO "That parses to $migratingTimestamp"
 	migratingTimestampSinceEpoc=`$DATE --date="${migratingTimestamp//_/ }" "+%s"`
 
 	#
@@ -111,8 +114,8 @@ if [ "X$statOMigratingFolder" != "X" ]  ; then
 	secondsPerDay=$(($secondsPerHour*24))
 	targetHistoryFolder=hourly
 
-	historyFolderList=( "daily" "weekly" "monthly" )
-	timePeriodList=( $secondsPerDay $(($secondsPerDay*7)) $(($secondsPerDay*30)) )
+	historyFolderList=( "daily" "weekly" "monthly" "quarterly" )
+	timePeriodList=( $secondsPerDay $(($secondsPerDay*7)) $(($secondsPerDay*30)) $(($secondsPerDay*121)) )
 	targetTimePeriod=$secondsPerHour
 
 	while [ ${#historyFolderList[@]} -gt 0 ] ; do
@@ -150,110 +153,114 @@ if [ "X$statOMigratingFolder" != "X" ]  ; then
 			baseTimeSinceEpoc=$migratingTimestampSinceEpoc
 		fi
 
-		#
-		# If the target folder exists, then set 'lastItemMigrated'
-		# to the mod date of the newest item.
-		#
-		mostRecentInTarget=`$REMOTE$LS -1 $historyRoot/$targetHistoryFolder 2> /dev/null | $SORT | $TAIL -n 1`
-		if [ -n "$targetExtension" ] ; then
-			mostRecentInTarget="${mostRecentInTarget//$targetExtension/}"
-		fi
-		if [ "X$mostRecentInTarget" != "X" ] ; then
-			mostRecentInTargetSinceEpoc=`$DATE --date="${mostRecentInTarget//_/ }" "+%s"`
-			$ECHO "most recent in target ($targetHistoryFolder) is $mostRecentInTarget"
-		fi
-
-		# && [ $migratingTimestampSinceEpoc - $lastItemMigrated -gt $timePeriod
-		if [ "$((currentTimestampSinceEpoc-$migratingTimestampSinceEpoc))" -gt $((2*$targetTimePeriod)) ] && [ ${#historyFolderList[@]} -gt 0 ] ; then
-			$ECHO "Backup frequency of migrating is less than $srcHistoryFolder"
-		else
+		# Skip the target folder if it does not exist (e.g. if you do not
+		# want the hourly backups, do not create the hourly folder)
+		if [ -n "$REMOTE" ] || [ -d $historyRoot/$srcHistoryFolder ] ; then
 			#
-			# If we have not done so yet, move the 'migrating' folder into
-			# the srcHistoryFolder (this will usually be 'hourly', unless
-			# backups are only being done on a daily or weekly basis).
-			# Move the 'migrating-in-progress' folder to the 'migrating' folder.
+			# If the target folder exists, then set 'lastItemMigrated'
+			# to the mod date of the newest item.
 			#
-			if [ "X$needToMoveMigrating" = "X1" ] ; then
-				$ECHO "Moving migrating folder to $srcHistoryFolder"
-				$REMOTE$MKDIR -p $historyRoot/$srcHistoryFolder
-				$REMOTE$MV $migratingFolder $historyRoot/$srcHistoryFolder/$migratingTimestamp$targetExtension
-				needToMoveMigrating=0
-				lastItemMigrated=$migratingTimestampSinceEpoc
-				# To do: we might under some circumstances wish to remove RSYNC log.
-			fi
-
-
-		fi
-
-		#
-		# Backup history item migration:
-		#
-		# Things that are always true:
-		#
-		#	Current and previous.in-progress are never moved to the history.
-		#
-		#	There will never be an item in history newer than "migrating"
-		#
-		echo "Consider moving items from $srcHistoryFolder to $targetHistoryFolder (source time period is $sourceTimePeriod target timePeriod $targetTimePeriod)"
-		deltaTime=$(($targetTimePeriod-$sourceTimePeriod))
-		for srcHistoryItem in `$REMOTE$LS -1 $historyRoot/$srcHistoryFolder | $SORT -r` ; do
+			mostRecentInTarget=`$REMOTE$LS -1 $historyRoot/$targetHistoryFolder 2> /dev/null | $SORT | $TAIL -n 1`
 			if [ -n "$targetExtension" ] ; then
-				srcHistoryItem="${srcHistoryItem//$targetExtension/}"
+				mostRecentInTarget="${mostRecentInTarget//$targetExtension/}"
 			fi
-			srcItemSinceEpoc=`$DATE --date="${srcHistoryItem//_/ }" "+%s"`
-			if [ "X$baseTimeSinceEpoc" = "X" ] ; then
-				baseTimeSinceEpoc=$srcItemSinceEpoc
+			if [ "X$mostRecentInTarget" != "X" ] ; then
+				mostRecentInTargetSinceEpoc=`$DATE --date="${mostRecentInTarget//_/ }" "+%s"`
+				$OUTPUT $ECHO "most recent in target ($targetHistoryFolder) is $mostRecentInTarget"
 			fi
-			# Process items older than current - 2*timeperiod; leave the others alone
-			if [ $srcItemSinceEpoc -lt $(($baseTimeSinceEpoc-$deltaTime)) ] ; then
-				# If an item was migrated, then delete items that are newer than lastItemMigraged - timeperiod
-				if [ "X$lastItemMigrated" != "X0" ] && [ $srcItemSinceEpoc -gt $(($lastItemMigrated-$deltaTime)) ] && [ $srcItemSinceEpoc -lt $(($lastItemMigrated+$deltaTime)) ] ; then
-					removeList="$removeList$historyRoot/$srcHistoryFolder/$srcHistoryItem$targetExtension "
-				else
-					# if there is an item in the target folder, then we will skip any item
-					# in the source that is not at least 'timeperiod' older than the newest in the target
-					if [ "X$mostRecentInTarget" = "X" ] || [ $srcItemSinceEpoc -gt $(($mostRecentInTargetSinceEpoc+$deltaTime)) ] ; then
-						$ECHO "Migrate item $srcHistoryItem$targetExtension from $srcHistoryFolder to $targetHistoryFolder"
-						$ECHO "Src item since epoc $srcItemSinceEpoc is greater than $mostRecentInTargetSinceEpoc - $deltaTime ( $(($mostRecentInTargetSinceEpoc-$deltaTime)) )"
-						moveList="$moveList$historyRoot/$srcHistoryFolder/$srcHistoryItem$targetExtension "
-						lastItemMigrated=$srcItemSinceEpoc
-					else
-						# to do:  not graceful to have two 'remove' conditions; combine 'if' statements
+
+			# && [ $migratingTimestampSinceEpoc - $lastItemMigrated -gt $timePeriod
+			if [ "$((currentTimestampSinceEpoc-$migratingTimestampSinceEpoc))" -gt $((2*$targetTimePeriod)) ] && [ ${#historyFolderList[@]} -gt 0 ] ; then
+				$OUTPUT && $ECHO "Backup frequency of migrating is less than $srcHistoryFolder"
+			else
+				#
+				# If we have not done so yet, move the 'migrating' folder into
+				# the srcHistoryFolder (this will usually be 'hourly', unless
+				# backups are only being done on a daily or weekly basis).
+				# Move the 'migrating-in-progress' folder to the 'migrating' folder.
+				#
+				if [ "X$needToMoveMigrating" = "X1" ] ; then
+					$OUTPUT && $ECHO "Moving migrating folder to $srcHistoryFolder"
+					$REMOTE$MKDIR -p $historyRoot/$srcHistoryFolder
+					$REMOTE$MV $migratingFolder $historyRoot/$srcHistoryFolder/$migratingTimestamp$targetExtension
+					needToMoveMigrating=0
+					lastItemMigrated=$migratingTimestampSinceEpoc
+					# To do: we might under some circumstances wish to remove RSYNC log.
+				fi
+
+
+			fi
+
+			#
+			# Backup history item migration:
+			#
+			# Things that are always true:
+			#
+			#	Current and previous.in-progress are never moved to the history.
+			#
+			#	There will never be an item in history newer than "migrating"
+			#
+			$OUTPUT && echo "Consider moving items from $srcHistoryFolder to $targetHistoryFolder (source time period is $sourceTimePeriod target timePeriod $targetTimePeriod)"
+			#deltaTime=$(($targetTimePeriod-$sourceTimePeriod))
+			deltaTime=$targetTimePeriod
+			for srcHistoryItem in `$REMOTE$LS -1 $historyRoot/$srcHistoryFolder | $SORT -r` ; do
+				if [ -n "$targetExtension" ] ; then
+					srcHistoryItem="${srcHistoryItem//$targetExtension/}"
+				fi
+				srcItemSinceEpoc=`$DATE --date="${srcHistoryItem//_/ }" "+%s"`
+				if [ "X$baseTimeSinceEpoc" = "X" ] ; then
+					baseTimeSinceEpoc=$srcItemSinceEpoc
+				fi
+				# Process items older than current - 2*timeperiod; leave the others alone
+				if [ $srcItemSinceEpoc -lt $(($baseTimeSinceEpoc-$deltaTime)) ] ; then
+					# If an item was migrated, then delete items that are newer than lastItemMigraged - timeperiod
+					if [ "X$lastItemMigrated" != "X0" ] && [ $srcItemSinceEpoc -gt $(($lastItemMigrated-$deltaTime)) ] && [ $srcItemSinceEpoc -lt $(($lastItemMigrated+$deltaTime)) ] ; then
 						removeList="$removeList$historyRoot/$srcHistoryFolder/$srcHistoryItem$targetExtension "
+					else
+						# if there is an item in the target folder, then we will skip any item
+						# in the source that is not at least 'timeperiod' older than the newest in the target
+						if [ "X$mostRecentInTarget" = "X" ] || [ $srcItemSinceEpoc -gt $(($mostRecentInTargetSinceEpoc+$deltaTime)) ] ; then
+							$OUTPUT && $ECHO "Migrate item $srcHistoryItem$targetExtension from $srcHistoryFolder to $targetHistoryFolder"
+							$OUTPUT && $ECHO "Src item since epoc $srcItemSinceEpoc is greater than $mostRecentInTargetSinceEpoc - $deltaTime ( $(($mostRecentInTargetSinceEpoc-$deltaTime)) )"
+							moveList="$moveList$historyRoot/$srcHistoryFolder/$srcHistoryItem$targetExtension "
+							lastItemMigrated=$srcItemSinceEpoc
+						else
+							# to do:  not graceful to have two 'remove' conditions; combine 'if' statements
+							removeList="$removeList$historyRoot/$srcHistoryFolder/$srcHistoryItem$targetExtension "
+						fi
 					fi
 				fi
-			fi
-		done
+			done
 
-		#
-		# If the move list is not empty, then move every item in it to the
-		# target history folder.  We'll also remove the rsync log from every
-		# history folder that moves, as there are usually other history folders
-		# that are deleted for every history folder that is migrated, and the
-		# rsync log is only useful in context of the history folder that comes
-		# chronologically immediately before it.
-		#
-		# To do:  if there are any "deletion" folders, merge them before deleting.
-		# To make this work, we'd need a series of move lists, though...
-		#
-		if [ "X$moveList" != "X" ] ; then
-			# $ECHO "Move $moveList from $srcHistoryFolder to $targetHistoryFolder"
-			$REMOTE$MKDIR -p $historyRoot/$targetHistoryFolder
-			$REMOTE$MV $moveList $historyRoot/$targetHistoryFolder
-			# The log becomes useless once we remove intermediary items.
-			# We could concatinate logs, but that would be noisy and useless.
-			# $ECHO "Remove the rsync log from items migrated"
-			$REMOTE$RM -f ${moveList// //RSYNC_LOG } 2>/dev/null
-			if [ "X$removeList" != "X" ] ; then
-				$ECHO "Remove item(s) $removeList"
-				$REMOTE$NICE $RM -rf $removeList &
-			fi
-		else
-			if [ "X$needToMoveMigrating" = "X0" ] ; then
-				# $ECHO "Break from history migration loop"
-				break
+			#
+			# If the move list is not empty, then move every item in it to the
+			# target history folder.  We'll also remove the rsync log from every
+			# history folder that moves, as there are usually other history folders
+			# that are deleted for every history folder that is migrated, and the
+			# rsync log is only useful in context of the history folder that comes
+			# chronologically immediately before it.
+			#
+			# To do:  if there are any "deletion" folders, merge them before deleting.
+			# To make this work, we'd need a series of move lists, though...
+			#
+			if [ "X$moveList" != "X" ] ; then
+				# $OUTPUT && $ECHO "Move $moveList from $srcHistoryFolder to $targetHistoryFolder"
+				$REMOTE$MKDIR -p $historyRoot/$targetHistoryFolder
+				$REMOTE$MV $moveList $historyRoot/$targetHistoryFolder
+				# The log becomes useless once we remove intermediary items.
+				# We could concatinate logs, but that would be noisy and useless.
+				# $OUTPUT && $ECHO "Remove the rsync log from items migrated"
+				$REMOTE$RM -f ${moveList// //RSYNC_LOG } 2>/dev/null
+				if [ "X$removeList" != "X" ] ; then
+					$OUTPUT && $ECHO "Remove item(s) $removeList"
+					$REMOTE$NICE $RM -rf $removeList &
+				fi
+			else
+				if [ "X$needToMoveMigrating" = "X0" ] ; then
+					# $OUTPUT && $ECHO "Break from history migration loop"
+					break
+				fi
 			fi
 		fi
-
 	done
 fi
