@@ -35,7 +35,7 @@ ROUTE=/sbin/route
 targetMachine=
 migratingFolder=previous
 historyRoot=history
-
+targetExtension=
 
 #
 # Remember the original script paramters, as 'shift' destroys $*.
@@ -49,7 +49,7 @@ while [ $# -gt 0 ] ; do
 
 	option=$1
 	shift
-	
+
 	case "$option" in
 		--migrating )
 			migratingFolder=$1
@@ -61,6 +61,10 @@ while [ $# -gt 0 ] ; do
 			;;
 		--target-machine )
 			targetMachine=$1
+			shift
+			;;
+		--target-extension )
+			targetExtension=$1
 			shift
 			;;
 		-* )
@@ -110,7 +114,7 @@ if [ "X$statOMigratingFolder" != "X" ]  ; then
 	historyFolderList=( "daily" "weekly" "monthly" )
 	timePeriodList=( $secondsPerDay $(($secondsPerDay*7)) $(($secondsPerDay*30)) )
 	targetTimePeriod=$secondsPerHour
-	
+
 	while [ ${#historyFolderList[@]} -gt 0 ] ; do
 
 		itemToMove=""
@@ -124,7 +128,7 @@ if [ "X$statOMigratingFolder" != "X" ]  ; then
 		targetTimePeriod=${timePeriodList[0]}
 		historyFolderList=( ${historyFolderList[@]:1} )
 		timePeriodList=( ${timePeriodList[@]:1} )
-		
+
 		#
 		# The base time is the newest item in a given history
 		# folder, usually the first item in the folder.  If,
@@ -151,11 +155,14 @@ if [ "X$statOMigratingFolder" != "X" ]  ; then
 		# to the mod date of the newest item.
 		#
 		mostRecentInTarget=`$REMOTE$LS -1 $historyRoot/$targetHistoryFolder 2> /dev/null | $SORT | $TAIL -n 1`
+		if [ -n "$targetExtension" ] ; then
+			mostRecentInTarget="${mostRecentInTarget//$targetExtension/}"
+		fi
 		if [ "X$mostRecentInTarget" != "X" ] ; then
 			mostRecentInTargetSinceEpoc=`$DATE --date="${mostRecentInTarget//_/ }" "+%s"`
 			$ECHO "most recent in target ($targetHistoryFolder) is $mostRecentInTarget"
 		fi
-		
+
 		# && [ $migratingTimestampSinceEpoc - $lastItemMigrated -gt $timePeriod
 		if [ "$((currentTimestampSinceEpoc-$migratingTimestampSinceEpoc))" -gt $((2*$targetTimePeriod)) ] && [ ${#historyFolderList[@]} -gt 0 ] ; then
 			$ECHO "Backup frequency of migrating is less than $srcHistoryFolder"
@@ -165,11 +172,11 @@ if [ "X$statOMigratingFolder" != "X" ]  ; then
 			# the srcHistoryFolder (this will usually be 'hourly', unless
 			# backups are only being done on a daily or weekly basis).
 			# Move the 'migrating-in-progress' folder to the 'migrating' folder.
-			#	
+			#
 			if [ "X$needToMoveMigrating" = "X1" ] ; then
 				$ECHO "Moving migrating folder to $srcHistoryFolder"
 				$REMOTE$MKDIR -p $historyRoot/$srcHistoryFolder
-				$REMOTE$MV $migratingFolder $historyRoot/$srcHistoryFolder/$migratingTimestamp
+				$REMOTE$MV $migratingFolder $historyRoot/$srcHistoryFolder/$migratingTimestamp$targetExtension
 				needToMoveMigrating=0
 				lastItemMigrated=$migratingTimestampSinceEpoc
 				# To do: we might under some circumstances wish to remove RSYNC log.
@@ -188,27 +195,31 @@ if [ "X$statOMigratingFolder" != "X" ]  ; then
 		#	There will never be an item in history newer than "migrating"
 		#
 		echo "Consider moving items from $srcHistoryFolder to $targetHistoryFolder (source time period is $sourceTimePeriod target timePeriod $targetTimePeriod)"
+		deltaTime=$(($targetTimePeriod-$sourceTimePeriod))
 		for srcHistoryItem in `$REMOTE$LS -1 $historyRoot/$srcHistoryFolder | $SORT -r` ; do
+			if [ -n "$targetExtension" ] ; then
+				srcHistoryItem="${srcHistoryItem//$targetExtension/}"
+			fi
 			srcItemSinceEpoc=`$DATE --date="${srcHistoryItem//_/ }" "+%s"`
 			if [ "X$baseTimeSinceEpoc" = "X" ] ; then
 				baseTimeSinceEpoc=$srcItemSinceEpoc
 			fi
 			# Process items older than current - 2*timeperiod; leave the others alone
-			if [ $srcItemSinceEpoc -lt $(($baseTimeSinceEpoc-$targetTimePeriod)) ] ; then
+			if [ $srcItemSinceEpoc -lt $(($baseTimeSinceEpoc-$deltaTime)) ] ; then
 				# If an item was migrated, then delete items that are newer than lastItemMigraged - timeperiod
-				if [ "X$lastItemMigrated" != "X0" ] && [ $srcItemSinceEpoc -gt $(($lastItemMigrated-$targetTimePeriod)) ] && [ $srcItemSinceEpoc -lt $(($lastItemMigrated+$targetTimePeriod)) ] ; then
-					removeList="$removeList$historyRoot/$srcHistoryFolder/$srcHistoryItem "
+				if [ "X$lastItemMigrated" != "X0" ] && [ $srcItemSinceEpoc -gt $(($lastItemMigrated-$deltaTime)) ] && [ $srcItemSinceEpoc -lt $(($lastItemMigrated+$deltaTime)) ] ; then
+					removeList="$removeList$historyRoot/$srcHistoryFolder/$srcHistoryItem$targetExtension "
 				else
-					# if there is an item in the target folder, then we will skip any item 
+					# if there is an item in the target folder, then we will skip any item
 					# in the source that is not at least 'timeperiod' older than the newest in the target
-					if [ "X$mostRecentInTarget" = "X" ] || [ $srcItemSinceEpoc -gt $(($mostRecentInTargetSinceEpoc+$targetTimePeriod)) ] ; then
-						$ECHO "Migrate item $srcHistoryItem from $srcHistoryFolder to $targetHistoryFolder"
-						$ECHO "Src item since epoc $srcItemSinceEpoc is greater than $mostRecentInTargetSinceEpoc - $targetTimePeriod ( $(($mostRecentInTargetSinceEpoc-$targetTimePeriod)) )"
-						moveList="$moveList$historyRoot/$srcHistoryFolder/$srcHistoryItem "
+					if [ "X$mostRecentInTarget" = "X" ] || [ $srcItemSinceEpoc -gt $(($mostRecentInTargetSinceEpoc+$deltaTime)) ] ; then
+						$ECHO "Migrate item $srcHistoryItem$targetExtension from $srcHistoryFolder to $targetHistoryFolder"
+						$ECHO "Src item since epoc $srcItemSinceEpoc is greater than $mostRecentInTargetSinceEpoc - $deltaTime ( $(($mostRecentInTargetSinceEpoc-$deltaTime)) )"
+						moveList="$moveList$historyRoot/$srcHistoryFolder/$srcHistoryItem$targetExtension "
 						lastItemMigrated=$srcItemSinceEpoc
 					else
 						# to do:  not graceful to have two 'remove' conditions; combine 'if' statements
-						removeList="$removeList$historyRoot/$srcHistoryFolder/$srcHistoryItem "
+						removeList="$removeList$historyRoot/$srcHistoryFolder/$srcHistoryItem$targetExtension "
 					fi
 				fi
 			fi
