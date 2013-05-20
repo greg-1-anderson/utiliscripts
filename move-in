@@ -404,11 +404,21 @@ if [ -n "$DISPLAY" ] ; then
   echo "# Check sublime..."
 
   s=`which sublime_text`
+  if [ -n "$s" ] ; then
+    # Check to see if Sublime is out of date
+    sublime_version=$(sublime_text --version | sed -e 's|.*Build ||')
+    if [ "x$sublime_version" != "x2217" ] ; then
+      s=""
+      if [ -d "$HOME/local/sublime-text-2" ]; then
+        mv "$HOME/local/sublime-text-2" "$HOME/local/sublime-text-2-build-${sublime_version}"
+      fi
+    fi
+  fi
   if [ -z "$s" ] && [ ! -d "$HOME/local/sublime-text-2" ]; then
 
   	sublime_url=`curl http://www.sublimetext.com/2 2>/dev/null | grep 'a href.*Linux 32' | sed -e 's/.*href="\([^"]*\).*/\1/'`
   	if [ -z "$sublime_url" ] ; then
-  		sublime_url="http://c758482.r82.cf2.rackcdn.com/Sublime Text 2.0.tar.bz2"
+      sublime_url="http://c758482.r82.cf2.rackcdn.com/Sublime Text 2.0.1.tar.bz2"
   	fi
   	sublime_file="${sublime_url##*/}"
 
