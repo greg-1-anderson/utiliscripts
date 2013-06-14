@@ -36,6 +36,33 @@ alias gs='git status'
 function tolower() { tr A-Z a-z <<<$@; }
 function mcd() { mkdir -p "$1" && cd "$1"; }
 
+# cd to a sibling directory
+function sib() {
+  sibpath=$1
+  sib=${sibpath%%/*}
+  remaining=${sibpath#*/}
+  dir=$(pwd)
+  target=
+
+  if [ -z $# ] || [ -z "$sib" ] ; then
+    echo "Usage: findsib <name of sibling folder>" >&2
+  else
+    while [ -z "$target" ] && [ "$dir" != "/" ] && [ -n "$dir" ]; do
+      dir=$(dirname "$dir")
+      if [ -d "$dir/$sib/$remaining" ] ; then
+        target="$dir/$sib/$remaining"
+      fi
+    done
+
+    if [ -n "$target" ] ; then
+      echo "$target"
+      cd "$target"
+    else
+      echo "$sibpath not found" >&2
+    fi
+  fi
+}
+
 # Prompt configuration
 c_red='0;31m'
 c_green='0;32m'
