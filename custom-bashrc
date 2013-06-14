@@ -40,7 +40,10 @@ function mcd() { mkdir -p "$1" && cd "$1"; }
 function sib() {
   sibpath=$1
   sib=${sibpath%%/*}
-  remaining=${sibpath#*/}
+  remaining=
+  if [ "x$sib" != "x$sibpath" ] ; then
+    remaining=${sibpath#*/}
+  fi
   dir=$(pwd)
   target=
 
@@ -49,8 +52,14 @@ function sib() {
   else
     while [ -z "$target" ] && [ "$dir" != "/" ] && [ -n "$dir" ]; do
       dir=$(dirname "$dir")
-      if [ -d "$dir/$sib/$remaining" ] ; then
-        target="$dir/$sib/$remaining"
+      if [ -n "$remaining" ] ; then
+        if [ -d "$dir/$sib/$remaining" ] ; then
+          target="$dir/$sib/$remaining"
+        fi
+      else
+        if [ -d "$dir/$sib" ] ; then
+          target="$dir/$sib"
+        fi
       fi
     done
 
