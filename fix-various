@@ -1,6 +1,12 @@
 #!/bin/bash
 
 #
+# For exiftool:
+#
+# sudo apt-get install libimage-exiftool-perl
+#
+
+#
 # Rename any directory "Various_xxx" to "xxx"
 #
 for d in $(ls -d Various_*) ; do
