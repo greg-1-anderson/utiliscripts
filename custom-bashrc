@@ -33,6 +33,11 @@ alias geni-update='git svn rebase'
 alias gl='git log --oneline -12'
 alias gs='git status'
 
+# Open a browser window on Byron's machine at home
+alias byron='ssh byron@10.100.1.95 /usr/bin/env DISPLAY=":0.0" xdg-open'
+# No more Minecraft -- do your homework!
+alias homework="sh -c 'ssh byron@10.100.1.95 /usr/bin/env DISPLAY=\":0.0\" gnome-screensaver-command --lock' && sh -c 'ssh root@10.100.1.95 pm-suspend' &"
+
 function tolower() { tr A-Z a-z <<<$@; }
 function mcd() { mkdir -p "$1" && cd "$1"; }
 

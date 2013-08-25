@@ -1,0 +1,23 @@
+#!/bin/sh
+
+HOSTNAME=$(hostname -f)
+SITE=$1
+added=false
+
+whitelistdir=/home/ga/local/config/whitelists/$HOSTNAME
+
+if [ -d $whitelistdir ] ; then
+  for dest in $(host $SITE | grep ' has address ' | sed -e 's# has address #:#') ; do
+  echo $dest
+    for host in $(ls $whitelistdir) ; do
+      if ! grep -q $dest $whitelistdir/$host ; then
+        echo $dest >> $whitelistdir/$host
+        added=true
+      fi
+    done
+  done
+fi
+
+if $added ; then
+  sudo /sbin/firewall.sh
+fi
