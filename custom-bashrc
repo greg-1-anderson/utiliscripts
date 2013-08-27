@@ -35,8 +35,14 @@ alias gs='git status'
 
 # Open a browser window on Byron's machine at home
 alias byron='ssh byron@10.100.1.95 /usr/bin/env DISPLAY=":0.0" xdg-open'
+# Tell Byron something
+function tell-byron() { echo \"$@\"; ssh byron@10.100.1.95 /usr/bin/env DISPLAY=":0.0" notify-send \"$@\"; }
 # No more Minecraft -- do your homework!
-alias homework="sh -c 'ssh byron@10.100.1.95 /usr/bin/env DISPLAY=\":0.0\" gnome-screensaver-command --lock' && sh -c 'ssh root@10.100.1.95 pm-suspend' &"
+alias byron-end="sh -c 'ssh byron@10.100.1.95 /usr/bin/env DISPLAY=\":0.0\" gnome-screensaver-command --lock' && sh -c 'ssh root@10.100.1.95 pm-suspend' &"
+# Polite warning before being done
+alias polite-end='for d in {3..1} ; do tell-byron "System going down in $d minutes"; sleep 1m; done; tell-byron "One more minute until shutdown."; sleep 50s; tell-byron "TEN SECONDS."; sleep 10s; byron-end'
+# Allow a fixed amount of time
+function byron-timer() { t=$1; if [ "$t" > 3 ] ; then tell-byron "You can play for $t minutes."; if [ "$t" > 10 ] ; then t=$((t-8)); sleep "${t}m"; tell-byron "Eight-minute warning."; t=8; fi ; t=$((t-3)); sleep "${t}m"; fi ; echo polite-end; }
 
 function tolower() { tr A-Z a-z <<<$@; }
 function mcd() { mkdir -p "$1" && cd "$1"; }
