@@ -300,25 +300,52 @@ then
   DRUSH="$(which drush)"
 fi
 
+# If we still have a copy of drush checked out from drupal.org, move it out of the way
+if [ -n "$DRUSH" ] && [ -d $HOME/local/drupal/drush ] ; then
+  (
+    cd $HOME/local/drupal/drush
+    origindo=$(git remote show -n origin | grep git.drupal.org)
+    if [ -n "$origindo" ] ; then
+      mv $HOME/local/drupal/drush $HOME/local/drupal/drush-d.o
+      DRUSH=
+    fi
+  )
+fi
+
 if [ -z "$DRUSH" ] && [ ! -d  $HOME/local/drupal/drush ] ; then
 
   (
     mkdir -p $HOME/local/drupal
+    pr_remote=drush-ops
     cd $HOME/local/drupal
     # read+write if "drush" is in $MAINTAINER, read-only otherwise
-    if [ -n "$DRUPALORG_USERNAME" ] && [ "${MAINTAINER}" != "${MAINTAINER/drush/}" ]
+    if [ "${MAINTAINER}" != "${MAINTAINER/drush/}" ]
     then
-      git clone --branch 8.x-6.x ${DRUPALORG_USERNAME}@git.drupal.org:project/drush.git
+      git clone git@github.com:greg-1-anderson/drush.git
       if [ ! -d drush ]
       then
       	echo "Could not clone a r/w copy of drush; cloning a r/o copy instead."
+      else
+        cd drush
+        git remote add drush-ops git@github.com:drush-ops/drush.git
       fi
     fi
 
     if [ ! -d drush ] ; then
-      git clone --branch 8.x-6.x http://git.drupal.org/project/drush.git
+      git clone git://github.com/drush-ops/drush.git
+      pr_remote=origin
     fi
   )
+
+  # TODO:
+  #
+  # Add the "pr" line to the $pr_remote entry (drush-ops or origin)
+  #
+  #[remote "drush-ops"]
+  #  url = git@github.com:drush-ops/drush.git
+  #  fetch = +refs/heads/*:refs/remotes/drush-ops/*
+  #  fetch = +refs/pull/*/head:refs/remotes/origin/pr/*
+
 fi
 
 if [ -z "$DRUSH" ] && [ -d  $HOME/local/drupal/drush ]
@@ -331,10 +358,10 @@ echo "# Check drush extensions..."
 DRUSH_EXTENSIONS=$HOME/local/drupal/drush_extensions
 mkdir -p $DRUSH_EXTENSIONS
 
+#   drupalcs \
 for drush_extension in \
     drush_sup \
     drush_iq \
-    drupalcs \
     drush_extras \
     dbtng_migrator \
     registry_rebuild \
