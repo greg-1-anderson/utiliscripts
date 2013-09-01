@@ -326,8 +326,10 @@ if [ -z "$DRUSH" ] && [ ! -d  $HOME/local/drupal/drush ] ; then
       then
       	echo "Could not clone a r/w copy of drush; cloning a r/o copy instead."
       else
-        cd drush
-        git remote add drush-ops git@github.com:drush-ops/drush.git
+        (
+          cd drush
+          git remote add drush-ops git@github.com:drush-ops/drush.git
+        )
       fi
     fi
 
