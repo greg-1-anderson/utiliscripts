@@ -59,7 +59,7 @@ function sib() {
   target=
 
   if [ -z $# ] || [ -z "$sib" ] ; then
-    echo "Usage: findsib <name of sibling folder>" >&2
+    echo "Usage: sib <name of sibling folder>" >&2
   else
     while [ -z "$target" ] && [ "$dir" != "/" ] && [ -n "$dir" ]; do
       dir=$(dirname "$dir")
@@ -80,6 +80,33 @@ function sib() {
     else
       echo "$sibpath not found" >&2
     fi
+  fi
+}
+
+# 'bd' from https://github.com/vigneshwaranr/bd - thanks!
+# (simplified to just do -s behavior if full match not found)
+function bd() {
+  if [ $# -eq 0 ]
+  then
+    echo "Usage: bd <name of some parent folder>" >&2
+  else
+    OLDPWD=`pwd`
+
+    NEWPWD=`echo $OLDPWD | sed 's|\(.*/'$1'/\).*|\1|'`
+    index=`echo $NEWPWD | awk '{ print index($1,"/'$1'/"); }'`
+    if [ $index -eq 0 ]
+    then
+      NEWPWD=`echo $OLDPWD | sed 's|\(.*/'$1'[^/]*/\).*|\1|'`
+      index=`echo $NEWPWD | awk '{ print index($1,"/'$1'"); }'`
+    fi
+
+    if [ $index -eq 0 ]
+    then
+      echo "No such occurrence."
+    fi
+
+    echo $NEWPWD
+    cd "$NEWPWD"
   fi
 }
 
