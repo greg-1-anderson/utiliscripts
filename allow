@@ -19,5 +19,5 @@ if [ -d $whitelistdir ] ; then
 fi
 
 if $added ; then
-  sudo /sbin/firewall.sh
+  sudo /sbin/firewall.sh --log blocked
 fi
