@@ -43,6 +43,8 @@ alias byron-end="sh -c 'ssh byron@10.100.1.95 /usr/bin/env DISPLAY=\":0.0\" gnom
 alias polite-end='tell-byron "System going down in 3 minutes."; sleep 1m; tell-byron "Two-minute warning."; tell-byron "One more minute until shutdown."; sleep 50s; tell-byron "TEN SECONDS."; sleep 10s; byron-end'
 # Allow a fixed amount of time
 function byron-timer() { t=$1; if [ "$t" -gt 3 ] ; then tell-byron "You can play for $t minutes."; if [ "$t" -gt 10 ] ; then t=$((t-8)); sleep "${t}m"; tell-byron "Eight-minute warning."; t=8; fi ; t=$((t-3)); sleep "${t}m"; fi ; polite-end }
+# Turn the whitelist on and off
+function whitelist() { WHITELIST='--whitelist' ; if [ "x$1" == "xoff" ] ; then WHITELIST='--no-whitelist' ; fi ; sudo /sbin/firewall.sh $WHITELIST --log blocked ; }
 
 function tolower() { tr A-Z a-z <<<$@; }
 function mcd() { mkdir -p "$1" && cd "$1"; }
