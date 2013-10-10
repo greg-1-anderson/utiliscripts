@@ -30,7 +30,7 @@ alias findtabs="find -not -regex '..*/\..*' -exec grep -HP '\t' {} \;"
 alias pull-all='for x in * ; do if [ -d $x/.git ] ; then ( cd $x ; s=$(git status -s); if [ -z "$s" ] ; then echo "Update $x." ; git pull ; else echo "$x is modified; skipping update." ; fi ) fi done'
 alias geni-commit='git svn dcommit'
 alias geni-update='git svn rebase'
-alias gl='git log --oneline -12'
+alias gl='git log --pretty=format:"%Cred%h %Cgreen%an%Creset %s" -12'
 alias gs='git status'
 
 # Open a browser window on Byron's machine at home
