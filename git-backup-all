@@ -4,11 +4,16 @@
 #
 #   git-backup-all git@myvcs.com
 #
-# This script will clone all repositories `git @myvcs.com:*.git`
+# This script will clone all repositories `git@myvcs.com:*.git`
 # to the current working directory.  All repositories are cloned
 # bare, for archival purposes.  If there are any repositories at
 # the destination that have already been cloned, then they will
 # each be pulled in turn.
+#
+# Example usage in cron:
+#
+#   30 */4 * * * cd /data/archive/git && git-backup-all git@vps.greenknowe.org
+#
 
 vcs_server=$1
 repos=$(ssh $vcs_server ls -d '*.git')
