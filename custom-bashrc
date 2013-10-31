@@ -31,6 +31,7 @@ alias pull-all='for x in * ; do if [ -d $x/.git ] ; then ( cd $x ; s=$(git statu
 alias geni-commit='git svn dcommit'
 alias geni-update='git svn rebase'
 alias gl='git log --pretty=format:"%Cred%h %Cgreen%an%Creset %s" -12'
+alias gld='git log --date=short --pretty=format:"%Cred%h %Cblue%cd %Cgreen%an%Creset %s" -12'
 alias gs='git status'
 
 # Open a browser window on Byron's machine at home
