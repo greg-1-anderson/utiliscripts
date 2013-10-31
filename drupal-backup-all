@@ -139,7 +139,7 @@ while [ $# -gt 0 ] ; do
       # Test to see if we have site aliases defined for the specified site.
       # TODO: We assume 'live' is remote and 'backup' is local.  Confirm this?
       site=$option
-      if [ -z "$(drush sa --short @$site.live)" ] || [ -z "$(drush sa --short @$site.backup)" ] ; then
+      if [ -z "$(drush site-alias @$site.live 2>/dev/null)" ] || [ -z "$(drush site-alias @$site.backup 2>/dev/null)" ] ; then
         (
           echo "The site alias @$option is either not defined, or is missing"
           echo "'live' and/or 'backup' site records."
@@ -191,7 +191,7 @@ for site in ${backup_list} ; do
   msg="=== Checking ${site} for changes ==="
   $FORCE && msg="=== Backup forced for ${site} ==="
   echo $msg 1>&2
-  drush @$site.live sql-hash --tables-list=$hash_tables --strict=0 > $cur_hash_file 2>/dev/null
+  drush @$site.live sql-query --db-prefix 'select max(nid),max(changed) from {node}' > $cur_hash_file 2>/dev/null
   if [ ! -f $hash_file ] || [ "x`diff $cur_hash_file $hash_file`" != "x" ] || $FORCE ; then
     msg="$(date "+%Y-%m-%d %H:%M")"
     echo "$msg :: Begin backup of $site" 1>&2
@@ -205,7 +205,7 @@ for site in ${backup_list} ; do
     # We expect that changes to code should not be made on the live site,
     # but if there are any dirty files in the git repository, we will
     # autocommit them.
-    live_root=$(drush sa @$site.live --component=root)
+    live_root=$(drush drupal-directory @$site.live:%root)
     drush @$site.live ssh "cd $live_root && git add -A && git commit -m 'Automatic commit by drupal-backup-all script' && git push" 1>&2
     # Next, make sure backup site has the most recent code.
     (
@@ -256,7 +256,7 @@ for site in ${backup_list} ; do
       fi
     fi
 
-    drush @$site.backup sql-hash --tables-list=$hash_tables --strict=0 > $backup_hash_file 2>/dev/null
+    drush @$site.backup sql-query --db-prefix 'select max(nid),max(changed) from {node}' > $backup_hash_file 2>/dev/null
     if [ "x`diff $hash_file $backup_hash_file`" != "x" ] ; then
       # We don't want to take the site offline while backing up, but it would be
       # useful if we could disable editing while backups are in progress.  Maybe
@@ -288,7 +288,7 @@ for site in ${backup_list} ; do
     if [ ! -f $update_list_file ] || [ "x`diff $cur_update_list_file $update_list_file`" != "x" ] || $FORCE_UPDATE ; then
       # If there is a @site.update alias defined, then automatically
       # perform a pm-update, so the result will be available for testing.
-      if [ -n "$(drush sa --short @$site.update)" ] ; then
+      if [ -n "$(drush site-alias @$site.update 2>/dev/null)" ] ; then
         # TODO: If we preserved the creation date of $update_list_file,
         # then we could output how long this site has been waiting for an
         # update below.

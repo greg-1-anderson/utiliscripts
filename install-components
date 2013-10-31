@@ -316,6 +316,8 @@ if [ "${selected}" != "${selected/oracle-java}" ] ; then
 	if [ -z "$(which java)" ] ; then
 		add-apt-repository ppa:webupd8team/java
 		apt-get update
+	else
+		unset install_list[oracle-java]
 	fi
 	unset install_list[open-java]
 fi
