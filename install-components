@@ -66,7 +66,7 @@ packages["graphics"]="gimp inkscape imagemagick"
 packages["sound"]="audacity"
 
 
-groups["system"]="admin intl security network system-gui repository compress"
+groups["system"]="admin intl network system-gui repository compress"
 # nvidia
 
 #
@@ -78,7 +78,7 @@ packages["admin"]="apt-file dpkg-dev sysv-rc-conf mcrypt"
 
 packages["intl"]="i8kutils"
 
-packages["security"]="uif bastille"
+# packages["security"]="uif bastille"
 
 packages["network"]="ssh rsh-client nmap davfs2 curl"
 
