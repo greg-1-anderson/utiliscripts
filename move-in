@@ -422,24 +422,26 @@ done
 
 if [ -n "$DISPLAY" ] ; then
 
+  # TODO: install sublime 3 via .deb file
+
   echo "# Check sublime..."
 
   s=`which sublime_text`
   if [ -n "$s" ] ; then
     # Check to see if Sublime is out of date
     sublime_version=$(sublime_text --version | sed -e 's|.*Build ||')
-    if [ "x$sublime_version" != "x2221" ] ; then
+    if [ "x$sublime_version" != "x3047" ] ; then
       s=""
-      if [ -d "$HOME/local/sublime-text-2" ]; then
-        mv "$HOME/local/sublime-text-2" "$HOME/local/sublime-text-2-build-${sublime_version}"
+      if [ -d "$HOME/local/sublime-text-3" ]; then
+        mv "$HOME/local/sublime-text-3" "$HOME/local/sublime-text-3-build-${sublime_version}"
       fi
     fi
   fi
-  if [ -z "$s" ] && [ ! -d "$HOME/local/sublime-text-2" ]; then
+  if [ -z "$s" ] && [ ! -d "$HOME/local/sublime-text-3" ]; then
 
-  	sublime_url=`curl http://www.sublimetext.com/2 2>/dev/null | grep 'a href.*Linux 32' | sed -e 's/.*href="\([^"]*\).*/\1/'`
+  	sublime_url=`curl http://www.sublimetext.com/3 2>/dev/null | grep 'a href.*_x64.tar.bz2' | sed -e 's/.*href="\([^"]*\).*/\1/'`
   	if [ -z "$sublime_url" ] ; then
-      sublime_url="http://c758482.r82.cf2.rackcdn.com/Sublime Text 2.0.2.tar.bz2"
+      sublime_url="http://c758482.r82.cf2.rackcdn.com/sublime_text_3_build_3047_x64.tar.bz2"
   	fi
   	sublime_file="${sublime_url##*/}"
 
@@ -449,7 +451,7 @@ if [ -n "$DISPLAY" ] ; then
   	wget -O "$HOME/tmp/$sublime_file" "$sublime_url"
   	tar -xjvf "$HOME/tmp/$sublime_file" -C $HOME/local
 
-  	mv "$HOME/local/Sublime Text 2" $HOME/local/sublime-text-2
+  	mv "$HOME/local/sublime_text_3" $HOME/local/sublime-text-3
   fi
 
 fi
@@ -619,8 +621,8 @@ if [ -n "$(which locale)" ] ; then
     export LC_ALL=POSIX
   fi
 fi
-if [ -d "\$HOME/local/sublime-text-2" ] ; then
-  [ "\$PATH" == "\${PATH/sublime-text-2/}" ] && export PATH="\$PATH:\$HOME/local/sublime-text-2"
+if [ -d "\$HOME/local/sublime-text-3" ] ; then
+  [ "\$PATH" == "\${PATH/sublime-text-3/}" ] && export PATH="\$PATH:\$HOME/local/sublime-text-3"
 fi
 if [ -f \$UTILISCRIPTS/custom-bashrc ]; then
   . \$UTILISCRIPTS/custom-bashrc
@@ -644,12 +646,18 @@ if [ -n "$DISPLAY" ] ; then
 
 echo "# Check preferences and configuration..."
 
+# TODO: update for sublime 3
+
 #
 # Copy sublime license file, if one exists in installdata
 #
 if [ ! -f $HOME/.config/sublime-text-2/Settings/License.sublime_license ] && [ -f $INSTALLATION_DATA/Licenses/License.sublime_license ] ; then
   mkdir -p $HOME/.config/sublime-text-2/Settings
   cp $INSTALLATION_DATA/Licenses/License.sublime_license $HOME/.config/sublime-text-2/Settings/License.sublime_license
+fi
+if [ ! -f $HOME/.config/sublime-text-3/Local/License.sublime_license ] && [ -f $INSTALLATION_DATA/Licenses/License.sublime_license ] ; then
+  mkdir -p $HOME/.config/sublime-text-3/Local
+  cp $INSTALLATION_DATA/Licenses/License.sublime_license $HOME/.config/sublime-text-3/Local/License.sublime_license
 fi
 
 #
@@ -687,6 +695,11 @@ __END__
 
 fi
 
+if [ ! -f $HOME/.config/sublime-text-3/Packages/User/Preferences.sublime-settings ] ; then
+  mkdir -p $HOME/.config/sublime-text-3/Packages/User
+  cp $HOME/.config/sublime-text-2/Packages/User/Preferences.sublime-settings $HOME/.config/sublime-text-3/Packages/User/Preferences.sublime-settings
+fi
+
 if [ ! -f $HOME/.config/sublime-text-2/Packages/User/Markdown.sublime-settings ] ; then
 
 mkdir -p $HOME/.config/sublime-text-2/Packages/User
@@ -700,6 +713,11 @@ cat << "__END__" > $HOME/.config/sublime-text-2/Packages/User/Markdown.sublime-s
 }
 __END__
 
+fi
+
+if [ ! -f $HOME/.config/sublime-text-3/Packages/User/Markdown.sublime-settings ] ; then
+  mkdir -p $HOME/.config/sublime-text-3/Packages/User
+  cp $HOME/.config/sublime-text-2/Packages/User/Markdown.sublime-settings $HOME/.config/sublime-text-3/Packages/User/Markdown.sublime-settings
 fi
 
 if [ ! -f "$HOME/.config/sublime-text-2/Packages/User/Default (Linux).sublime-keymap" ] || [ "`ls -l \"$HOME/.config/sublime-text-2/Packages/User/Default (Linux).sublime-keymap\" | awk '{ print $5 }'`" -lt 10 ] ; then
@@ -756,6 +774,11 @@ cat << "__END__" > "$HOME/.config/sublime-text-2/Packages/User/Default (Linux).s
 ]
 __END__
 
+fi
+
+if [ ! -f "$HOME/.config/sublime-text-3/Packages/User/Default (Linux).sublime-keymap" ] ; then
+  mkdir -p $HOME/.config/sublime-text-3/Packages/User
+  cp "$HOME/.config/sublime-text-2/Packages/User/Default (Linux).sublime-keymap" "$HOME/.config/sublime-text-3/Packages/User/Default (Linux).sublime-keymap"
 fi
 
 # Install Sublime Code Intel plugin
