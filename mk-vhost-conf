@@ -34,6 +34,16 @@
 # Runing networking restart does not work!
 #
 
+# Find out if we are running apache 2.2 or earlier.  If so,
+# $apache_22_or_earlier will == 2.2.
+apache=apache2
+if [ -n "$(which httpd)" ] ; then
+	apache=httpd
+fi
+apache_version=$($apache -v | grep 'Apache/' | sed -e 's#.*Apache/\([0-9]*\.[0-9]*\).*#\1#')
+apache_22_or_earlier=$((echo $apache_version && echo 2.2) | sort -V | tail -n 1)
+
+
 #
 # Here are some common default values.
 # We set more default values after the
@@ -762,12 +772,12 @@ cat << "__END__" | sed -f $sed_script > $vhost_conf
 	<Directory />
 		Options FollowSymLinks
 		AllowOverride None
+		Require all denied
 	</Directory>
 	<Directory __HTTP_DOCUMENTROOT__>
 		Options Indexes FollowSymLinks MultiViews
 		AllowOverride All
-		Order allow,deny
-		allow from all
+		Require all granted
 
 		AuthType Basic
 		AuthName "__AUTH_MESSAGE__"
@@ -780,8 +790,7 @@ cat << "__END__" | sed -f $sed_script > $vhost_conf
 	<Directory "__CGI_BIN_DIR__/__CGI_BIN_PREFIX__cgi-bin">
 		AllowOverride None
 		Options +ExecCGI -MultiViews +SymLinksIfOwnerMatch
-		Order allow,deny
-		Allow from all
+		Require all granted
 	</Directory>
 
 	ErrorLog __LOG_DIR__/__ERR_PREFIX__error.log
@@ -816,13 +825,12 @@ cat << "__END__" | sed -f $sed_script > $vhost_conf
 	<Directory />
 		Options None
 		AllowOverride None
-		deny from all
+		Require all denied
 	</Directory>
 	<Directory __HTTP_DOCUMENTROOT__>
 		Options None
 		AllowOverride None
-		Order allow,deny
-		deny from all
+		Require all denied
 	</Directory>
 
 	ErrorLog __LOG_DIR__/__ERR_PREFIX__error.log
@@ -864,13 +872,12 @@ cat << "__END__" | sed -f $sed_script > $vhost_conf
 	<Directory />
 		Options None
 		AllowOverride None
-		deny from all
+		Require all denied
 	</Directory>
 	<Directory __HTTP_DOCUMENTROOT__>
 		Options None
 		AllowOverride None
-		Order allow,deny
-		deny from all
+		Require all denied
 	</Directory>
 
 	ErrorLog __LOG_DIR__/__ERR_PREFIX__error.log
@@ -900,6 +907,11 @@ if [ "x$site_alias" != "x$site_fqdn" ] ; then
 # this certificate from "www.site-domain.com", it would result in an
 # unpleasant warning message.
 #
+# TODO: Test this again. I think this is too late to avoid the
+# warning, but the warning should not come, as "www" is not considered
+# a significant difference in domain names to browsers when evaluating
+# site certificates.
+#
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 cat << "__END__" | sed -f $sed_script >> $vhost_conf
@@ -920,13 +932,12 @@ cat << "__END__" | sed -f $sed_script >> $vhost_conf
 	<Directory />
 		Options None
 		AllowOverride None
-		deny from all
+		Require all denied
 	</Directory>
 	<Directory __HTTP_DOCUMENTROOT__>
 		Options None
 		AllowOverride None
-		Order allow,deny
-		deny from all
+		Require all denied
 	</Directory>
 
 	ErrorLog __LOG_DIR__/__ERR_PREFIX__error.log
@@ -964,12 +975,12 @@ cat << "__END__" | sed -f $sed_script >> $vhost_conf
 	<Directory />
 		Options FollowSymLinks
 		AllowOverride None
+		Require all denied
 	</Directory>
 	<Directory __HTTPS_DOCUMENTROOT__>
 		Options Indexes FollowSymLinks MultiViews
 		AllowOverride All
-		Order allow,deny
-		allow from all
+		Require all granted
 
 		AuthType Basic
 		AuthName "__AUTH_MESSAGE__"
@@ -981,8 +992,7 @@ cat << "__END__" | sed -f $sed_script >> $vhost_conf
 	<Directory "__CGI_BIN_DIR__/__CGI_BIN_PREFIX____CGI_BIN_SSL_PREFIX__cgi-bin">
 		AllowOverride None
 		Options +ExecCGI -MultiViews +SymLinksIfOwnerMatch
-		Order allow,deny
-		Allow from all
+		Require all granted
 	</Directory>
 
 	ErrorLog __LOG_DIR__/__ERR_PREFIX__error.log
@@ -1132,6 +1142,15 @@ fi
 
 fi
 
+# If we are running apache 2.2 or earlier, back-convert our
+# template file.  See: http://httpd.apache.org/docs/trunk/upgrading.html
+if [ $apache_22_or_earlier == "2.2" ] ; then
+	sed -i \
+		-e 's#Require all denied#Order deny,allow\nDeny from all#' \
+		-e 's#Require all granted#Order allow,deny\nAllow from all#' \
+		-e 's#Require host \(.*\)#Order deny,allow\nDeny from all\nAllow from \1#' \
+		$vhost_conf
+fi
 
 #
 # If outputting to stdout, then cat the output file,
