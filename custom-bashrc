@@ -55,6 +55,12 @@ function whitelist() { WHITELIST='--whitelist' ; if [ "x$1" == "xoff" ] ; then W
 function tolower() { tr A-Z a-z <<<$@; }
 function mcd() { mkdir -p "$1" && cd "$1"; }
 
+# Only useful on the corporate intranet.  Prerequisites:
+#   sudo mkdir /mnt/public
+#   sudo apt-get install cifs-utils
+alias mount-public='sudo mount -t cifs -o user=ganderson //samba/public /mnt/public'
+
+
 # cd to a sibling directory
 function sib() {
   sibpath=$1
