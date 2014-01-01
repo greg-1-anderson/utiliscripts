@@ -8,6 +8,13 @@
 #
 #    0  3  *  *  *  /usr/bin/env PATH=/usr/local/bin:/usr/bin:/bin drupal-backup-all site1 site2 site3
 #
+# Important:
+#
+# Insure that the user who runs this script is a member of the www-data group.
+# If this script is run by a user named 'archive', then:
+#
+#   sudo /usr/sbin/usermod -a -G www-data archive
+#
 # Configuration:
 #
 # Each site named in the commandline arguments must have a Drush site alias
@@ -271,7 +278,7 @@ for site in ${backup_list} ; do
     fi
 
     # Make sure that the group for the files remains www-data
-    $EXEC chgrp -R www-data $(drush drupal-directory @$site.backup)
+    $EXEC find $(drush drupal-directory @$site.backup) \! -group www-data -exec chgrp www-data {} \;
 
     # Keep calm and clear the cache, in case any files changed
     $EXEC drush -y @$site.backup cache-clear all
@@ -338,7 +345,7 @@ for site in ${backup_list} ; do
         ) >> $update_notify_file
 
         # Make sure that the group for the files remains www-data
-        $EXEC chgrp -R www-data $(drush drupal-directory @$site.update)
+        $EXEC find $(drush drupal-directory @$site.update) \! -group www-data -exec chgrp www-data {} \;
 
         echo "Update complete for $site" 1>&2
       else
