@@ -30,7 +30,7 @@ done
 server_name=${server_fqdn%%.*}
 
 if [ "x$server_fqdn" != "x$current_fqdn" ] ; then
-	echo $server_fqdn > /etc/hostname
+	echo $server_name > /etc/hostname
 	hostname -F /etc/hostname
 	
 	#
