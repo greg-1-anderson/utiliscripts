@@ -214,10 +214,13 @@ for site in ${backup_list} ; do
     # autocommit them.
     live_root=$(drush drupal-directory @$site.live:%root)
     drush @$site.live ssh "cd $live_root && git add -A && git commit -m 'Automatic commit by drupal-backup-all script' && git push" 1>&2
+    # Determine which branch is checked out on the live site
+    live_branch=$(drush @$site.live ssh "git branch 2>/dev/null| sed -n '/^\*/s/^\* //p'")
     # Next, make sure backup site has the most recent code.
     (
       cd $(drush drupal-directory @$site.backup)
-      $EXEC git pull 1>&2
+      $EXEC git pull origin $live_branch 1>&2
+      $EXEC git checkout $live_branch 1>&2
     )
     # Move the previous database dump into the history folder,
     # after first compressing it with gzip
