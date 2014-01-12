@@ -422,15 +422,22 @@ done
 
 if [ -n "$DISPLAY" ] ; then
 
-  # TODO: install sublime 3 via .deb file
-
   echo "# Check sublime..."
+
+  sublime_url=`curl http://www.sublimetext.com/3 2>/dev/null | grep 'a href.*_x64.tar.bz2' | sed -e 's/.*href="\([^"]*\).*/\1/'`
+  if [ -z "$sublime_url" ] ; then
+    sublime_url="http://c758482.r82.cf2.rackcdn.com/sublime_text_3_build_3047_x64.tar.bz2"
+  fi
+  sublime_file="${sublime_url##*/}"
+  sublime_latest="${sublime_file##*_build_}"
+  sublime_latest="${sublime_latest%%_*}"
 
   s=`which sublime_text`
   if [ -n "$s" ] ; then
     # Check to see if Sublime is out of date
     sublime_version=$(sublime_text --version | sed -e 's|.*Build ||')
-    if [ "x$sublime_version" != "x3047" ] ; then
+    if [ "$sublime_version" -lt "$sublime_latest" ] ; then
+      echo "Sublime text $sublime_version installed, but latest version is $sublime_latest. Updating."
       s=""
       if [ -d "$HOME/local/sublime-text-3" ]; then
         mv "$HOME/local/sublime-text-3" "$HOME/local/sublime-text-3-build-${sublime_version}"
@@ -438,12 +445,6 @@ if [ -n "$DISPLAY" ] ; then
     fi
   fi
   if [ -z "$s" ] && [ ! -d "$HOME/local/sublime-text-3" ]; then
-
-  	sublime_url=`curl http://www.sublimetext.com/3 2>/dev/null | grep 'a href.*_x64.tar.bz2' | sed -e 's/.*href="\([^"]*\).*/\1/'`
-  	if [ -z "$sublime_url" ] ; then
-      sublime_url="http://c758482.r82.cf2.rackcdn.com/sublime_text_3_build_3047_x64.tar.bz2"
-  	fi
-  	sublime_file="${sublime_url##*/}"
 
   	mkdir -p $HOME/tmp
   	mkdir -p $HOME/local
