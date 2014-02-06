@@ -206,6 +206,35 @@ fi
 
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #
+#  G E T   C O M P O S E R
+#
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+# https://getcomposer.org/doc/00-intro.md#system-requirements
+
+if [ -z "$(which composer)" ] ; then
+
+  curl -sS https://getcomposer.org/installer | php
+  mkdir -p $HOME/bin
+  mv composer.phar $HOME/bin/composer
+
+  if [ "$PATH" == "${PATH/$USER/}" ] ; then
+    export PATH="$PATH:$HOME/bin"
+  fi
+fi
+
+# Insure that the vendor/bin directory is on our PATH as well
+
+if [ "$PATH" == "${PATH/.composer/}" ] ; then
+
+  echo 'export PATH="$HOME/.composer/vendor/bin:$PATH"' >> $HOME/.bashrc
+  export PATH="$HOME/.composer/vendor/bin:$PATH"
+
+fi
+
+
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#
 #  G E T   C O N F I G
 #
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -294,24 +323,14 @@ echo "# Check drush..."
 
 # If we do not already have drush, then get the master branch with git
 
-DRUSH=
-if [ -n "$DRUPALORG_USERNAME" ] && [ "${MAINTAINER}" != "${MAINTAINER/drush/}" ]
-then
-  DRUSH="$(which drush)"
-fi
+DRUSH="$(which drush)"
 
-# If we still have a copy of drush checked out from drupal.org, move it out of the way
-if [ -n "$DRUSH" ] && [ -d $HOME/local/drupal/drush ] ; then
-  (
-    cd $HOME/local/drupal/drush
-    origindo=$(git remote show -n origin | grep git.drupal.org)
-    if [ -n "$origindo" ] ; then
-      mv $HOME/local/drupal/drush $HOME/local/drupal/drush-d.o
-      DRUSH=
-    fi
-  )
-fi
+# Install Drush via composer
+composer global require drush/drush:dev-master --prefer-source
 
+DRUSH="$(which drush)"
+
+# The old way to install
 if [ -z "$DRUSH" ] && [ ! -d  $HOME/local/drupal/drush ] ; then
 
   (
