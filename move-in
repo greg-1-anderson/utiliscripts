@@ -218,7 +218,7 @@ if [ -z "$(which composer)" ] ; then
   mkdir -p $HOME/bin
   mv composer.phar $HOME/bin/composer
 
-  if [ "$PATH" == "${PATH/$USER/}" ] ; then
+  if [ -z "$(which composer)" ] ; then
     export PATH="$PATH:$HOME/bin"
   fi
 fi
@@ -226,10 +226,20 @@ fi
 # Insure that the vendor/bin directory is on our PATH as well
 
 if [ "$PATH" == "${PATH/.composer/}" ] ; then
-
-  echo 'export PATH="$HOME/.composer/vendor/bin:$PATH"' >> $HOME/.bashrc
   export PATH="$HOME/.composer/vendor/bin:$PATH"
+fi
 
+chkbashrc=$(grep 'composer/vendor/bin' "$HOME/.bashrc")
+if [ "X$chkbashrc" = "X" ] ; then
+  sed -e '/^ *$/,$ d' $HOME/.bashrc > $HOME/.bashrc-head
+  sed -e '1,/^ *$/ d' $HOME/.bashrc > $HOME/.bashrc-body
+  cp $HOME/.bashrc-head $HOME/.bashrc
+cat <<- __END__ >> $HOME/.bashrc
+[ "\$PATH" == "\${PATH/.composer/}" ] && export PATH="\$HOME/.composer/vendor/bin:\$PATH"
+__END__
+  cat $HOME/.bashrc-body >> $HOME/.bashrc
+  rm $HOME/.bashrc-head
+  rm $HOME/.bashrc-body
 fi
 
 
@@ -608,25 +618,6 @@ export SSH_KEY_ARCHIVE="\$HOME/$SSH_KEY_ARCHIVE_RELATIVE"
 __END__
 sed -e '1,/^ *$/ d' $HOME/.bashrc >> $HOME/.bashrc-update
 mv -f $HOME/.bashrc-update $HOME/.bashrc
-fi
-
-# If we have not set the location of the drush yet,
-# write it to $HOME/.bashrc.  Only do this once, in case
-# the user might care to change it.
-chkbashrc=`grep '\(drush\)' $HOME/.bashrc`
-if [ "X$chkbashrc" = "X" ] ; then
-sed -e '/^ *$/,$ d' $HOME/.bashrc > $HOME/.bashrc-head
-sed -e '1,/^ *$/ d' $HOME/.bashrc > $HOME/.bashrc-body
-cp $HOME/.bashrc-head $HOME/.bashrc
-cat <<- __END__ >> $HOME/.bashrc
-
-# Add drush to the path
-[ "\$PATH" == "\${PATH/drush/}" ] && export PATH="\$HOME/local/drupal/drush:\$PATH"
-
-__END__
-cat $HOME/.bashrc-body >> $HOME/.bashrc
-rm $HOME/.bashrc-head
-rm $HOME/.bashrc-body
 fi
 
 # Rewrite the "Bash Customizations" section
