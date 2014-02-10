@@ -555,6 +555,8 @@ then
 
 \$options['include'][] = \$home . '/local/drupal/drush_extensions';
 \$options['config'][] = \$home . '/local/config';
+
+\$options['shell-aliases']['unsuck'] = '!drush pm-disable -y overlay,dashboard,toolbar,shortcut && drush pm-enable -y admin_menu';
 __EOT__
   grep -v '<\?php' $HOME/.drush/drushrc.php >> $HOME/.drush/drushrc.php-update
   mv -f $HOME/.drush/drushrc.php-update $HOME/.drush/drushrc.php
