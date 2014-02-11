@@ -219,6 +219,7 @@ if [ -z "$(which composer)" ] ; then
   mv composer.phar $HOME/bin/composer
 
   if [ -z "$(which composer)" ] ; then
+    sed -i '1i export PATH=$PATH:$HOME/bin' ~/.bashrc
     export PATH="$PATH:$HOME/bin"
   fi
 fi
