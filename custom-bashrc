@@ -35,8 +35,8 @@ alias geni-update='git svn rebase'
 # Git aliases
 #
 git config --global alias.unstage 'reset HEAD --'
-alias gl='git log --pretty=format:"%Cred%h %Cgreen%an%Creset %s" -12'
-alias gld='git log --date=short --pretty=format:"%Cred%h %Cblue%cd %Cgreen%an%Creset %s" -12'
+alias gl='git log --date=short --pretty=format:"%Cred%h %Cblue%cd %Cgreen%an%Creset %s" -12'
+alias gls='git log --pretty=format:"%Cred%h %Cgreen%an%Creset %s" -12'
 alias gs='git status'
 
 # Open a browser window on Byron's machine at home
