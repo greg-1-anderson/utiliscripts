@@ -208,20 +208,13 @@ for site in ${backup_list} ; do
     diff -U 0 $hash_file $cur_hash_file > $diff_file
     mv -f $cur_hash_file $hash_file
 
-    # First, insure that the git repository is clean on the live site.
-    # We expect that changes to code should not be made on the live site,
-    # but if there are any dirty files in the git repository, we will
-    # autocommit them.
-    live_root=$(drush drupal-directory @$site.live:%root)
-    drush @$site.live ssh "cd $live_root && git add -A && git commit -m 'Automatic commit by drupal-backup-all script' && git push" 1>&2
-    # Determine which branch is checked out on the live site
-    live_branch=$(drush @$site.live ssh "git branch 2>/dev/null| sed -n '/^\*/s/^\* //p'")
-    # Next, make sure backup site has the most recent code.
-    (
-      cd $(drush drupal-directory @$site.backup)
-      $EXEC git pull origin $live_branch 1>&2
-      $EXEC git checkout $live_branch 1>&2
-    )
+    # In the past, I tried to use git commit + git push
+    # on the live site, followed by git pull on the backup site
+    # to get the Drupal files.  There were just too many different
+    # ways this can go wrong, so instead, I now just rsync
+    # everything over, vcs files included.
+    $EXEC drush -y -v --include-vcs rsync @$site.live @$site.backup
+
     # Move the previous database dump into the history folder,
     # after first compressing it with gzip
     if [ -f "$dump_file" ] ; then
@@ -231,6 +224,7 @@ for site in ${backup_list} ; do
       migratehistories --quiet --migrating "$compressed_dump" --history-root "$history_dir" --target-extension .sql.gz
     fi
     # Get current commit tag and write it into live database
+    live_root=$(drush drupal-directory @$site.live:%root)
     head_commithash=$(drush @$site.live ssh "cd $live_root && git rev-parse HEAD")
     $EXEC drush -v @$site.live vset --always-set -y git_commithash "$head_commithash"
 
