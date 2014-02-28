@@ -35,8 +35,8 @@ alias geni-update='git svn rebase'
 # Git aliases
 #
 git config --global alias.unstage 'reset HEAD --'
-alias gl='git log --pretty=format:"%Cred%h %Cgreen%an%Creset %s" -12'
-alias gld='git log --date=short --pretty=format:"%Cred%h %Cblue%cd %Cgreen%an%Creset %s" -12'
+alias gl='git log --date=short --pretty=format:"%Cred%h %Cblue%cd %Cgreen%an%Creset %s" -12'
+alias gls='git log --pretty=format:"%Cred%h %Cgreen%an%Creset %s" -12'
 alias gs='git status'
 
 # Open a browser window on Byron's machine at home
@@ -55,11 +55,23 @@ function whitelist() { WHITELIST='--whitelist' ; if [ "x$1" == "xoff" ] ; then W
 function tolower() { tr A-Z a-z <<<$@; }
 function mcd() { mkdir -p "$1" && cd "$1"; }
 
+
+
 # Only useful on the corporate intranet.  Prerequisites:
 #   sudo mkdir /mnt/public
 #   sudo apt-get install cifs-utils
 alias mount-public='sudo mount -t cifs -o user=ganderson //samba/public /mnt/public'
 
+function fingerprints() {
+  path="$1"
+  if [ -z "$path" ]; then
+    path="$HOME/.ssh/authorized_keys"
+  fi
+  local file="$path"
+  while read l; do
+    [[ -n $l && ${l###} = $l ]] && ssh-keygen -l -f /dev/stdin <<<$l
+  done < $file
+}
 
 # cd to a sibling directory
 function sib() {

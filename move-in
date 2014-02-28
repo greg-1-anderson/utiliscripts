@@ -206,6 +206,46 @@ fi
 
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #
+#  G E T   C O M P O S E R
+#
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+# https://getcomposer.org/doc/00-intro.md#system-requirements
+
+if [ -z "$(which composer)" ] ; then
+
+  curl -sS https://getcomposer.org/installer | php
+  mkdir -p $HOME/bin
+  mv composer.phar $HOME/bin/composer
+
+  if [ -z "$(which composer)" ] ; then
+    sed -i '1i export PATH=$PATH:$HOME/bin' ~/.bashrc
+    export PATH="$PATH:$HOME/bin"
+  fi
+fi
+
+# Insure that the vendor/bin directory is on our PATH as well
+
+if [ "$PATH" == "${PATH/.composer/}" ] ; then
+  export PATH="$HOME/.composer/vendor/bin:$PATH"
+fi
+
+chkbashrc=$(grep 'composer/vendor/bin' "$HOME/.bashrc")
+if [ "X$chkbashrc" = "X" ] ; then
+  sed -e '/^ *$/,$ d' $HOME/.bashrc > $HOME/.bashrc-head
+  sed -e '1,/^ *$/ d' $HOME/.bashrc > $HOME/.bashrc-body
+  cp $HOME/.bashrc-head $HOME/.bashrc
+cat <<- __END__ >> $HOME/.bashrc
+[ "\$PATH" == "\${PATH/.composer/}" ] && export PATH="\$HOME/.composer/vendor/bin:\$PATH"
+__END__
+  cat $HOME/.bashrc-body >> $HOME/.bashrc
+  rm $HOME/.bashrc-head
+  rm $HOME/.bashrc-body
+fi
+
+
+#:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+#
 #  G E T   C O N F I G
 #
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -294,24 +334,14 @@ echo "# Check drush..."
 
 # If we do not already have drush, then get the master branch with git
 
-DRUSH=
-if [ -n "$DRUPALORG_USERNAME" ] && [ "${MAINTAINER}" != "${MAINTAINER/drush/}" ]
-then
-  DRUSH="$(which drush)"
-fi
+DRUSH="$(which drush)"
 
-# If we still have a copy of drush checked out from drupal.org, move it out of the way
-if [ -n "$DRUSH" ] && [ -d $HOME/local/drupal/drush ] ; then
-  (
-    cd $HOME/local/drupal/drush
-    origindo=$(git remote show -n origin | grep git.drupal.org)
-    if [ -n "$origindo" ] ; then
-      mv $HOME/local/drupal/drush $HOME/local/drupal/drush-d.o
-      DRUSH=
-    fi
-  )
-fi
+# Install Drush via composer
+composer global require drush/drush:dev-master --prefer-source
 
+DRUSH="$(which drush)"
+
+# The old way to install
 if [ -z "$DRUSH" ] && [ ! -d  $HOME/local/drupal/drush ] ; then
 
   (
@@ -422,15 +452,22 @@ done
 
 if [ -n "$DISPLAY" ] ; then
 
-  # TODO: install sublime 3 via .deb file
-
   echo "# Check sublime..."
+
+  sublime_url=`curl http://www.sublimetext.com/3 2>/dev/null | grep 'a href.*_x64.tar.bz2' | sed -e 's/.*href="\([^"]*\).*/\1/'`
+  if [ -z "$sublime_url" ] ; then
+    sublime_url="http://c758482.r82.cf2.rackcdn.com/sublime_text_3_build_3047_x64.tar.bz2"
+  fi
+  sublime_file="${sublime_url##*/}"
+  sublime_latest="${sublime_file##*_build_}"
+  sublime_latest="${sublime_latest%%_*}"
 
   s=`which sublime_text`
   if [ -n "$s" ] ; then
     # Check to see if Sublime is out of date
     sublime_version=$(sublime_text --version | sed -e 's|.*Build ||')
-    if [ "x$sublime_version" != "x3047" ] ; then
+    if [ "$sublime_version" -lt "$sublime_latest" ] ; then
+      echo "Sublime text $sublime_version installed, but latest version is $sublime_latest. Updating."
       s=""
       if [ -d "$HOME/local/sublime-text-3" ]; then
         mv "$HOME/local/sublime-text-3" "$HOME/local/sublime-text-3-build-${sublime_version}"
@@ -438,12 +475,6 @@ if [ -n "$DISPLAY" ] ; then
     fi
   fi
   if [ -z "$s" ] && [ ! -d "$HOME/local/sublime-text-3" ]; then
-
-  	sublime_url=`curl http://www.sublimetext.com/3 2>/dev/null | grep 'a href.*_x64.tar.bz2' | sed -e 's/.*href="\([^"]*\).*/\1/'`
-  	if [ -z "$sublime_url" ] ; then
-      sublime_url="http://c758482.r82.cf2.rackcdn.com/sublime_text_3_build_3047_x64.tar.bz2"
-  	fi
-  	sublime_file="${sublime_url##*/}"
 
   	mkdir -p $HOME/tmp
   	mkdir -p $HOME/local
@@ -525,6 +556,8 @@ then
 
 \$options['include'][] = \$home . '/local/drupal/drush_extensions';
 \$options['config'][] = \$home . '/local/config';
+
+\$options['shell-aliases']['unsuck'] = '!drush pm-disable -y overlay,dashboard,toolbar,shortcut && drush pm-enable -y admin_menu';
 __EOT__
   grep -v '<\?php' $HOME/.drush/drushrc.php >> $HOME/.drush/drushrc.php-update
   mv -f $HOME/.drush/drushrc.php-update $HOME/.drush/drushrc.php
@@ -588,25 +621,6 @@ export SSH_KEY_ARCHIVE="\$HOME/$SSH_KEY_ARCHIVE_RELATIVE"
 __END__
 sed -e '1,/^ *$/ d' $HOME/.bashrc >> $HOME/.bashrc-update
 mv -f $HOME/.bashrc-update $HOME/.bashrc
-fi
-
-# If we have not set the location of the drush yet,
-# write it to $HOME/.bashrc.  Only do this once, in case
-# the user might care to change it.
-chkbashrc=`grep '\(drush\)' $HOME/.bashrc`
-if [ "X$chkbashrc" = "X" ] ; then
-sed -e '/^ *$/,$ d' $HOME/.bashrc > $HOME/.bashrc-head
-sed -e '1,/^ *$/ d' $HOME/.bashrc > $HOME/.bashrc-body
-cp $HOME/.bashrc-head $HOME/.bashrc
-cat <<- __END__ >> $HOME/.bashrc
-
-# Add drush to the path
-[ "\$PATH" == "\${PATH/drush/}" ] && export PATH="\$HOME/local/drupal/drush:\$PATH"
-
-__END__
-cat $HOME/.bashrc-body >> $HOME/.bashrc
-rm $HOME/.bashrc-head
-rm $HOME/.bashrc-body
 fi
 
 # Rewrite the "Bash Customizations" section
