@@ -55,7 +55,23 @@ function whitelist() { WHITELIST='--whitelist' ; if [ "x$1" == "xoff" ] ; then W
 function tolower() { tr A-Z a-z <<<$@; }
 function mcd() { mkdir -p "$1" && cd "$1"; }
 
+# Thanks to:
+# http://stackoverflow.com/questions/141599/how-do-you-get-a-list-of-changes-from-a-subversion-repository-by-date-range
+# http://stackoverflow.com/questions/2693173/log-of-svn-activity-for-a-certain-user
+function lastweek() {
+  svn log "$1" -r {$(date --date="Monday last week" "+%F")}:{$(date --date="Sunday last week" "+%F")} | filter-log-by-user "$2"
+}
 
+function filter-log-by-user {
+  if [ -n "$1" ] ; then
+    who="$1"
+  elif [ -n "$SVNUSER" ] ; then
+    who="$SVNUSER"
+  else
+    who="$(whoami)"
+  fi
+  sed -n "/| $SVNUSER |/,/-----\$/ p"
+}
 
 # Only useful on the corporate intranet.  Prerequisites:
 #   sudo mkdir /mnt/public
