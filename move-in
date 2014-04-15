@@ -28,7 +28,7 @@ SELF_DIRNAME="`dirname -- "$0"`"
 
 # Don't allow this as root unless you have logged in as root.
 # I don't know that I recommend running this as root, but neither do I prevent it.
-if [ "$USER" == "root" ] && [ $HOME != "/root" ]
+if [ "$USER" == "root" ] && [ "$HOME" != "/root" ]
 then
 	echo "Do not run this script via sudo root"
   exit 1
@@ -39,7 +39,7 @@ fi
 #
 #     export INSTALLATION_DATA_REPO=user@my.server.com:my_installdata.git
 
-[ -z "$INSTALLATION_DATA" ] && export INSTALLATION_DATA=$HOME/local/installdata
+[ -z "$INSTALLATION_DATA" ] && export INSTALLATION_DATA="$HOME/local/installdata"
 if [ -z "$INSTALLATION_DATA_REPO" ] ; then
   if [ "$USER" == "ga" ]
   then
@@ -58,19 +58,19 @@ echo "# Check install data..."
 
 # If we do not already have the installation data, then get it with git
 
-if [ ! -d $INSTALLATION_DATA ] && [ -n "$INSTALLATION_DATA_REPO" ] ; then
+if [ ! -d "$INSTALLATION_DATA" ] && [ -n "$INSTALLATION_DATA_REPO" ] ; then
 
   (
-    mkdir -p $(dirname $INSTALLATION_DATA)
-    cd $(dirname $INSTALLATION_DATA)
-    git clone $INSTALLATION_DATA_REPO
+    mkdir -p "$(dirname $INSTALLATION_DATA)"
+    cd "$(dirname $INSTALLATION_DATA)"
+    git clone "$INSTALLATION_DATA_REPO"
 
   )
 
 fi
 
-if [ -f $INSTALLATION_DATA/moveinrc ] ; then
-  source $INSTALLATION_DATA/moveinrc
+if [ -f "$INSTALLATION_DATA/moveinrc" ] ; then
+  source "$INSTALLATION_DATA/moveinrc"
 fi
 
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -81,11 +81,11 @@ fi
 
 
 # Set up some default locations
-[ -z "$UTILISCRIPTS" ]            && export UTILISCRIPTS=$HOME/local/utiliscripts
-[ -z "$HISTORYRECALL" ]           && export HISTORYRECALL=$HOME/local/history-recall
-[ -z "$CONFIG" ]                  && export CONFIG=$HOME/local/config
-[ -z "$SSH_KEY_ARCHIVE" ]         && export SSH_KEY_ARCHIVE=$INSTALLATION_DATA/ssh_key_archive
-[ -z "$DESKTOP_BACKGROUND_DIR" ]  && export DESKTOP_BACKGROUND_DIR=$INSTALLATION_DATA/DesktopBackgrounds
+[ -z "$UTILISCRIPTS" ]            && export UTILISCRIPTS="$HOME/local/utiliscripts"
+[ -z "$HISTORYRECALL" ]           && export HISTORYRECALL="$HOME/local/history-recall"
+[ -z "$CONFIG" ]                  && export CONFIG="$HOME/local/config"
+[ -z "$SSH_KEY_ARCHIVE" ]         && export SSH_KEY_ARCHIVE="$INSTALLATION_DATA/ssh_key_archive"
+[ -z "$DESKTOP_BACKGROUND_DIR" ]  && export DESKTOP_BACKGROUND_DIR="$INSTALLATION_DATA/DesktopBackgrounds"
 
 # Location of per-user repositories
 if [ -z "$CONFIG_REPO" ] ; then
@@ -104,16 +104,16 @@ fi
 
 echo "# Check ssh keys..."
 
-host=`hostname -s`
+host="$(hostname)"
 keytype=rsa
 
-mkdir -p $HOME/.ssh
-chmod 700 $HOME/.ssh
+mkdir -p "$HOME/.ssh"
+chmod 700 "$HOME/.ssh"
 
 archive_key="$SSH_KEY_ARCHIVE/${host}_id_rsa"
 if [ -f "${archive_key%rsa}"dsa ]
 then
-	archive_key="${archive_key%rsa}"dsa
+  archive_key="${archive_key%rsa}"dsa
   keytype=dsa
 fi
 
@@ -129,7 +129,7 @@ then
       chmod 600 "$HOME/.ssh/id_${keytype}.pub"
   else
 		echo "Generating a public / private key pair for this system; please protect it with a password."
-		ssh-keygen -t $keytype -f $HOME/.ssh/id_$keytype
+		ssh-keygen -t $keytype -f "$HOME/.ssh/id_$keytype"
   fi
 fi
 
@@ -147,11 +147,11 @@ fi
 echo "# Check ssh key archive..."
 
 CREATE_KEY_ARCHIVE=false
-if [ ! -d "$(dirname $SSH_KEY_ARCHIVE)" ]
+if [ ! -d "$(dirname "$SSH_KEY_ARCHIVE")" ]
 then
   CREATE_KEY_ARCHIVE=true
 fi
-mkdir -p $SSH_KEY_ARCHIVE
+mkdir -p "$SSH_KEY_ARCHIVE"
 
 # If we have an archive of the public / private key pair for this machine, make sure it is accurate.
 # If the key has not been archived yet, then archive it.
@@ -184,7 +184,7 @@ else
   else
     if [ -d "$INSTALLATION_DATA/.git" ] ; then
       (
-        cd $SSH_KEY_ARCHIVE
+        cd "$SSH_KEY_ARCHIVE"
         git add .
         git commit -m "Add new keypair for ${host}"
         git push
@@ -195,9 +195,9 @@ fi
 
 if $CREATE_KEY_ARCHIVE
 then
-  cp $SELF_DIRNAME/example.moveinrc $(dirname $SSH_KEY_ARCHIVE)/moveinrc
+  cp "$SELF_DIRNAME/example.moveinrc" "$(dirname "$SSH_KEY_ARCHIVE")/moveinrc"
   (
-    cd $(dirname $SSH_KEY_ARCHIVE)
+    cd "$(dirname "$SSH_KEY_ARCHIVE")"
     git init
     git add .
     git commit -m "Automatically create an installdata project to store key pairs in"
@@ -212,11 +212,11 @@ fi
 
 # https://getcomposer.org/doc/00-intro.md#system-requirements
 
-if [ -z "$(which composer)" ] ; then
+if [ -z "$(which composer)" ] && [ -n "$(which php)" ] ; then
 
   curl -sS https://getcomposer.org/installer | php
-  mkdir -p $HOME/bin
-  mv composer.phar $HOME/bin/composer
+  mkdir -p "$HOME/bin"
+  mv composer.phar "$HOME/bin/composer"
 
   if [ -z "$(which composer)" ] ; then
     sed -i '1i export PATH=$PATH:$HOME/bin' ~/.bashrc
@@ -230,17 +230,17 @@ if [ "$PATH" == "${PATH/.composer/}" ] ; then
   export PATH="$HOME/.composer/vendor/bin:$PATH"
 fi
 
-chkbashrc=$(grep 'composer/vendor/bin' "$HOME/.bashrc")
+chkbashrc="$(grep 'composer/vendor/bin' "$HOME/.bashrc")"
 if [ "X$chkbashrc" = "X" ] ; then
-  sed -e '/^ *$/,$ d' $HOME/.bashrc > $HOME/.bashrc-head
-  sed -e '1,/^ *$/ d' $HOME/.bashrc > $HOME/.bashrc-body
-  cp $HOME/.bashrc-head $HOME/.bashrc
-cat <<- __END__ >> $HOME/.bashrc
+  sed -e '/^ *$/,$ d' "$HOME/.bashrc" > "$HOME/.bashrc-head"
+  sed -e '1,/^ *$/ d' "$HOME/.bashrc" > "$HOME/.bashrc-body"
+  cp "$HOME/.bashrc-head" "$HOME/.bashrc"
+cat <<- __END__ >> "$HOME/.bashrc"
 [ "\$PATH" == "\${PATH/.composer/}" ] && export PATH="\$HOME/.composer/vendor/bin:\$PATH"
 __END__
-  cat $HOME/.bashrc-body >> $HOME/.bashrc
-  rm $HOME/.bashrc-head
-  rm $HOME/.bashrc-body
+  cat "$HOME/.bashrc-body" >> "$HOME/.bashrc"
+  rm "$HOME/.bashrc-head"
+  rm "$HOME/.bashrc-body"
 fi
 
 
@@ -254,12 +254,12 @@ echo "# Check config..."
 
 # If we do not already have the config project, then get it with git
 
-if [ ! -d $CONFIG ] && [ -n "$CONFIG_REPO" ] ; then
+if [ ! -d "$CONFIG" ] && [ -n "$CONFIG_REPO" ] ; then
 
   (
-    mkdir -p $(dirname $CONFIG)
-    cd $(dirname $CONFIG)
-    git clone $CONFIG_REPO
+    mkdir -p "$(dirname "$CONFIG")"
+    cd "$(dirname "$CONFIG")"
+    git clone "$CONFIG_REPO"
   )
 
 fi
@@ -274,11 +274,11 @@ echo "# Check utiliscripts..."
 
 # If we do not already have utiliscripts, then get them with git
 
-if [ ! -d $UTILISCRIPTS ] ; then
+if [ ! -d "$UTILISCRIPTS" ] ; then
 
   (
-    mkdir -p $(dirname $UTILISCRIPTS)
-    cd $(dirname $UTILISCRIPTS)
+    mkdir -p "$(dirname "$UTILISCRIPTS")"
+    cd "$(dirname "$UTILISCRIPTS")"
     # read+write if "utiliscripts" is in $MAINTAINER, read-only otherwise
     if [ "${MAINTAINER}" != "${MAINTAINER/utiliscripts/}" ]
     then
@@ -289,7 +289,7 @@ if [ ! -d $UTILISCRIPTS ] ; then
       fi
     fi
 
-    if [ ! -d $UTILISCRIPTS ] ; then
+    if [ ! -d "$UTILISCRIPTS" ] ; then
       git clone git://github.com/greg-1-anderson/utiliscripts.git
     fi
   )
@@ -304,10 +304,10 @@ fi
 
 echo "# Check history-recall..."
 
-if [ ! -d $HISTORYRECALL ] ; then
+if [ ! -d "$HISTORYRECALL" ] ; then
   (
-    mkdir -p $(dirname $HISTORYRECALL)
-    cd $(dirname $HISTORYRECALL)
+    mkdir -p "$(dirname "$HISTORYRECALL")"
+    cd "$(dirname "$HISTORYRECALL")"
     # read+write if "history-recall" is in $MAINTAINER, read-only otherwise
     if [ "${MAINTAINER}" != "${MAINTAINER/history-recall/}" ]
     then
@@ -318,17 +318,20 @@ if [ ! -d $HISTORYRECALL ] ; then
       fi
     fi
 
-    if [ ! -d $HISTORYRECALL ] ; then
+    if [ ! -d "$HISTORYRECALL" ] ; then
       git clone git://github.com/greg-1-anderson/history-recall.git
     fi
   )
 fi
+
 
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #
 #  G E T   D R U S H
 #
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+if [ -n "$(which php)" ] && [ -n "($which composer)" ] ; then
 
 echo "# Check drush..."
 
@@ -342,12 +345,12 @@ composer global require drush/drush:dev-master --prefer-source
 DRUSH="$(which drush)"
 
 # The old way to install
-if [ -z "$DRUSH" ] && [ ! -d  $HOME/local/drupal/drush ] ; then
+if [ -z "$DRUSH" ] && [ ! -d  "$HOME/local/drupal/drush" ] ; then
 
   (
-    mkdir -p $HOME/local/drupal
+    mkdir -p "$HOME/local/drupal"
     pr_remote=drush-ops
-    cd $HOME/local/drupal
+    cd "$HOME/local/drupal"
     # read+write if "drush" is in $MAINTAINER, read-only otherwise
     if [ "${MAINTAINER}" != "${MAINTAINER/drush/}" ]
     then
@@ -380,15 +383,15 @@ if [ -z "$DRUSH" ] && [ ! -d  $HOME/local/drupal/drush ] ; then
 
 fi
 
-if [ -z "$DRUSH" ] && [ -d  $HOME/local/drupal/drush ]
+if [ -z "$DRUSH" ] && [ -d  "$HOME/local/drupal/drush" ]
 then
-  DRUSH=$HOME/local/drupal/drush/drush
+  DRUSH="$HOME/local/drupal/drush/drush"
 fi
 
 echo "# Check drush extensions..."
 
-DRUSH_EXTENSIONS=$HOME/local/drupal/drush_extensions
-mkdir -p $DRUSH_EXTENSIONS
+DRUSH_EXTENSIONS="$HOME/local/drupal/drush_extensions"
+mkdir -p "$DRUSH_EXTENSIONS"
 
 #   drupalcs \
 for drush_extension in \
@@ -408,12 +411,12 @@ for drush_extension in \
   extension_destination=$DRUSH_EXTENSIONS/$extension_shortname
   if [ ! -d "$extension_destination" ] ; then
 		(
-			cd $DRUSH_EXTENSIONS
+			cd "$DRUSH_EXTENSIONS"
       # read+write if "extension_shortname" is in $MAINTAINER, read-only otherwise
       if [ -n "$DRUPALORG_USERNAME" ] && [ "${MAINTAINER}" != "${MAINTAINER/$extension_shortname/}" ]
       then
         # Figure out what which branch to select (e.g. --branch 7.x-2.x)
-        branch=$($DRUSH pm-releases $extension_shortname | grep '\-dev' | head -n 1 | sed -e 's|^ *||' -e 's|-dev.*||')
+        branch=$("$DRUSH" pm-releases $extension_shortname | grep '\-dev' | head -n 1 | sed -e 's|^ *||' -e 's|-dev.*||')
         if [ -z "$branch" ]
         then
           echo "Could not determine default branch for $extension_shortname"
@@ -426,7 +429,7 @@ for drush_extension in \
         fi
       fi
 			if [ ! -d "$extension_destination" ] ; then
-        $DRUSH --yes pm-download $drush_extension --destination="$extension_destination"
+        "$DRUSH" --yes pm-download $drush_extension --destination="$extension_destination"
       fi
 		)
 	fi
@@ -439,10 +442,12 @@ for example_extensions in sync_enable.drush.inc sync_via_http.drush.inc ; do
 
 	if [ ! -f "$HOME/local/drupal/drush_extensions/$example_extensions" ] ; then
 
-		cp "$HOME/local/drupal/drush/examples/$example_extensions" $HOME/local/drupal/drush_extensions
+		cp "$HOME/local/drupal/drush/examples/$example_extensions" "$HOME/local/drupal/drush_extensions"
 
 	fi
 done
+
+fi
 
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #
@@ -467,7 +472,7 @@ if [ -n "$DISPLAY" ] ; then
   sublime_latest="${sublime_file##*_build_}"
   sublime_latest="${sublime_latest%%_*}"
 
-  s=`which sublime_text`
+  s="$(which sublime_text)"
   if [ -n "$s" ] ; then
     # Check to see if Sublime is out of date
     sublime_version=$(sublime_text --version | sed -e 's|.*Build ||')
@@ -481,13 +486,13 @@ if [ -n "$DISPLAY" ] ; then
   fi
   if [ -z "$s" ] && [ ! -d "$HOME/local/sublime-text-3" ]; then
 
-  	mkdir -p $HOME/tmp
-  	mkdir -p $HOME/local
+  	mkdir -p "$HOME/tmp"
+  	mkdir -p "$HOME/local"
 
   	wget -O "$HOME/tmp/$sublime_file" "$sublime_url"
-  	tar -xjvf "$HOME/tmp/$sublime_file" -C $HOME/local
+  	tar -xjvf "$HOME/tmp/$sublime_file" -C "$HOME/local"
 
-  	mv "$HOME/local/sublime_text_3" $HOME/local/sublime-text-3
+  	mv "$HOME/local/sublime_text_3" "$HOME/local/sublime-text-3"
   fi
 
 fi
@@ -503,46 +508,50 @@ echo "# Check bash and drush environments..."
 #
 # Get rid of the old .bash_customizations file if it exists
 #
-if [ -f $HOME/.bash_customizations ]; then
-	rm $HOME/.bash_customizations
+if [ -f "$HOME/.bash_customizations" ]; then
+	rm "$HOME/.bash_customizations"
 fi
 
 # Put in uniform drushrc.php
 
-mkdir -p $HOME/.drush
+mkdir -p "$HOME/.drush"
 
-if [ -f  $HOME/.drush/drushrc.php ]
+if [ -f  "$HOME/.drush/drushrc.php" ]
 then
-  # If the old drushrc.php is a symbolic link, then get rid of it.
-  drushrctype="`readlink $HOME/.drush/drushrc.php`"
+  drushrctype=
+  if [ -n "$(which readlink)" ]
+  then
+    # If the old drushrc.php is a symbolic link, then get rid of it.
+    drushrctype="`readlink "$HOME/.drush/drushrc.php"`"
+  fi
   if [ -n "$drushrctype" ]
   then
-    rm -f $HOME/.drush/drushrc.php
+    rm -f "$HOME/.drush/drushrc.php"
   else
     # If the old drushrc.php is not a symbolic link, then move it
     # to the new config location
-    if [ ! -f $CONFIG/drushrc.php ]
+    if [ ! -f "$CONFIG/drushrc.php" ] && [ -f "$(dirname "$DRUSH")/examples/example.drushrc.php" ]
     then
-      mkdir -p $CONFIG
-      mv -f "$(dirname $DRUSH)/examples/example.drushrc.php" "$CONFIG/drushrc.php"
+      mkdir -p "$CONFIG"
+      mv -f "$(dirname "$DRUSH")/examples/example.drushrc.php" "$CONFIG/drushrc.php"
     fi
   fi
 else
   # If there was no drushrc config file in either location, then copy the
   # example drushrc.php file to provide a starting point.
-  if [ ! -f $CONFIG/drushrc.php ]
+  if [ ! -f "$CONFIG/drushrc.php" ]  && [ -f "$(dirname "$DRUSH")/examples/example.drushrc.php" ]
   then
-    mkdir -p $CONFIG
-    cp -f "$(dirname $DRUSH)/examples/example.drushrc.php" "$CONFIG/drushrc.php"
+    mkdir -p "$CONFIG"
+    cp -f "$(dirname "$DRUSH")/examples/example.drushrc.php" "$CONFIG/drushrc.php"
   fi
 fi
 
 # At this point, there should not be a drushrc.php file in the
 # $HOME directory unless both $HOME/.drush and the config location
 # both had drushrc.php files.  If there is none, then make an empty file.
-if [ ! -f  $HOME/.drush/drushrc.php ]
+if [ ! -f  "$HOME/.drush/drushrc.php" ]
 then
-  echo << __EOT__ > $HOME/.drush/drushrc.php
+  echo << __EOT__ > "$HOME/.drush/drushrc.php"
 <?php
 
 __EOT__
@@ -551,10 +560,10 @@ fi
 # At this point we will always have something in the .drush directory.
 # Add our template to the beginning of whatever was there, unless it
 # has already been added.
-checkdrushrc="$(grep '\(/local/drupal/drush_extensions\)' $HOME/.drush/drushrc.php)"
+checkdrushrc="$(grep '\(/local/drupal/drush_extensions\)' "$HOME/.drush/drushrc.php")"
 if [ -z "$checkdrushrc" ]
 then
-  cat << __EOT__ > $HOME/.drush/drushrc.php-update
+  cat << __EOT__ > "$HOME/.drush/drushrc.php-update"
 <?php
 
 \$home = drush_server_home();
@@ -564,27 +573,27 @@ then
 
 \$options['shell-aliases']['unsuck'] = '!drush pm-disable -y overlay,dashboard,toolbar,shortcut && drush pm-enable -y admin_menu';
 __EOT__
-  grep -v '<\?php' $HOME/.drush/drushrc.php >> $HOME/.drush/drushrc.php-update
-  mv -f $HOME/.drush/drushrc.php-update $HOME/.drush/drushrc.php
+  grep -v '<\?php' $HOME/.drush/drushrc.php >> "$HOME/.drush/drushrc.php-update"
+  mv -f "$HOME/.drush/drushrc.php-update" "$HOME/.drush/drushrc.php"
 fi
 
 # Get rid of old drushrc5rc.php and drushrc6rc.php symlinks, if they exist.
-if [ -f  $HOME/.drush/drush5rc.php ]
+if [ -f  "$HOME/.drush/drush5rc.php" ]
 then
   # If the old drushrc.php is a symbolic link, then get rid of it.
-  drushrctype="`readlink $HOME/.drush/drush5rc.php`"
+  drushrctype="`readlink "$HOME/.drush/drush5rc.php"`"
   if [ -n "$drushrctype" ]
   then
-    rm -f $HOME/.drush/drush5rc.php
+    rm -f "$HOME/.drush/drush5rc.php"
   fi
 fi
-if [ -f  $HOME/.drush/drush6rc.php ]
+if [ -f  "$HOME/.drush/drush6rc.php" ]
 then
   # If the old drushrc.php is a symbolic link, then get rid of it.
-  drushrctype="`readlink $HOME/.drush/drush6rc.php`"
+  drushrctype="`readlink "$HOME/.drush/drush6rc.php"`"
   if [ -n "$drushrctype" ]
   then
-    rm -f $HOME/.drush/drush6rc.php
+    rm -f "$HOME/.drush/drush6rc.php"
   fi
 fi
 
@@ -603,7 +612,7 @@ fi
 #   >> # If not running interactively, don't do anything
 #   >> [ -z "$PS1" ] && return
 if [ ! -f "$HOME/.bashrc" ] ; then
-cat <<- __END__ > $HOME/.bashrc
+cat <<- __END__ > "$HOME/.bashrc"
 # Default bashrc added by move-in script
 
 # If not running interactively, don't do anything
@@ -615,8 +624,8 @@ chkbashrc=$(grep '\(UTILISCRIPTS\)' "$HOME/.bashrc")
 if [ "X$chkbashrc" = "X" ] ; then
 UTILISCRIPTS_RELATIVE=$(echo $UTILISCRIPTS | sed -e 's|/home/[^/]*/||')
 SSH_KEY_ARCHIVE_RELATIVE=$(echo $SSH_KEY_ARCHIVE| sed -e 's|/home/[^/]*/||')
-sed -e '/^ *$/,$ d' $HOME/.bashrc > $HOME/.bashrc-update
-cat <<- __END__ >> $HOME/.bashrc-update
+sed -e '/^ *$/,$ d' "$HOME/.bashrc" > "$HOME/.bashrc-update"
+cat <<- __END__ >> "$HOME/.bashrc-update"
 
 # Add Utiliscripts to the path and export location environment variables
 export UTILISCRIPTS="\$HOME/$UTILISCRIPTS_RELATIVE"
@@ -624,14 +633,14 @@ export SSH_KEY_ARCHIVE="\$HOME/$SSH_KEY_ARCHIVE_RELATIVE"
 [ "\$PATH" == "\${PATH/utiliscripts/}" ] && export PATH="\$UTILISCRIPTS:\$PATH"
 
 __END__
-sed -e '1,/^ *$/ d' $HOME/.bashrc >> $HOME/.bashrc-update
-mv -f $HOME/.bashrc-update $HOME/.bashrc
+sed -e '1,/^ *$/ d' "$HOME/.bashrc" >> "$HOME/.bashrc-update"
+mv -f "$HOME/.bashrc-update" "$HOME/.bashrc"
 fi
 
 # Rewrite the "Bash Customizations" section
 HISTORYRECALL_RELATIVE=$(echo $HISTORYRECALL | sed -e 's|/home/[^/]*/||')
-sed -i -e '/Include Bash Customizations/,/End Bash Customizations/ d' $HOME/.bashrc
-cat <<- __END__ >> $HOME/.bashrc
+sed -i -e '/Include Bash Customizations/,/End Bash Customizations/ d' "$HOME/.bashrc"
+cat <<- __END__ >> "$HOME/.bashrc"
 # Include Bash Customizations
 if [ -n "$(which locale)" ] ; then
   if [ -n "\$(locale -a | grep -i 'en_US.utf8')" ] ; then
@@ -643,17 +652,16 @@ fi
 if [ -d "\$HOME/local/sublime-text-3" ] ; then
   [ "\$PATH" == "\${PATH/sublime-text-3/}" ] && export PATH="\$PATH:\$HOME/local/sublime-text-3"
 fi
-if [ -f \$UTILISCRIPTS/custom-bashrc ]; then
-  . \$UTILISCRIPTS/custom-bashrc
+if [ -f "\$UTILISCRIPTS/custom-bashrc" ]; then
+  . "\$UTILISCRIPTS/custom-bashrc"
 fi
 export HISTORYRECALL="\$HOME/$HISTORYRECALL_RELATIVE"
-if [ -f \$HISTORYRECALL/historyrc ]; then
-  . \$HISTORYRECALL/historyrc
+if [ -f "\$HISTORYRECALL/historyrc" ]; then
+  . "\$HISTORYRECALL/historyrc"
 fi
 
 # End Bash Customizations
 __END__
-
 
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #
