@@ -25,7 +25,6 @@
 #
 SELF_DIRNAME="`dirname -- "$0"`"
 
-
 # Don't allow this as root unless you have logged in as root.
 # I don't know that I recommend running this as root, but neither do I prevent it.
 if [ "$USER" == "root" ] && [ "$HOME" != "/root" ]
@@ -78,7 +77,6 @@ fi
 #  S E T   D E F A U L T   L O C A T I O N S
 #
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-
 
 # Set up some default locations
 [ -z "$UTILISCRIPTS" ]            && export UTILISCRIPTS="$HOME/local/utiliscripts"
@@ -622,8 +620,8 @@ __END__
 fi
 chkbashrc=$(grep '\(UTILISCRIPTS\)' "$HOME/.bashrc")
 if [ "X$chkbashrc" = "X" ] ; then
-UTILISCRIPTS_RELATIVE=$(echo $UTILISCRIPTS | sed -e 's|/home/[^/]*/||')
-SSH_KEY_ARCHIVE_RELATIVE=$(echo $SSH_KEY_ARCHIVE| sed -e 's|/home/[^/]*/||')
+UTILISCRIPTS_RELATIVE=$(echo $UTILISCRIPTS | sed -e "s|$HOME/||")
+SSH_KEY_ARCHIVE_RELATIVE=$(echo $SSH_KEY_ARCHIVE| sed -e "s|$HOME/||")
 sed -e '/^ *$/,$ d' "$HOME/.bashrc" > "$HOME/.bashrc-update"
 cat <<- __END__ >> "$HOME/.bashrc-update"
 
@@ -638,7 +636,7 @@ mv -f "$HOME/.bashrc-update" "$HOME/.bashrc"
 fi
 
 # Rewrite the "Bash Customizations" section
-HISTORYRECALL_RELATIVE=$(echo $HISTORYRECALL | sed -e 's|/home/[^/]*/||')
+HISTORYRECALL_RELATIVE=$(echo $HISTORYRECALL | sed -e "s|$HOME/||")
 sed -i -e '/Include Bash Customizations/,/End Bash Customizations/ d' "$HOME/.bashrc"
 cat <<- __END__ >> "$HOME/.bashrc"
 # Include Bash Customizations
