@@ -76,7 +76,9 @@ groups["system"]="admin intl network system-gui repository compress"
 #
 packages["admin"]="apt-file dpkg-dev sysv-rc-conf mcrypt"
 
-packages["intl"]="i8kutils"
+# TODO: this is only for Dell laptops
+#packages["intl"]="i8kutils"
+packages["intl"]=""
 
 # packages["security"]="uif bastille"
 
