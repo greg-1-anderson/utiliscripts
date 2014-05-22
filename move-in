@@ -48,7 +48,7 @@ fi
 if [ -z "$INSTALLATION_DATA_REPO" ] ; then
   if [ "$USER" == "ga" ]
   then
-    export INSTALLATION_DATA_REPO=ga@hydroden.greenknowe.org:installdata.git
+    export INSTALLATION_DATA_REPO=ga@hydrogen.greenknowe.org:installdata.git
   fi
 fi
 
@@ -95,7 +95,7 @@ fi
 if [ -z "$CONFIG_REPO" ] ; then
   if [ "$USER" == "ga" ]
   then
-    export CONFIG_REPO=git@hydroden.greenknowe.org:config.git
+    export CONFIG_REPO=git@hydrogen.greenknowe.org:config.git
   fi
 fi
 
