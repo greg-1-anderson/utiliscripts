@@ -13,8 +13,9 @@ SERVER=ga@hydrogen.greenknowe.org
 # %H     hour (00..23)
 # day of week (0..6); 0 is Sunday
 # %s     seconds since 1970-01-01 00:00:00 UTC
+# %m     month (01..12)
 HOUR=$(date +%H)
-DOW=$(date +%w)
+SEQUENCE=$(($(date +%m)%3))
 EPOCH=$(date +%s)
 
 #
@@ -54,13 +55,13 @@ done
 for user in $USERLIST ; do
   # Once per day, do a rolling backup, keeping the last 7 days.
   # If the "ROLLING" folder exists, check to see if it is "too old".
-  ROLLING=$ARCHIVE_DIR/$user/history/rolling/$DOW
+  ROLLING=$ARCHIVE_DIR/$user/history/rolling/$SEQUENCE
   if [ -d "$ROLLING" ] ; then
     ROLLING_DIR_EPOCH=$(stat --format=%Y $ROLLING)
     DELTA=$(($EPOCH-$ROLLING_DIR_EPOCH))
-    # Anything > 24hrs is "too old".  If it is, delete it to
+    # Anything > 32 days is "too old".  If it is, delete it to
     # force a new rolling backup to be created.
-    if [ "$DELTA" -gt "$((24*60*60))" ] ; then
+    if [ "$DELTA" -gt "$((32*24*60*60))" ] ; then
       # TODO: Check to see if we should move the "ROLLING" folder
       # to a long-term-backup directory
       rm -rf "$ROLLING"
