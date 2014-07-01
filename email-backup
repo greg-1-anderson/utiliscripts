@@ -74,6 +74,6 @@ for user in $USERLIST ; do
     cp -alf $ARCHIVE_DIR/$user/mail $ROLLING
   fi
   # Back up from server
-  echo rsync -rlptz $SERVER:/home/$user/mail $ARCHIVE_DIR/$user
-  echo rsync -rlptz $SERVER:/var/mail/$user $ARCHIVE_DIR/$user/mail/var-mail-$user
+  rsync -rlptz --exclude=backup $SERVER:/home/$user/mail $ARCHIVE_DIR/$user
+  rsync -rlptz $SERVER:/var/mail/$user $ARCHIVE_DIR/$user/mail/var-mail-$user
 done
