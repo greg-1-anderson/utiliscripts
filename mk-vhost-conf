@@ -441,7 +441,7 @@ fi
 
 if [ "x$vhost_conf" = "x" ] ; then
 	vhost_conf=$vhost_conf_dir/$prefix$site_alias
-	if [ "x`echo $vhost_conf_dir | grep "sites-available" 2>/dev/null`" == "x" ] ; then
+	if [ $apache_22_or_earlier != "2.2" ] || [ "x`echo $vhost_conf_dir | grep "sites-available" 2>/dev/null`" == "x" ] ; then
 		vhost_conf=$vhost_conf".conf"
 	fi
 fi
