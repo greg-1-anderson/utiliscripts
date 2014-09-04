@@ -25,6 +25,12 @@
 #
 SELF_DIRNAME="`dirname -- "$0"`"
 
+# Get the OS name; convert "MINGW..." to "Windows"
+OS="$(uname -s)"
+if [ "$OS" != "${OS/MINGW}" ] ; then
+  OS=Windows
+fi
+
 # Don't allow this as root unless you have logged in as root.
 # I don't know that I recommend running this as root, but neither do I prevent it.
 if [ "$USER" == "root" ] && [ "$HOME" != "/root" ]
@@ -42,7 +48,7 @@ fi
 if [ -z "$INSTALLATION_DATA_REPO" ] ; then
   if [ "$USER" == "ga" ]
   then
-    export INSTALLATION_DATA_REPO=ga@hydroden.greenknowe.org:installdata.git
+    export INSTALLATION_DATA_REPO=ga@hydrogen.greenknowe.org:installdata.git
   fi
 fi
 
@@ -89,7 +95,7 @@ fi
 if [ -z "$CONFIG_REPO" ] ; then
   if [ "$USER" == "ga" ]
   then
-    export CONFIG_REPO=git@hydroden.greenknowe.org:config.git
+    export CONFIG_REPO=git@hydrogen.greenknowe.org:config.git
   fi
 fi
 
@@ -462,7 +468,7 @@ if [ -n "$DISPLAY" ] ; then
     architecture=64
   fi
 
-  sublime_url=`curl http://www.sublimetext.com/3 2>/dev/null | grep 'a href.*_x$architecture.tar.bz2' | sed -e 's/.*href="\([^"]*\).*/\1/'`
+  sublime_url=`curl http://www.sublimetext.com/3 2>/dev/null | grep "a href.*_x$architecture.tar.bz2" | sed -e 's/.*href="\([^"]*\).*/\1/'`
   if [ -z "$sublime_url" ] ; then
     sublime_url="http://c758482.r82.cf2.rackcdn.com/sublime_text_3_build_3047_x$architecture.tar.bz2"
   fi
@@ -667,35 +673,39 @@ __END__
 #
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-if [ -n "$DISPLAY" ] ; then
+if [ -n "$DISPLAY" ] || [ "$OS" == "Windows" ] ; then
 
 echo "# Check preferences and configuration..."
 
-# TODO: update for sublime 3
+# Determine the sublime configuration directory location based on platform
+SUBLIME_CONFIG_DIR="$HOME/.config/sublime-text-3"
+if [ "$OS" == "Windows" ] ; then
+  SUBLIME_CONFIG_DIR="$HOME/AppData/Roaming/Sublime Text 3"
+fi
 
 #
 # Copy sublime license file, if one exists in installdata
 #
-if [ ! -f $HOME/.config/sublime-text-2/Settings/License.sublime_license ] && [ -f $INSTALLATION_DATA/Licenses/License.sublime_license ] ; then
-  mkdir -p $HOME/.config/sublime-text-2/Settings
-  cp $INSTALLATION_DATA/Licenses/License.sublime_license $HOME/.config/sublime-text-2/Settings/License.sublime_license
+if [ ! -f "$SUBLIME_CONFIG_DIR/Settings/License.sublime_license" ] && [ -f "$INSTALLATION_DATA/Licenses/License.sublime_license" ] ; then
+  mkdir -p "$SUBLIME_CONFIG_DIR/Settings"
+  cp "$INSTALLATION_DATA/Licenses/License.sublime_license" "$SUBLIME_CONFIG_DIR/Settings/License.sublime_license"
 fi
-if [ ! -f $HOME/.config/sublime-text-3/Local/License.sublime_license ] && [ -f $INSTALLATION_DATA/Licenses/License.sublime_license ] ; then
-  mkdir -p $HOME/.config/sublime-text-3/Local
-  cp $INSTALLATION_DATA/Licenses/License.sublime_license $HOME/.config/sublime-text-3/Local/License.sublime_license
+if [ ! -f "$HOME/.config/sublime-text-3/Local/License.sublime_license" ] && [ -f "$INSTALLATION_DATA/Licenses/License.sublime_license" ] ; then
+  mkdir -p "$HOME/.config/sublime-text-3/Local"
+  cp "$INSTALLATION_DATA/Licenses/License.sublime_license" "$HOME/.config/sublime-text-3/Local/License.sublime_license"
 fi
 
 #
 # Set up sublime default preferences
 #
-if [ ! -f $HOME/.config/sublime-text-2/Packages/User/Preferences.sublime-settings ] ; then
+if [ ! -f "$SUBLIME_CONFIG_DIR/Packages/User/Preferences.sublime-settings" ] || [ ! "$(grep -q : "$SUBLIME_CONFIG_DIR/Packages/User/Default ($OS).sublime-keymap")" ] ; then
 
-mkdir -p $HOME/.config/sublime-text-2/Packages/User
+mkdir -p "$SUBLIME_CONFIG_DIR/Packages/User"
 
 # Set up Sublime default editing preferences to match Drupal php conventions.
 # See: http://drupal.org/node/1346890
 # Also: http://www.sublimetext.com/forum/viewtopic.php?f=3&t=2704
-cat << "__END__" > $HOME/.config/sublime-text-2/Packages/User/Preferences.sublime-settings
+cat << "__END__" > "$SUBLIME_CONFIG_DIR/Packages/User/Preferences.sublime-settings"
 {
   "color_scheme": "Packages/Color Scheme - Default/Mac Classic.tmTheme",
   "rulers": [80],
@@ -718,20 +728,17 @@ cat << "__END__" > $HOME/.config/sublime-text-2/Packages/User/Preferences.sublim
 }
 __END__
 
+# Note that there is an escaped " above inside "word_separators" that slightly confuses sublime text.
+
 fi
 
-if [ ! -f $HOME/.config/sublime-text-3/Packages/User/Preferences.sublime-settings ] ; then
-  mkdir -p $HOME/.config/sublime-text-3/Packages/User
-  cp $HOME/.config/sublime-text-2/Packages/User/Preferences.sublime-settings $HOME/.config/sublime-text-3/Packages/User/Preferences.sublime-settings
-fi
+if [ ! -f "$SUBLIME_CONFIG_DIR/Packages/User/Markdown.sublime-settings" ] ; then
 
-if [ ! -f $HOME/.config/sublime-text-2/Packages/User/Markdown.sublime-settings ] ; then
-
-mkdir -p $HOME/.config/sublime-text-2/Packages/User
+mkdir -p "$SUBLIME_CONFIG_DIR/Packages/User"
 
 # Avoid trimming whitespace from the ends of lines in Markdown, as
 # that is significant in this file format.
-cat << "__END__" > $HOME/.config/sublime-text-2/Packages/User/Markdown.sublime-settings
+cat << "__END__" > "$SUBLIME_CONFIG_DIR/Packages/User/Markdown.sublime-settings"
 {
   "trim_automatic_white_space": false,
   "trim_trailing_white_space_on_save": false
@@ -740,16 +747,11 @@ __END__
 
 fi
 
-if [ ! -f $HOME/.config/sublime-text-3/Packages/User/Markdown.sublime-settings ] ; then
-  mkdir -p $HOME/.config/sublime-text-3/Packages/User
-  cp $HOME/.config/sublime-text-2/Packages/User/Markdown.sublime-settings $HOME/.config/sublime-text-3/Packages/User/Markdown.sublime-settings
-fi
+if [ ! -f "$SUBLIME_CONFIG_DIR/Packages/User/Default ($OS).sublime-keymap" ] || [ ! "$(grep -q keys "$SUBLIME_CONFIG_DIR/Packages/User/Default ($OS).sublime-keymap")" ] ; then
 
-if [ ! -f "$HOME/.config/sublime-text-2/Packages/User/Default (Linux).sublime-keymap" ] || [ "`ls -l \"$HOME/.config/sublime-text-2/Packages/User/Default (Linux).sublime-keymap\" | awk '{ print $5 }'`" -lt 10 ] ; then
+mkdir -p "$SUBLIME_CONFIG_DIR/Packages/User"
 
-mkdir -p $HOME/.config/sublime-text-2/Packages/User
-
-cat << "__END__" > "$HOME/.config/sublime-text-2/Packages/User/Default (Linux).sublime-keymap"
+cat << "__END__" > "$SUBLIME_CONFIG_DIR/Packages/User/Default ($OS).sublime-keymap"
 [
   /*
    * Nedit key bindings:
@@ -801,45 +803,40 @@ __END__
 
 fi
 
-if [ ! -f "$HOME/.config/sublime-text-3/Packages/User/Default (Linux).sublime-keymap" ] ; then
-  mkdir -p $HOME/.config/sublime-text-3/Packages/User
-  cp "$HOME/.config/sublime-text-2/Packages/User/Default (Linux).sublime-keymap" "$HOME/.config/sublime-text-3/Packages/User/Default (Linux).sublime-keymap"
-fi
-
 # Install Sublime Code Intel plugin
-#if [ ! -d "$HOME/.config/sublime-text-2/Packages/SublimeCodeIntel" ] ; then
-#  git clone git://github.com/Kronuz/SublimeCodeIntel.git "$HOME/.config/sublime-text-2/Packages/SublimeCodeIntel"
+#if [ ! -d "$SUBLIME_CONFIG_DIR/Packages/SublimeCodeIntel" ] ; then
+#  git clone git://github.com/Kronuz/SublimeCodeIntel.git "$SUBLIME_CONFIG_DIR/Packages/SublimeCodeIntel"
 #fi
 
 # Install Sublime PhpDoc plugin
-if [ ! -d "$HOME/.config/sublime-text-2/Packages/PhpDoc" ] ; then
-  git clone git://github.com/SublimeText/PhpDoc.git "$HOME/.config/sublime-text-2/Packages/PhpDoc"
+if [ ! -d "$SUBLIME_CONFIG_DIR/Packages/PhpDoc" ] ; then
+  git clone git://github.com/SublimeText/PhpDoc.git "$SUBLIME_CONFIG_DIR/Packages/PhpDoc"
 fi
 
 # Install Sublime Drupal snippets
-if [ ! -d "$HOME/.config/sublime-text-2/Packages/DrupalSnippets" ] ; then
-  git clone git://gitorious.org/sublime-text-snippets/drupal.git "$HOME/.config/sublime-text-2/Packages/DrupalSnippets"
+if [ ! -d "$SUBLIME_CONFIG_DIR/Packages/DrupalSnippets" ] ; then
+  git clone git://gitorious.org/sublime-text-snippets/drupal.git "$SUBLIME_CONFIG_DIR/Packages/DrupalSnippets"
 fi
 
 # Install Suplime php lint
-if [ ! -d "$HOME/.config/sublime-text-2/Packages/sublimelint" ] ; then
-  git clone git://github.com/lunixbochs/sublimelint.git "$HOME/.config/sublime-text-2/Packages/sublimelint"
+if [ ! -d "$SUBLIME_CONFIG_DIR/Packages/sublimelint" ] ; then
+  git clone git://github.com/lunixbochs/sublimelint.git "$SUBLIME_CONFIG_DIR/Packages/sublimelint"
 fi
 
 # Install Sublime zen coding plugin (if mercurial is available)
 # See: http://code.google.com/p/zen-coding/downloads/detail?name=ZenCodingCheatSheet.pdf
 #hg=`which hg`
-#if [ ! -z "$hg" ] && [ ! -d "$HOME/.config/sublime-text-2/Packages/sublime-2-zencoding" ] ; then
-#  hg clone https://bitbucket.org/sublimator/sublime-2-zencoding "$HOME/.config/sublime-text-2/Packages/sublime-2-zencoding"
+#if [ ! -z "$hg" ] && [ ! -d "$SUBLIME_CONFIG_DIR/Packages/sublime-2-zencoding" ] ; then
+#  hg clone https://bitbucket.org/sublimator/sublime-2-zencoding "$SUBLIME_CONFIG_DIR/Packages/sublime-2-zencoding"
 #fi
 
 #
 # Set up nedit default preferences
 #
-mkdir -p $HOME/.nedit
-if [ -f $HOME/.nedit/nedit.rc ] ; then
+mkdir -p "$HOME/.nedit"
+if [ -f "$HOME/.nedit/nedit.rc" ] ; then
 
-	sed -i $HOME/.nedit/nedit.rc \
+	sed -i "$HOME/.nedit/nedit.rc" \
 		-e 's/^\(nedit.autoWrap: \).*/\1 None/' \
 		-e 's/^\(nedit.openInTab: \).*/\1 False/' \
 		-e 's/^\(nedit.statisticsLine: \).*/\1 True/' \
@@ -848,7 +845,7 @@ if [ -f $HOME/.nedit/nedit.rc ] ; then
 
 else
 
-	cat <<- __END__ > $HOME/.nedit/nedit.rc
+	cat <<- __END__ > "$HOME/.nedit/nedit.rc"
 	nedit.autoWrap: None
 	nedit.openInTab: False
 	nedit.statisticsLine: True
