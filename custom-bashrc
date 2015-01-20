@@ -31,6 +31,10 @@ alias pull-all='for x in * ; do if [ -d $x/.git ] ; then ( cd $x ; s=$(git statu
 alias dr=drush
 alias ..='cd ..'
 
+if [ "$(uname -s)" == "Darwin" ] ; then
+  alias ssh-copy-id='ssh-copy-id.sh'
+fi
+
 #
 # Git aliases
 #
