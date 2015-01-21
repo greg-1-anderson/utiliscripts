@@ -442,11 +442,14 @@ done
 
 # Also copy in some of the example drush extensions from the drush/examples folder
 
+DRUSH_LINKDIR="$(dirname $DRUSH)"
+DRUSH_EXAMPLES="$DRUSH_LINKDIR/$(dirname $(readlink $DRUSH))/examples"
+
 for example_extensions in sync_enable.drush.inc sync_via_http.drush.inc ; do
 
 	if [ ! -f "$HOME/local/drupal/drush_extensions/$example_extensions" ] ; then
 
-		cp "$HOME/local/drupal/drush/examples/$example_extensions" "$HOME/local/drupal/drush_extensions"
+		cp "$DRUSH_EXAMPLES/$example_extensions" "$HOME/local/drupal/drush_extensions"
 
 	fi
 done
