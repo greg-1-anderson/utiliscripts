@@ -10,6 +10,8 @@ stty stop undef
 export LANGUAGE=en_US.UTF-8
 export LANG=en_US.UTF-8
 
+OS="$(uname -s)"
+
 #
 # Some aliases and functions that Greg likes:
 #
@@ -31,8 +33,9 @@ alias pull-all='for x in * ; do if [ -d $x/.git ] ; then ( cd $x ; s=$(git statu
 alias dr=drush
 alias ..='cd ..'
 
-if [ "$(uname -s)" == "Darwin" ] ; then
+if [ "$OS" == "Darwin" ] ; then
   alias ssh-copy-id='ssh-copy-id.sh'
+  alias sublime_text='/Applications/Sublime\ Text.app/Contents/MacOS/Sublime\ Text'
 fi
 
 #
