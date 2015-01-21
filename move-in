@@ -31,7 +31,7 @@ if [ "$OS" != "${OS/MINGW}" ] ; then
   OS=Windows
 fi
 
-# Don't allow this as root unless you have logged in as root.
+# Don't allow this as root unless you have logge in as root.
 # I don't know that I recommend running this as root, but neither do I prevent it.
 if [ "$USER" == "root" ] && [ "$HOME" != "/root" ]
 then
@@ -228,10 +228,20 @@ if [ -z "$(which composer)" ] && [ -n "$(which php)" ] ; then
   fi
 fi
 
+# Make sure that $HOME/bin is on our PATH
+
+if [ "$PATH" == "${PATH/$HOME/}" ] ; then
+  export PATH="$HOME/bin:$PATH"
+fi
+
 # Insure that the vendor/bin directory is on our PATH as well
 
 if [ "$PATH" == "${PATH/.composer/}" ] ; then
   export PATH="$HOME/.composer/vendor/bin:$PATH"
+fi
+
+if [ ! -f "$HOME/.bashrc" ] ; then
+  echo "# Initial .bashrc created by move-in script." > "$HOME/.bashrc"
 fi
 
 chkbashrc="$(grep 'composer/vendor/bin' "$HOME/.bashrc")"
@@ -240,6 +250,7 @@ if [ "X$chkbashrc" = "X" ] ; then
   sed -e '1,/^ *$/ d' "$HOME/.bashrc" > "$HOME/.bashrc-body"
   cp "$HOME/.bashrc-head" "$HOME/.bashrc"
 cat <<- __END__ >> "$HOME/.bashrc"
+[ "\$PATH" == "\${PATH/\$HOME/}" ] && export PATH="\$HOME/bin:\$PATH"
 [ "\$PATH" == "\${PATH/.composer/}" ] && export PATH="\$HOME/.composer/vendor/bin:\$PATH"
 __END__
   cat "$HOME/.bashrc-body" >> "$HOME/.bashrc"
