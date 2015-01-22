@@ -1,0 +1,10 @@
+#!/bin/bash
+
+OS="$(uname -s)"
+
+if [ "$OS" != "Darwin" ] ; then
+  echo "This script is only for Macintosh systems."
+  exit 1
+fi
+
+brew install wget
