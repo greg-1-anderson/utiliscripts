@@ -6,6 +6,12 @@ if [ "x$TERM" == "xcygwin" ] ; then
   exit 0
 fi
 
+# Just call subl on MacOS
+if [ "$(uname -s)" == "Darwin" ] ; then
+	"/Applications/Sublime Text.app/Contents/SharedSupport/bin/subl" -n "$@" &
+	exit 0
+fi
+
 window_cache=$HOME/.se_window_cache
 existing_wids=
 

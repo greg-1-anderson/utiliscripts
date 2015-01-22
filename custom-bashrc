@@ -245,7 +245,7 @@ export EDITOR=vi
 s=`which sublime_text 2>/dev/null`
 s2=`which se 2>/dev/null`
 if [ -n "$s" ] && [ -n "$s2" ] ; then
-  export EDITOR=se
+  export EDITOR='se -w'
 fi
 
 #
