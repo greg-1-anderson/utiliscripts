@@ -53,10 +53,27 @@ while [ $# -gt 0 ] ; do
 	esac
 done
 
+if [ -f /usr/local/bin/mysql.server ] ; then
+	MYSQL_INIT=/usr/local/bin/mysql.server
+elif [ -f /etc/init.d/mysql ] ; then
+	MYSQL_INIT=/etc/init.d
+fi
+
+if [ -z "$MYSQL_INIT" ] ; then
+	echo "Could not find mysql init script."
+	exit 1
+fi
+
+MYSQL_SCRIPT_FILE=`mktemp mysql_pw_reset.sql.XXXXX`
+if [ -z "$MYSQL_SCRIPT_FILE" ] ; then
+	echo "mktemp failed to create a temporary file."
+	exit 1
+fi
+
 #
 # Step # 1: stop mysql service
 #
-$DO /etc/init.d/mysql stop
+$DO "$MYSQL_INIT" stop
 
 #
 # Step # 2: Start mysql server without a password
@@ -77,7 +94,6 @@ sleep 3
 #
 # We will send the above SQL commands directly to mysql.
 #
-MYSQL_SCRIPT_FILE=`mktemp`
 cat << __EOF__ > $MYSQL_SCRIPT_FILE
 use mysql;
 update user set password=PASSWORD("$NEW_MYSQL_ROOT_PASSWORD") where User='root';
@@ -95,12 +111,12 @@ rm $MYSQL_SCRIPT_FILE
 #
 # Step # 5: Stop MySQL Server: 
 #
-$DO /etc/init.d/mysql stop
+$DO "$MYSQL_INIT" stop
 
 #
 # Step # 6: Restart MySQL server 
 #
-$DO /etc/init.d/mysql start
+$DO "$MYSQL_INIT" start
 
 echo
 echo "# To test your new mysql root password:"
