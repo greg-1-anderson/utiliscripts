@@ -263,7 +263,6 @@ if [ -n "$d" ] ; then
   else
     d=$(dirname $(dirname "$d")"/$d2")
   fi
-  echo "drush dir is $d"
   if [ -f "$d/examples/example.bashrc" ] ; then
     . "$d/examples/example.bashrc"
     # Add aliases for standard bash commands
