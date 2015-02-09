@@ -39,6 +39,16 @@ then
   exit 1
 fi
 
+# There are some customization steps that we will skip in
+# remote (ssh) environments, such as headless virtual machines,
+# hosting providers, etc.  Note, however, that we assume that
+# such remote machines will always be Linux, or Linux-like
+# systems.  We do not support headless Mac or Windows installs.
+HAS_DISPLAY=true
+if [ "$OS" != "WINDOWS" ] && [ "$OS" != "Darwin" ] && [ -z "$DISPLAY" ] ; then
+  HAS_DISPLAY=false
+fi
+
 # Default location to pull installation data from.  Before running this script,
 # define:
 #
@@ -473,7 +483,7 @@ fi
 #
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-if [ -n "$DISPLAY" ] ; then
+if $HAS_DISPLAY && [ "$OS" != "Darwin" ] ; then
 
   echo "# Check sublime..."
 
@@ -687,7 +697,7 @@ __END__
 #
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-if [ -n "$DISPLAY" ] || [ "$OS" == "Windows" ] ; then
+if $HAS_DISPLAY && [ "$OS" != "Darwin" ]; then
 
 echo "# Check preferences and configuration..."
 
