@@ -258,7 +258,7 @@ if [ -n "$d" ] ; then
   d2=`readlink $d`
   # Get the directory that drush is stored in.
   # d2 might be relative or absolute path.
-  if [ "x${d2:0:1}" == "/" ] ; then
+  if [ "x${d2:0:1}" == "x/" ] ; then
     d=$(dirname "$d2")
   else
     d=$(dirname $(dirname "$d")"/$d2")
