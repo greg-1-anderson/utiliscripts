@@ -255,9 +255,15 @@ fi
 d=`which drush 2>/dev/null`
 if [ -n "$d" ] ; then
   # If the file found is a symlink, resolve to the actual file
-  d=`readlink $d`
-  # Get the directory that drush is stored in
-  d="${d%/*}"
+  d2=`readlink $d`
+  # Get the directory that drush is stored in.
+  # d2 might be relative or absolute path.
+  if [ "x${d2:0:1}" == "/" ] ; then
+    d=$(dirname "$d2")
+  else
+    d=$(dirname $(dirname "$d")"/$d2")
+  fi
+  echo "drush dir is $d"
   if [ -f "$d/examples/example.bashrc" ] ; then
     . "$d/examples/example.bashrc"
     # Add aliases for standard bash commands
