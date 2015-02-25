@@ -697,7 +697,7 @@ __END__
 #
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-if $HAS_DISPLAY && [ "$OS" != "Darwin" ]; then
+if $HAS_DISPLAY ; then
 
 echo "# Check preferences and configuration..."
 
@@ -706,6 +706,10 @@ SUBLIME_CONFIG_DIR="$HOME/.config/sublime-text-3"
 if [ "$OS" == "Windows" ] ; then
   SUBLIME_CONFIG_DIR="$HOME/AppData/Roaming/Sublime Text 3"
 fi
+if [ "$OS" == "Darwin" ] ; then
+  SUBLIME_CONFIG_DIR="$HOME/Library/Application Support/Sublime Text 3"
+fi
+
 
 #
 # Copy sublime license file, if one exists in installdata
@@ -714,9 +718,9 @@ if [ ! -f "$SUBLIME_CONFIG_DIR/Settings/License.sublime_license" ] && [ -f "$INS
   mkdir -p "$SUBLIME_CONFIG_DIR/Settings"
   cp "$INSTALLATION_DATA/Licenses/License.sublime_license" "$SUBLIME_CONFIG_DIR/Settings/License.sublime_license"
 fi
-if [ ! -f "$HOME/.config/sublime-text-3/Local/License.sublime_license" ] && [ -f "$INSTALLATION_DATA/Licenses/License.sublime_license" ] ; then
-  mkdir -p "$HOME/.config/sublime-text-3/Local"
-  cp "$INSTALLATION_DATA/Licenses/License.sublime_license" "$HOME/.config/sublime-text-3/Local/License.sublime_license"
+if [ ! -f "$SUBLIME_CONFIG_DIR/Local/License.sublime_license" ] && [ -f "$INSTALLATION_DATA/Licenses/License.sublime_license" ] ; then
+  mkdir -p "$SUBLIME_CONFIG_DIR/Local"
+  cp "$INSTALLATION_DATA/Licenses/License.sublime_license" "$SUBLIME_CONFIG_DIR/Local/License.sublime_license"
 fi
 
 #
@@ -748,11 +752,9 @@ cat << "__END__" > "$SUBLIME_CONFIG_DIR/Packages/User/Preferences.sublime-settin
   "remember_open_files": false,
   "close_windows_when_empty": true,
   // Characters that are considered to separate words
-  "word_separators": "./\\()\"'-:,.;<>~!@#%^&*|+=[]{}`~?"
+  "word_separators": "./\\()'-:,.;<>~!@#%^&*|+=[]{}`~"
 }
 __END__
-
-# Note that there is an escaped " above inside "word_separators" that slightly confuses sublime text.
 
 fi
 
@@ -854,6 +856,8 @@ fi
 #  hg clone https://bitbucket.org/sublimator/sublime-2-zencoding "$SUBLIME_CONFIG_DIR/Packages/sublime-2-zencoding"
 #fi
 
+if [ "$OS" != "Darwin" ] ; then
+
 #
 # Set up nedit default preferences
 #
@@ -876,6 +880,7 @@ else
 	nedit.tabDistance: 8
 	__END__
 
+fi
 fi
 fi
 
