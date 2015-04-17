@@ -752,7 +752,7 @@ cat << "__END__" > "$SUBLIME_CONFIG_DIR/Packages/User/Preferences.sublime-settin
   "remember_open_files": false,
   "close_windows_when_empty": true,
   // Characters that are considered to separate words
-  "word_separators": "./\\()'-:,.;<>~!@#%^&*|+=[]{}`~"
+  "word_separators": "./\\()\"'-:,.;<>~!@#%^&*|+=[]{}`~?"
 }
 __END__
 
