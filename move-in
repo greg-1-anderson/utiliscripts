@@ -856,6 +856,23 @@ fi
 #  hg clone https://bitbucket.org/sublimator/sublime-2-zencoding "$SUBLIME_CONFIG_DIR/Packages/sublime-2-zencoding"
 #fi
 
+
+#
+# Mac-specific settings
+#
+if [ "$OS" == "Darwin" ] ; then
+  # Don't let mouse-scrolling-twiches get converted into forward/back in Chrome
+  defaults write com.google.Chrome AppleEnableSwipeNavigateWithScrolls -bool FALSE
+
+  # Set the location where screenshots are saved
+  defaults write com.apple.screencapture location ~/Pictures/Screenshots/
+
+fi
+
+
+#
+# Some non-Mac settings
+#
 if [ "$OS" != "Darwin" ] ; then
 
 #
