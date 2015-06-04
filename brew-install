@@ -7,4 +7,21 @@ if [ "$OS" != "Darwin" ] ; then
   exit 1
 fi
 
-brew install wget
+brew update
+brew doctor
+brew upgrade
+
+# I think this is pre-installed
+# brew install mysql
+# TODO: Should we also configure software, e.g. mysql, per:
+# http://blog.joefallon.net/2013/10/install-mysql-on-mac-osx-using-homebrew/
+
+# https://github.com/Homebrew/homebrew-php
+brew tap homebrew/dupes
+brew tap homebrew/versions
+brew tap homebrew/homebrew-php
+brew install php55-xdebug
+
+brew install tree
+
+brew install nodejs
