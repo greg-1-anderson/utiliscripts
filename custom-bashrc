@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# Incude our private stuff, if the file exists
+PRIVATE_BASHRC="$HOME/local/config/private-bashrc.rc"
+if [ -f "$PRIVATE_BASHRC" ]
+then
+  source "$PRIVATE_BASHRC"
+fi
+
 # Require THREE ^D characters in a row to exit
 export IGNOREEOF=2
 
