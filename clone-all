@@ -1,0 +1,42 @@
+#!/bin/sh
+# Reqs: curl, git
+#
+# GITHUBTOKEN: Create a personal access token here: https://github.com/settings/tokens
+#
+# Usage:
+#
+#   cd ~/work-dir
+#   GITHUBTOKEN=... ORG=pantheon-cookbooks clone-all
+#
+
+if [ -z "$GITHUBTOKEN" ]; then
+  echo "no GITHUBTOKEN= environment var specified"
+  exit 1
+fi
+
+if [ -z "$ORG" ]; then
+  echo "no ORG= environment var specified"
+  exit 1
+fi
+
+echo "==> Cloning all repos from '$ORG'"
+repos=$(curl -u "$GITHUBTOKEN:x-oauth-basic" -s https://api.github.com/orgs/$ORG/repos\?per_page\=500 | grep '"ssh_url":' | sed -e 's/[^:]*: "//' -e 's/",*$//')
+
+for repo in $repos
+do
+  dir=$(basename $repo .git)
+  if [ -d "$dir" ]
+  then
+    echo "==> Updating $dir"
+    cd "$dir"
+    git pull
+  else
+    echo "==> Cloning $dir"
+    git clone $repo $dir
+  fi
+done
+
+# The ruby way
+# | ruby -rubygems -e 'require "json"; JSON.load(STDIN.read).each { |repo| %x[git clone #{repo["ssh_url"]} ]}'
+
+echo "==> Done."
