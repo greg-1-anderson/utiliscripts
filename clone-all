@@ -28,8 +28,10 @@ do
   if [ -d "$dir" ]
   then
     echo "==> Updating $dir"
-    cd "$dir"
-    git pull
+    (
+      cd "$dir"
+      git pull
+    )
   else
     echo "==> Cloning $dir"
     git clone $repo $dir
