@@ -30,3 +30,7 @@ up the $PATH and a number of other environment settings.
 The install-components uses `apt-get install` to install a whole
 bunch of packages.  Run with --help to see options for installing
 less than everything (the default is 'everything').
+
+Note:  Some of these scripts (e.g. move-in) work fine on the Mac.
+Use the `brew-install` script instead of `install-components` to get
+the software you need.
