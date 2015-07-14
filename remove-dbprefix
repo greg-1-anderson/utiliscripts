@@ -1,0 +1,89 @@
+#!/bin/bash
+
+#
+# Required first parameter specifying the site to target
+#
+SITE=$1
+if [ -z "$SITE" ]
+then
+  echo "Usage: $0 SITE"
+  exit 1
+fi
+
+#
+# Look up the db prefix
+#
+prefix=$(drush $SITE sql-conf --format=yaml | grep 'prefix:' | sed -e 's/prefix: //')
+if [ -z "$prefix" ]
+then
+  echo "Prefix is empty on $SITE. This script is designed for removing db prefixes from Drupal sites that are configured with them."
+fi
+
+#
+# Get the Drupal root iff the site is local
+#
+drupal_root=$(drush sa --local-only $SITE --format=list --fields=root)
+
+#
+# Get the location of the settings directory
+#
+site_dir=$(drush $SITE dd %site)
+
+#
+# Take the site offline
+#
+drush -y $SITE vset --always-set maintenance_mode 1
+
+#
+# Reduce the size of the database
+#
+drush -y $SITE cc all
+drush -y $SITE watchdog-delete all
+
+#
+# Get a list of all of the tables in the system.
+# Pass them through 'sed' to make the parameter list
+# for rename tables.
+#
+# RENAME TABLE prefixed_table1 TO table1,
+#              prefixed_table2 TO table2,
+#              prefixed_table3 to table3;
+#
+tables=$(drush $SITE sqlq 'show tables;' | grep $prefix | sed -e "s/$prefix\([^ ]*\)/$prefix\1 to \1,/g" | sed -e '$ s/,$/;/')
+if [ -z "$tables" ]
+then
+  echo "Could not get list of database tables."
+  exit 1
+fi
+
+#
+# Rename the tables.
+#
+drush -y $SITE sqlq "RENAME TABLE $tables"
+
+#
+# Fix things up if the site is local
+#
+if [ -n "$drupal_root" ]
+then
+  #
+  # Remove the prefix from the database array in settings.php.
+  #
+  sed -i -e "s/'$prefix'/''/" "$site_dir/settings.php"
+
+  #
+  #
+  #
+  drush $SITE sql-conf
+
+  #
+  # Bring the site back online
+  #
+  drush -y $SITE vset --always-set maintenance_mode 0
+else
+  #
+  # Just tell the user what to do
+  #
+  echo "Remove the db prefix from settings.php and bring the site back online."
+  echo "drush -y $SITE vset maintenance_mode 0"
+fi
