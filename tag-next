@@ -274,6 +274,15 @@ do
     esac
   fi
 
+  # If MAJOR is set to filter to a specific version, then
+  # it does not make any sense to offer to tag the next
+  # major version, as that tag probably already exists on
+  # another branch.  Terminate the loop here if that is the
+  # case.
+  if [ "$current" == "$MAJOR" ]
+  then
+    current=
+  fi
 done
 
 #
