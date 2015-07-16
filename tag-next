@@ -97,6 +97,7 @@ current_version=$(
   tail -n 1
 )
 
+current="$current_version"
 declare -a next_versions
 index=1
 
@@ -112,7 +113,7 @@ index=1
 # in the current version string.
 #
 version_append=
-while [ -n "$current_version" ]
+while [ -n "$current" ]
 do
 
   #
@@ -122,24 +123,14 @@ do
   # Version head:     8.0.0-beta
   # Version tail:     11
   #
-  version_tail=$(echo $current_version | sed -e 's/\([0-9][0-9]*\)$/z\1/' -e 's/[^z]*z//')
-  version_head=$(echo $current_version | sed -e 's/\([0-9][0-9]*\)$//')
+  version_tail=$(echo $current | sed -e 's/\([0-9][0-9]*\)$/z\1/' -e 's/[^z]*z//')
+  version_head=$(echo $current | sed -e 's/\([0-9][0-9]*\)$//')
 
   #
   # Now we can simply add one to $version_tail,
   # and we will get the next version.
   #
   version_next="$version_head$(($version_tail+1))$version_append"
-
-  #
-  # If we increment the major version ($version_head is empty),
-  # then add an "-alpha1" on the end, to show that we are going
-  # up to the next unstable version.
-  #
-  if [ -z "$version_head" ]
-  then
-    version_next="${version_next}-alpha1"
-  fi
 
   #
   # Store this $version_next into the "next_versions"
@@ -149,6 +140,17 @@ do
   index="$(($index+1))"
 
   #
+  # If we increment the major version ($version_head is empty),
+  # then add an "-alpha1" on the end, to show that we are going
+  # up to the next unstable version.  This option is available
+  # in addition to the next major version without the "-alpha".
+  #
+  if [ -z "$version_head" ]
+  then
+    next_versions["$index"]="${version_next}-alpha1"
+  fi
+
+  #
   # Take off the end of the current version.  On the
   # next iteration through the loop, the version will
   # be shorter, so the next from the left in the version
@@ -156,7 +158,7 @@ do
   # the same length by appending ".0" to the end of
   # $version_append as we shorten the current version.
   #
-  current_version=$(echo $version_head | sed -e 's/[^0-9]*$//')
+  current=$(echo $version_head | sed -e 's/[^0-9]*$//')
 
   # If $version_head ends in a dot, then add a ".0" to $version_append.
   echo "$version_head" | grep -q '\.$'
@@ -170,10 +172,10 @@ do
     stage=$(echo $version_head | sed -e 's/\([a-z]*$\)/z\1/' -e 's/[^z]*z//')
     case "$stage" in
       alpha)
-        current_version="$current_version-beta0"
+        current="$current-beta0"
         ;;
       beta)
-        current_version="$current_version-rc0"
+        current="$current-rc0"
         ;;
     esac
   fi
@@ -188,7 +190,7 @@ then
   input=1
 else
   # Show the user all of the choices, and prompt for one.
-  echo "current verison is $current_version"
+  echo "Current verison is $current_version"
   echo
   echo "Select a version:"
   for i in ${!next_versions[@]} ; do
@@ -203,7 +205,7 @@ selected="${next_versions[$input]}"
 if [ -n "$selected" ]
 then
   echo "git tag -a $selected"
-  git tag -a "$selected"
+  #git tag -a "$selected"
 else
   echo "Aborted."
 fi
