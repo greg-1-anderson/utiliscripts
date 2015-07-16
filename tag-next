@@ -1,5 +1,83 @@
 #!/bin/bash
 
+#
+# tag-next
+#
+# In the context of a git repository where git tags
+# using semantic versioning represent releases, this
+# script will tag the project with the next following
+# version number.
+#
+#
+# Getting started:
+#
+# If you have no versioned releases yet, create one
+# to start things off:
+#
+#   $ git tag -a 0.0.1
+#
+#     or
+#
+#   $ git tag -a 1.0.0-alpha1
+#
+#
+# Usage:
+#
+#   $ tag-next            # Ask the user which version to pick
+#
+#   $ tag-next -q         # Quickly tag the next version in the sequence
+#
+#
+# Example 1:
+#
+#    $ tag-next
+#    Current verison is 8.0.0-beta11
+#
+#    Select a version:
+#    1. 8.0.0-beta12
+#    2. 8.0.0-rc1
+#    3. 8.0.0
+#    4. 8.1.0
+#    5. 9.0.0
+#    6. 9.0.0-alpha1
+#    > 1
+#    git tag -a 8.0.0-beta12
+#
+#    $ tag-next -q
+#    git tag -a 8.0.0-beta13
+#
+#
+# Example 2:
+#
+#    $ tag-next
+#
+#    Current verison is 7.0.0
+#
+#     Select a version:
+#     1. 7.0.0
+#     2. 7.1.0
+#     3. 8.0.0
+#     4. 8.0.0-alpha1
+#     > 2
+#     git tag -a 7.1.0
+#
+#
+# The current version is determined by examing the name
+# of the current branch.  If the current branch is "7.x",
+# then the current version will be whichever version tag
+# is greatest among those in the 7.x series.
+#
+# If the current branch is "master", or any name that does
+# not match the pattern "N.x" (for any numeric "N"), then
+# the script assumes that the greatest tagged version is the
+# current version.
+#
+#
+# Suggestion:
+#
+# alias tnq='tag-next -q && git push --tags'
+#
+
 MAJOR=
 MATCH_MAJOR=.
 QUICK=false
