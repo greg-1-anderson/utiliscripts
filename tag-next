@@ -133,6 +133,22 @@ do
   version_next="$version_head$(($version_tail+1))$version_append"
 
   #
+  # As an exception, if the next version is
+  # MAJOR.0.1, we will re-map it to MAJOR.0.0.
+  # We will skip this if the current version
+  # is already MAJOR.0.0.
+  #
+  echo "$version_next" | grep -q '\.0\.1$'
+  if [ "$?" == 0 ]
+  then
+    echo "$current_version" | grep -q '\.0\.0$'
+    if [ "$?" == 1 ]
+    then
+      version_next="$version_head$version_tail"
+    fi
+  fi
+
+  #
   # Store this $version_next into the "next_versions"
   # array under index $index.  Increment the index.
   #
@@ -205,7 +221,7 @@ selected="${next_versions[$input]}"
 if [ -n "$selected" ]
 then
   echo "git tag -a $selected"
-  #git tag -a "$selected"
+  git tag -a "$selected"
 else
   echo "Aborted."
 fi
