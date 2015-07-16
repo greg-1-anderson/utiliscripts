@@ -1,0 +1,209 @@
+#!/bin/bash
+
+MAJOR=
+MATCH_MAJOR=.
+QUICK=false
+
+#
+# Parse command line args
+#
+while [ $# -gt 0 ] ; do
+
+  option="$1"
+  shift
+
+  case "$option" in
+    --major)
+      MAJOR="$1"
+      ;;
+
+    -q|--quick)
+     QUICK=true
+     ;;
+
+  esac
+done
+
+#
+# Check the name of the current branch
+#
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+#
+# If the current branch is "N.x" for any numeric N,
+# then auto-set "MAJOR" to "N"
+#
+echo $CURRENT_BRANCH | grep -q '^[0-9][0-9]*\.x$'
+if [ "$?" == 0 ]
+then
+  MAJOR=${CURRENT_BRANCH/.x/}
+fi
+
+#
+# If a major branch was specified, then set
+# MATCH_MAJOR so that only that branch is considered.
+#
+if [ -n "$MAJOR" ]
+then
+  MATCH_MAJOR="^$MAJOR"'\.'
+fi
+
+#
+# Look for versions that match 1.2.3-alpha4
+#
+# To make sure that the versions sort numerically, tranform them
+# so that an alphabetic sort and a numeric sort are equivalent
+# (all numeric values contain the same number of digits).
+#
+# Also, conveniently, the following stages sort in the right order:
+#   -alpha
+#   -beta
+#   -rc
+#   -stable
+#
+# We therefore add "-stable" to the end of each version that has
+# no stage modifier on it, so that the stable releases come after
+# the releases with modifiers, rather than before.
+#
+current_version=$(
+  git tag -l |
+         # Look for tags that match semantic version strings such as 1.2.3-alpha4
+  grep '^v*[0-9]\+\.[0-9]\+\.\([0-9]\+-alpha[0-9]\+\|[0-9]\+-beta[0-9]\+\|[0-9]\+-rc[0-9]\+\|[0-9]\+\)$' |
+         # convert to vv1..2..3--alpha4zzz
+  sed -e 's/^/v/' \
+      -e 's/$/zzz/' \
+      -e 's/\./../g' \
+      -e 's/-/--/g' |
+         # convert to vv0001..0002..0003--alpha0004zzz
+  sed -e 's/\([^0-9]\)\([0-9]\)\([^0-9]\)/\1000\2\3/g' \
+      -e 's/\([^0-9]\)\([0-9][0-9]\)\([^0-9]\)/\100\2\3/g' \
+      -e 's/\([^0-9]\)\([0-9][0-9][0-9]\)\([^0-9]\)/\10\2\3/g' |
+         # convert to 0001.0002.0003-alpha0004
+  sed -e 's/--*/-/g' \
+      -e 's/\.\.*/./g' \
+      -e 's/zzz$//' \
+      -e 's/^v*//' |
+         # add -stable to any line that does not contain an -alpha / -beta / -rc
+  sed -e 's/^\([^-]*\)$/\1-stable/' |
+  sort |
+         # remove -stable
+  sed -e 's/-stable//g' |
+         # convert to 1.2.3-alpha4
+  sed -e 's/0*\([1-9][0-9]*\)/\1/g' \
+      -e 's/00*/0/g' |
+         # select only versions from the selected major version series
+  grep "$MATCH_MAJOR" |
+         # take the last one
+  tail -n 1
+)
+
+declare -a next_versions
+index=1
+
+#
+# In the future, we might want a feature where we can tag
+# the next stable version, or something like that, but that's
+# pretty easy to do manually, when you want to.
+#
+# (It might be useful, though, to show all of the available
+# plausible "next versions" and allow the user to select one.)
+#
+# For now, we will only support incrementing the LAST number
+# in the current version string.
+#
+version_append=
+while [ -n "$current_version" ]
+do
+
+  #
+  # Split $current version up into $version_tail and $version_head
+  #
+  # Current version:  8.0.0-beta11
+  # Version head:     8.0.0-beta
+  # Version tail:     11
+  #
+  version_tail=$(echo $current_version | sed -e 's/\([0-9][0-9]*\)$/z\1/' -e 's/[^z]*z//')
+  version_head=$(echo $current_version | sed -e 's/\([0-9][0-9]*\)$//')
+
+  #
+  # Now we can simply add one to $version_tail,
+  # and we will get the next version.
+  #
+  version_next="$version_head$(($version_tail+1))$version_append"
+
+  #
+  # If we increment the major version ($version_head is empty),
+  # then add an "-alpha1" on the end, to show that we are going
+  # up to the next unstable version.
+  #
+  if [ -z "$version_head" ]
+  then
+    version_next="${version_next}-alpha1"
+  fi
+
+  #
+  # Store this $version_next into the "next_versions"
+  # array under index $index.  Increment the index.
+  #
+  next_versions["$index"]="$version_next"
+  index="$(($index+1))"
+
+  #
+  # Take off the end of the current version.  On the
+  # next iteration through the loop, the version will
+  # be shorter, so the next from the left in the version
+  # will be incremented.  We will keep all of the versions
+  # the same length by appending ".0" to the end of
+  # $version_append as we shorten the current version.
+  #
+  current_version=$(echo $version_head | sed -e 's/[^0-9]*$//')
+
+  # If $version_head ends in a dot, then add a ".0" to $version_append.
+  echo "$version_head" | grep -q '\.$'
+  if [ "$?" == 0 ]
+  then
+    version_append=".0$version_append"
+  else
+    # The current version is in the "alpha" or "beta" stage, then
+    # we will also want to consider the option of advancing to the
+    # next stage (i.e., "-beta1" or "-rc1").
+    stage=$(echo $version_head | sed -e 's/\([a-z]*$\)/z\1/' -e 's/[^z]*z//')
+    case "$stage" in
+      alpha)
+        current_version="$current_version-beta0"
+        ;;
+      beta)
+        current_version="$current_version-rc0"
+        ;;
+    esac
+  fi
+
+done
+
+#
+# In --quick mode, just take the first possible version.
+#
+if $QUICK
+then
+  input=1
+else
+  # Show the user all of the choices, and prompt for one.
+  echo "current verison is $current_version"
+  echo
+  echo "Select a version:"
+  for i in ${!next_versions[@]} ; do
+    echo "$i. ${next_versions[$i]}"
+  done
+  echo -n "> "
+  read -r input
+fi
+
+# Determine what was selected (if anything) and tag it.
+selected="${next_versions[$input]}"
+if [ -n "$selected" ]
+then
+  echo "git tag -a $selected"
+  git tag -a "$selected"
+else
+  echo "Aborted."
+fi
