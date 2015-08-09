@@ -23,5 +23,6 @@ brew tap homebrew/homebrew-php
 brew install php55-xdebug
 
 brew install tree
+brew install hub
 
 brew install nodejs
