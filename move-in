@@ -701,6 +701,12 @@ if $HAS_DISPLAY ; then
 
 echo "# Check preferences and configuration..."
 
+# Make CyberDuck work correctly on MacOS
+if [ "$OS" == "Darwin" ] ; then
+  defaults write ch.sudo.cyberduck ssh.authentication.publickey.default.enable true
+fi
+
+
 # Determine the sublime configuration directory location based on platform
 SUBLIME_CONFIG_DIR="$HOME/.config/sublime-text-3"
 if [ "$OS" == "Windows" ] ; then
