@@ -1,0 +1,91 @@
+#!/bin/bash
+
+#
+# Permanently delete all of the branches (except master) and
+# all of the tags from a local and remote repository.
+#
+# A few notes:
+#
+# - This script is way too destructive for casual use.
+#
+# - This script is not quite destructive enough for reliable
+#   use.  If there are other forks of this repo, the data
+#   will persist there, and might be pushed back to the main
+#   repository by other maintainers.
+#
+# - Sensitive data contained in the repository may persist
+#   in the repository.  See:
+#
+#      https://help.github.com/articles/remove-sensitive-data/
+#
+default_remote=$(git remote show | head -n 1)
+remote=${1-$default_remote}
+
+# Get remote branches
+branches=$(git ls-remote --heads $remote | grep -v master | awk '{ print $2; }' | sed -e 's#refs/heads/##')
+
+# Get remote tags
+tags=$(git ls-remote --tags $remote | grep '[a-zA-Z0-9]$' | awk '{ print $2; }' | sed -e 's#refs/tags/##')
+
+cat << __EOF__
+
+**** WARNING ****
+
+You will delete *ALL* of the following branches:
+
+$branches
+
+and *ALL* of the following tags:
+
+$tags
+
+These will be PERMANENTLY removed from the local repository
+AND WILL ALSO BE DELETED FROM THE REMOTE "$remote".
+
+Are you sure you want to do this (y/n)?
+__EOF__
+
+read prompt
+
+if [ "$prompt" == "y" ] || [ "$prompt" == "yes" ]
+then
+
+  script=/tmp/git-ravage.sh
+
+  (
+    # Iterate over remote branches
+    for branch in $branches
+    do
+      # Delete local branch
+      echo git branch -d $branch
+
+      # Delete remote branch
+      echo git push $remote --delete $branch
+    done
+
+    for tag in $tags
+    do
+      # Delete local tag
+      echo git tag -d $tag
+
+      # Delete remote tag
+      echo git push $remote :refs/tags/$tag
+    done
+  ) > $script
+
+  echo
+  cat $script
+  echo
+
+  echo "Is that what you want to do?"
+  read prompt
+
+  if [ "$prompt" == "y" ] || [ "$prompt" == "yes" ]
+  then
+    chmod +x $script
+    source $script
+    exit 0
+  fi
+fi
+
+echo "Aborted."
