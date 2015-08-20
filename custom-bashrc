@@ -83,6 +83,13 @@ function title {
   printf "\033];$1\007"
 }
 
+# Make yubikey work in current terminal window.
+# It is questionable whether or not this is actually necessary.
+function yubi {
+  export SSH_AUTH_SOCK=$(launchctl getenv SSH_AUTH_SOCK)
+  ssh-add -s /usr/local/lib/opensc-pkcs11.so
+}
+
 function filter-log-by-user {
   if [ -n "$1" ] ; then
     who="$1"
