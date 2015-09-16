@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# Use 'sed $INPLACE' for cross-platform 'sed -i'.
+INPLACE="-i"
+if [ "$OS" == "Darwin" ]
+then
+  INPLACE="-i ''"
+fi
+
 # Incude our private stuff, if the file exists
 PRIVATE_BASHRC="$HOME/local/config/private-bashrc.rc"
 if [ -f "$PRIVATE_BASHRC" ]
@@ -84,6 +91,10 @@ function lastweek() {
   svn log "$1" -r {$(date --date="Monday last week" "+%F")}:{$(date --date="Sunday last week" "+%F")} | filter-log-by-user "$2"
 }
 
+function _title {
+  printf "\033];$1\007"
+}
+
 # Use 'title' function to change the name of your Terminal window.
 # Make them easier to find in the window list.
 function title {
@@ -92,7 +103,87 @@ function title {
   then
     title="$(basename "$(pwd)")"
   fi
-  printf "\033];$title\007"
+  _title "$title"
+
+  termwindow="$HOME/.termwindow/$(tty)"
+  mkdir -p "$termwindow"
+  echo $title > "$termwindow/title"
+  cwd="$(pwd)"
+  echo $cwd > "$termwindow/cwd"
+  last="n/a"
+  if [ -f "$termwindow/stack" ]
+  then
+    last="$(tail -n 1 $termwindow/stack)"
+  fi
+  if [ "$cwd" != "$last" ]
+  then
+    echo $cwd >> $termwindow/stack
+  fi
+}
+
+# Go back to the directory where the 'title' was last run
+function td {
+  termwindow="$HOME/.termwindow/$(tty)"
+  if [ -f "$termwindow/cwd" ]
+  then
+    cwd="$(cat $termwindow/cwd)"
+    title="$(cat $termwindow/title)"
+    _title "$title"
+    cd "$cwd"
+  fi
+}
+
+# Pop off the current 'title' directory and then go
+# back to the last 'title' directory we were at before.
+function pd {
+  termwindow="$HOME/.termwindow/$(tty)"
+  if [ -f "$termwindow/stack" ]
+  then
+    cur="$(tail -n 1 $termwindow/stack)"
+    last="$(tail -n 2 $termwindow/stack | head -n 1)"
+  fi
+  if [ -n "$last" ]
+  then
+    cd "$last"
+    _title "$(basename $last)"
+    echo "$cur" > $termwindow/newstack
+    cat $termwindow/stack | sed '$d' >> $termwindow/newstack
+    mv -f $termwindow/newstack $termwindow/stack
+  fi
+}
+
+# Like pd, but goes in the reverse direction
+function rd {
+  termwindow="$HOME/.termwindow/$(tty)"
+  if [ -f "$termwindow/stack" ]
+  then
+    dir="$(head -n 1 $termwindow/stack)"
+  fi
+  if [ -n "$dir" ]
+  then
+    cd "$dir"
+    sed $INPLACE -e '1d' $termwindow/stack
+    title
+  fi
+}
+
+# Find a directory with a specified name in one of
+# our search locations
+function fd {
+  s="$1"
+  for d in $(echo $FDPATH | tr ':' ' ')
+  do
+    if [ "${d:0:1}" != "/" ]
+    then
+      d="$HOME/$d"
+    fi
+    if [ -d "$d/$s" ]
+    then
+      cd "$d/$s"
+      title
+      break
+    fi
+  done
 }
 
 # Make yubikey work in current terminal window.
