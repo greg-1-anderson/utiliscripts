@@ -54,6 +54,13 @@ alias gl='git log --date=short --pretty=format:"%Cred%h %Cblue%cd %Cgreen%an%Cre
 alias gls='git log --pretty=format:"%Cred%h %Cgreen%an%Creset %s" -12'
 alias gs='git status'
 
+#
+# Terminus aliases
+#
+alias tli='terminus auth login greg.1.anderson@greenknowe.org'
+alias tsa='terminus sites aliases'
+alias ta='tli && tsa'
+
 # Open a browser window on Byron's machine at home
 alias byron='ssh byron@10.100.1.95 /usr/bin/env DISPLAY=":0.0" xdg-open'
 # Tell Byron something
@@ -80,13 +87,18 @@ function lastweek() {
 # Use 'title' function to change the name of your Terminal window.
 # Make them easier to find in the window list.
 function title {
-  printf "\033];$1\007"
+  title="$1"
+  if [ -z "$title" ]
+  then
+    title="$(basename "$(pwd)")"
+  fi
+  printf "\033];$title\007"
 }
 
 # Make yubikey work in current terminal window.
-# It is questionable whether or not this is actually necessary.
 function yubi {
   export SSH_AUTH_SOCK=$(launchctl getenv SSH_AUTH_SOCK)
+  ssh-add -e /usr/local/lib/opensc-pkcs11.so
   ssh-add -s /usr/local/lib/opensc-pkcs11.so
 }
 
@@ -305,27 +317,30 @@ if [ -n "$d" ] ; then
   fi
 fi
 
-# Start up ssh-agent.  From http://mah.everybody.org/docs/ssh
-SSH_ENV="$HOME/.ssh/environment"
+if [ "$(uname -s)" != "Darwin" ]
+then
+  # Start up ssh-agent.  From http://mah.everybody.org/docs/ssh
+  SSH_ENV="$HOME/.ssh/environment"
 
-function start_agent {
-     echo "Initialising new SSH agent..."
-     /usr/bin/ssh-agent | sed 's/^echo/#echo/' > "${SSH_ENV}"
-     echo succeeded
-     chmod 600 "${SSH_ENV}"
-     . "${SSH_ENV}" > /dev/null
-     /usr/bin/ssh-add;
-}
+  function start_agent {
+       echo "Initialising new SSH agent..."
+       /usr/bin/ssh-agent | sed 's/^echo/#echo/' > "${SSH_ENV}"
+       echo succeeded
+       chmod 600 "${SSH_ENV}"
+       . "${SSH_ENV}" > /dev/null
+       /usr/bin/ssh-add;
+  }
 
-# Source SSH settings, if applicable
+  # Source SSH settings, if applicable
 
-if [ -f "${SSH_ENV}" ]; then
-     . "${SSH_ENV}" > /dev/null
-     #ps ${SSH_AGENT_PID} doesn't work under cywgin
-     ps -ef | grep ${SSH_AGENT_PID} | grep ssh-agent$ > /dev/null || {
-         start_agent;
-     }
-else
-     start_agent;
+  if [ -f "${SSH_ENV}" ]; then
+       . "${SSH_ENV}" > /dev/null
+       #ps ${SSH_AGENT_PID} doesn't work under cywgin
+       ps -ef | grep ${SSH_AGENT_PID} | grep ssh-agent$ > /dev/null || {
+           start_agent;
+       }
+  else
+       start_agent;
+  fi
 fi
 
