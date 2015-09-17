@@ -20,9 +20,12 @@ export IGNOREEOF=2
 # Prevent Control-S from freezing terminal output
 stty stop undef
 
-# Locale settings
-export LANGUAGE=en_US.UTF-8
+# Locale settings For chef:
+# https://github.com/berkshelf/berkshelf-api/issues/112#issuecomment-71907310
 export LANG=en_US.UTF-8
+export LANGUAGE=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+export RUBYOPTS="-E utf-8"
 
 OS="$(uname -s)"
 
@@ -433,5 +436,17 @@ then
   else
        start_agent;
   fi
+else
+
+  # For yubikey:
+  eval $(ssh-agent)
+
+  function cleanup {
+    echo "Killing SSH-Agent"
+    kill -9 $SSH_AGENT_PID
+  }
+
+  trap cleanup EXIT
+
 fi
 
