@@ -37,13 +37,13 @@ alias lla='ls -A -l --si'
 alias ll='ls -l --si'
 alias la='ls -A'
 alias l='ls -CF'
-alias f="find -type f \! -path '*/.git/*'"
+alias f="find . -type f \! -path '*/.git/*'"
 alias fj='find . -name "*.java"'
 alias fppt='find . -name "*.ppt"'
 alias fxls='find . -name "*.xls"'
 alias portscan='nmap -sT -O'
 alias openports='portscan localhost'
-alias rmrej='rm `find -name "*.rej"` `find -name "*.orig"`'
+alias rmrej='rm `find . -name "*.rej"` `find -name "*.orig"`'
 alias rot13='tr a-zA-Z n-za-mN-ZA-M'
 alias findtabs="find -not -regex '..*/\..*' -exec grep -HP '\t' {} \;"
 alias pull-all='for x in * ; do if [ -d $x/.git ] ; then ( cd $x ; s=$(git status -s); if [ -z "$s" ] ; then echo "Update $x." ; git pull ; else echo "$x is modified; skipping update." ; fi ) fi done'
