@@ -125,7 +125,7 @@ function title {
 }
 
 # Go back to the directory where the 'title' was last run
-function td {
+function restoredir {
   termwindow="$HOME/.termwindow/$(tty)"
   if [ -f "$termwindow/cwd" ]
   then
@@ -136,8 +136,14 @@ function td {
   fi
 }
 
+# When this function first loads, restore the
+# title and cwd previously saved with this tty.
+restoredir
+
 # Pop off the current 'title' directory and then go
 # back to the last 'title' directory we were at before.
+# If the cwd has moved away from the current directory,
+# then this function will just return us to there.
 function pd {
   termwindow="$HOME/.termwindow/$(tty)"
   if [ -f "$termwindow/stack" ]
@@ -145,13 +151,19 @@ function pd {
     cur="$(tail -n 1 $termwindow/stack)"
     last="$(tail -n 2 $termwindow/stack | head -n 1)"
   fi
-  if [ -n "$last" ]
+  if [ "$(pwd)" != "$cur" ]
   then
-    cd "$last"
-    _title "$(basename $last)"
-    echo "$cur" > $termwindow/newstack
-    cat $termwindow/stack | sed '$d' >> $termwindow/newstack
-    mv -f $termwindow/newstack $termwindow/stack
+    cd "$cur"
+    _title "$(basename $cur)"
+  else
+    if [ -n "$last" ]
+    then
+      cd "$last"
+      _title "$(basename $last)"
+      echo "$cur" > $termwindow/newstack
+      cat $termwindow/stack | sed '$d' >> $termwindow/newstack
+      mv -f $termwindow/newstack $termwindow/stack
+    fi
   fi
 }
 
@@ -187,6 +199,14 @@ function fd {
       break
     fi
   done
+}
+
+# Too indescriminate
+# Filter anything that does not have at least three entries before sending through uniq
+# Ignore "~/." directories and "Libraries"
+function suggest-fdpath {
+  echo "Working..."
+  echo $(find . -name ".git" | sed -e 's#^./##' -e 's#/[^/]*/.git$##' | uniq) | tr ' ' ':'
 }
 
 # Make yubikey work in current terminal window.
