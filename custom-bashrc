@@ -64,6 +64,30 @@ alias gl='git log --date=short --pretty=format:"%Cred%h %Cblue%cd %Cgreen%an%Cre
 alias gls='git log --pretty=format:"%Cred%h %Cgreen%an%Creset %s" -12'
 alias gs='git status'
 
+function recent() {
+  since="${1:-1}"
+  if [ -d .git ]
+  then
+    gl --since="$since days ago"
+  else
+    for d in $(ls -d ./*)
+    do
+      if [ -d "$d/.git" ]
+      then
+      (
+        cd "$d"
+        log=$(gl --since="$since days ago")
+        if [ -n "$log" ]
+        then
+          echo "$(basename $(pwd)):"
+          cat <<< "$log"
+        fi
+      )
+      fi
+    done
+  fi
+}
+
 #
 # Terminus aliases
 #
