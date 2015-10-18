@@ -7,9 +7,23 @@ if [ "$OS" != "Darwin" ] ; then
   exit 1
 fi
 
+#
+# Get brew set up.
+#
 brew update
 brew doctor
 brew upgrade
+
+brew tap homebrew/dupes
+brew tap homebrew/versions
+brew tap homebrew/homebrew-php
+
+#
+# Useful CLI tools
+#
+brew install tree
+brew install hub
+
 
 # I think this is pre-installed
 # brew install mysql
@@ -17,12 +31,20 @@ brew upgrade
 # http://blog.joefallon.net/2013/10/install-mysql-on-mac-osx-using-homebrew/
 
 # https://github.com/Homebrew/homebrew-php
-brew tap homebrew/dupes
-brew tap homebrew/versions
-brew tap homebrew/homebrew-php
-brew install php55-xdebug
 
-brew install tree
-brew install hub
+#
+# I install 5.6 from sources now.
+#
+#brew install php55-xdebug
 
+
+#
+# Some front-end tools
+#
 brew install nodejs
+
+brew install chruby ruby-install
+ruby-install ruby 2.0
+
+brew install node010
+
