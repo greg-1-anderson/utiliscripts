@@ -64,6 +64,22 @@ alias gl='git log --date=short --pretty=format:"%Cred%h %Cblue%cd %Cgreen%an%Cre
 alias gls='git log --pretty=format:"%Cred%h %Cgreen%an%Creset %s" -12'
 alias gs='git status'
 
+
+#
+# Show recent commits.  Can be used on a single repository,
+# or show all of the commits in many repositories to find out
+# what has changed in a set of projects.
+#
+# Usage, single repository:
+#
+#   cd /path/to/project
+#   recent 3
+#
+# Usage, multiple repositories:
+#
+#   cd /path/to/projects/parent
+#   recent 3
+#
 function recent() {
   since="${1:-1}"
   if [ -d .git ]
