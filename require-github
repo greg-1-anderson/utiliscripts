@@ -1,0 +1,123 @@
+#!/usr/bin/env php
+<?php
+
+/**
+ * require-github
+ *
+ * THIS IS CLOSEE, BUT NOT QUITE RIGHT YET.  Adjust composer.json as needed
+ * after running this tool.
+ *
+ * Works like 'composer require org/project', works for GitHub repositories,
+ * buiding the necessary 'packages' entry.
+ *
+ * Typical use-cases include testing GitHub projects that are not yet
+ * registered on Packagist, testing private forks of Packagist projects,
+ * or testing alternate branches (e.g. pull requests) of Packagist
+ * projects.
+ *
+ * Usage:
+ *
+ *    require-github org/project
+ *    require-github org/project pr-branch
+ *
+ *       - or -
+ *
+ *    require-github https://github.com/org/project
+ *    require-github https://github.com/org/project/pr-branch
+ *
+ * This command will insert the necessary 'package' entry in the 'repositories'
+ * section of the composer.json in the current working directory, and also add
+ * the project to the 'require' section.  The project is taken from the
+ * specified GitHub repository. If a branch is not provided, 'master' is
+ * assumed.
+ *
+ * If there is another project with the same name already listed in the
+ * 'require' section, then it is removed. This allows you to use
+ * 'require-github myusername/project pr-branch' to replace 'org/project',
+ * if you wish to test a PR in your own forked copy of the given project.
+ */
+$project_dir = getcwd();
+
+$github_project = FALSE;
+$github_branch = "master";
+
+// Look at the provided commandline arguments and convert them to
+// a standard form.
+if (count($argv) == 1) {
+  $org_proj_branch = preg_replace('#https://github.com/##', '', $argv[1]);
+  $parts = explode('/', $org_proj_branch);
+  if (count($parts) >= 2) {
+    $github_project = $parts[0] . '/' . $parts[1];
+  }
+  if (count($parts) >= 3) {
+    $github_branch = $parts[2];
+  }
+}
+elseif (count($argv) > 1) {
+  $github_project = $argv[1];
+  $github_branch = $argv[2];
+}
+
+// Future: command-line options
+$options = getopt ("dv", array(
+  'version:',
+)) + array(
+  'd' => FALSE,
+  'v' => FALSE,
+  'version' => "1.0",
+);
+
+$placeholder_version = $options['version'];
+
+// Abort with an error if the caller did not specify a project.
+if (!$github_project) {
+  print("Usage:\n   require-github org/project branch\n   require-github https://github.com/org/project/branch");
+  exit(1);
+}
+
+// Get the "org part" and the "project part" from "org/project".
+$parts = explode('/', $github_project);
+if (count($parts) != 2) {
+  print("Error: The github project must always be specified as 'org/project'.");
+  exit(1);
+}
+$org_part = $parts[0];
+$project_part = $parts[1];
+
+// Load the original contents of the composer.json file of the project to modify.
+$composer_json = file_get_contents($project_dir . "/composer.json");
+$composer_json = json_decode($composer_json, TRUE);
+
+// Load the composer.json file for the project we wish to test
+$project_composer_json = file_get_contents("https://raw.githubusercontent.com/$github_project/$github_branch/composer.json");
+$project_composer_json = json_decode($project_composer_json, TRUE);
+
+// Pull the name of the project we wish to test from its composer.json file.
+$github_project_name = $project_composer_json["name"];
+
+// Build a package info record for the project we wish to test.
+$package_info = [ "type" => "package", "package" => $project_composer_json ];
+$package_info["package"]["source"] = [ "url" => "https://github.com/$github_project.git", "type" => "git", "reference" => $github_branch ];
+$package_info["package"]["version"] = $placeholder_version;
+
+// Add our generated package info to the 'repositories' section.
+$composer_json["repositories"][] = $package_info;
+
+// Remove any project from the 'require' section that has the same name as
+// the project we are testing.
+foreach ($composer_json["require"] as $required_project => $project_version) {
+  if (strpos($required_project, "/$project_part")) {
+    unset ($composer_json["require"][$required_project]);
+  }
+}
+
+// Add the project we wish to test to the 'require' section.
+$composer_json["require"][$github_project_name] = "$placeholder_version";
+
+if ($options['v']) {
+  print(json_encode($composer_json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+}
+
+// Write the file when we are done
+file_put_contents("composer.json", json_encode($composer_json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
