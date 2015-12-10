@@ -104,12 +104,6 @@ function recent() {
   fi
 }
 
-#
-# Terminus aliases
-#
-alias tli='terminus auth login greg.1.anderson@greenknowe.org'
-alias tsa='terminus sites aliases'
-alias ta='tli && tsa'
 
 # Turn the whitelist on and off
 function whitelist() { WHITELIST='--whitelist' ; if [ "x$1" == "xoff" ] ; then WHITELIST='--no-whitelist' ; fi ; sudo /sbin/firewall.sh $WHITELIST --log blocked ; }
