@@ -6,7 +6,7 @@
 # Usage:
 #
 #   cd ~/work-dir
-#   GITHUBTOKEN=... ORG=pantheon-cookbooks clone-all
+#   GITHUBTOKEN=... ORG=pantheon-cookbooks clone-all [filter]
 #
 
 if [ -z "$GITHUBTOKEN" ]; then
@@ -19,8 +19,15 @@ if [ -z "$ORG" ]; then
   exit 1
 fi
 
+FILTER=${1-.}
+
+echo "FILTER is $FILTER"
+
 echo "==> Cloning all repos from '$ORG'"
-repos=$(curl -u "$GITHUBTOKEN:x-oauth-basic" -s https://api.github.com/orgs/$ORG/repos\?per_page\=500 | grep '"ssh_url":' | sed -e 's/[^:]*: "//' -e 's/",*$//')
+repos=$(curl -u "$GITHUBTOKEN:x-oauth-basic" -s https://api.github.com/orgs/$ORG/repos\?per_page\=500 | grep '"ssh_url":' | sed -e 's/[^:]*: "//' -e 's/",*$//' | grep -i "$FILTER")
+
+cat <<< $repos
+exit 0
 
 for repo in $repos
 do
