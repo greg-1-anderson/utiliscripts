@@ -61,13 +61,16 @@ elseif (count($argv) > 1) {
 // Future: command-line options
 $options = getopt ("dv", array(
   'version:',
+  'inject',
 )) + array(
   'd' => FALSE,
   'v' => FALSE,
-  'version' => "1.0",
+  'version' => FALSE,
+  'inject' => FALSE,
 );
 
-$placeholder_version = $options['version'];
+$required_version = $options['version'];
+$inject = $options['inject'] || $options['version'];
 
 // Abort with an error if the caller did not specify a project.
 if (!$github_project) {
@@ -95,13 +98,22 @@ $project_composer_json = json_decode($project_composer_json, TRUE);
 // Pull the name of the project we wish to test from its composer.json file.
 $github_project_name = $project_composer_json["name"];
 
-// Build a package info record for the project we wish to test.
-$package_info = [ "type" => "package", "package" => $project_composer_json ];
-$package_info["package"]["source"] = [ "url" => "https://github.com/$github_project.git", "type" => "git", "reference" => $github_branch ];
-$package_info["package"]["version"] = $placeholder_version;
+if ($inject) {
+  // Build a package info record for the project we wish to test.
+  $required_package_info = [ "type" => "package", "package" => $project_composer_json ];
+  $required_package_info["package"]["source"] = [ "url" => "https://github.com/$github_project.git", "type" => "git", "reference" => $github_branch ];
+  $required_package_info["package"]["version"] = $required_version;
+}
+else {
+  $required_package_info = [
+    "type" => "vcs",
+    "url" =>
+  ];
+  $required_version = "dev-$github_branch";
+}
 
-// Add our generated package info to the 'repositories' section.
-$composer_json["repositories"][] = $package_info;
+// Add our generated package info to the top of the 'repositories' section.
+array_unshift($composer_json["repositories"], $required_package_info);
 
 // Remove any project from the 'require' section that has the same name as
 // the project we are testing.
@@ -112,7 +124,7 @@ foreach ($composer_json["require"] as $required_project => $project_version) {
 }
 
 // Add the project we wish to test to the 'require' section.
-$composer_json["require"][$github_project_name] = "$placeholder_version";
+$composer_json["require"][$github_project_name] = "$required_version";
 
 if ($options['v']) {
   print(json_encode($composer_json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
