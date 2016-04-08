@@ -57,7 +57,7 @@ then
     for branch in $branches
     do
       # Delete local branch
-      echo git branch -d $branch
+      echo git branch -D $branch
 
       # Delete remote branch
       echo git push $remote --delete $branch
