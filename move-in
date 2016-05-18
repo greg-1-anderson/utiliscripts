@@ -250,24 +250,6 @@ if [ "$PATH" == "${PATH/.composer/}" ] ; then
   export PATH="$HOME/.composer/vendor/bin:$PATH"
 fi
 
-if [ ! -f "$HOME/.bashrc" ] ; then
-  echo "# Initial .bashrc created by move-in script." > "$HOME/.bashrc"
-fi
-
-chkbashrc="$(grep 'composer/vendor/bin' "$HOME/.bashrc")"
-if [ "X$chkbashrc" = "X" ] ; then
-  sed -e '/^ *$/,$ d' "$HOME/.bashrc" > "$HOME/.bashrc-head"
-  sed -e '1,/^ *$/ d' "$HOME/.bashrc" > "$HOME/.bashrc-body"
-  cp "$HOME/.bashrc-head" "$HOME/.bashrc"
-cat <<- __END__ >> "$HOME/.bashrc"
-[ "\$PATH" == "\${PATH/\$HOME/}" ] && export PATH="\$HOME/bin:\$PATH"
-[ "\$PATH" == "\${PATH/.composer/}" ] && export PATH="\$HOME/.composer/vendor/bin:\$PATH"
-__END__
-  cat "$HOME/.bashrc-body" >> "$HOME/.bashrc"
-  rm "$HOME/.bashrc-head"
-  rm "$HOME/.bashrc-body"
-fi
-
 
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #
@@ -629,10 +611,6 @@ fi
 # Customize bash settings
 #
 
-# If we have not set the location of the UTILISCRIPTS yet,
-# write it to $HOME/.bashrc.  Only do this once, in case
-# the user might care to change it.
-#
 # To make this work right with non-login shells (e.g.
 # `ssh user@host 'command'` or `drush sql-sync @remote @local`),
 # then we need to add the path to the beginning of .bashrc, not the
@@ -648,28 +626,18 @@ cat <<- __END__ > "$HOME/.bashrc"
 
 __END__
 fi
-chkbashrc=$(grep '\(UTILISCRIPTS\)' "$HOME/.bashrc")
-if [ "X$chkbashrc" = "X" ] ; then
+
 UTILISCRIPTS_RELATIVE=$(echo $UTILISCRIPTS | sed -e "s|$HOME/||")
 SSH_KEY_ARCHIVE_RELATIVE=$(echo $SSH_KEY_ARCHIVE| sed -e "s|$HOME/||")
-sed -e '/^ *$/,$ d' "$HOME/.bashrc" > "$HOME/.bashrc-update"
-cat <<- __END__ >> "$HOME/.bashrc-update"
-
-# Add Utiliscripts to the path and export location environment variables
-export UTILISCRIPTS="\$HOME/$UTILISCRIPTS_RELATIVE"
-export SSH_KEY_ARCHIVE="\$HOME/$SSH_KEY_ARCHIVE_RELATIVE"
-[ "\$PATH" == "\${PATH/utiliscripts/}" ] && export PATH="\$UTILISCRIPTS:\$PATH"
-
-__END__
-sed -e '1,/^ *$/ d' "$HOME/.bashrc" >> "$HOME/.bashrc-update"
-mv -f "$HOME/.bashrc-update" "$HOME/.bashrc"
-fi
 
 # Rewrite the "Bash Customizations" section
 HISTORYRECALL_RELATIVE=$(echo $HISTORYRECALL | sed -e "s|$HOME/||")
 sed -i -e '/Include Bash Customizations/,/End Bash Customizations/ d' "$HOME/.bashrc"
-cat <<- __END__ >> "$HOME/.bashrc"
+cat <<- __END__ > /tmp/bashwork
 # Include Bash Customizations
+export UTILISCRIPTS="\$HOME/$UTILISCRIPTS_RELATIVE"
+export SSH_KEY_ARCHIVE="\$HOME/$SSH_KEY_ARCHIVE_RELATIVE"
+
 if [ -n "$(which locale)" ] ; then
   if [ -n "\$(locale -a | grep -i 'en_US.utf8')" ] ; then
     export LC_ALL=en_US.utf8
@@ -688,8 +656,27 @@ if [ -f "\$HISTORYRECALL/historyrc" ]; then
   . "\$HISTORYRECALL/historyrc"
 fi
 
+[ "\$PATH" == "\${PATH/\$HOME/}" ] && export PATH="\$HOME/bin:\$PATH"
+[ "\$PATH" == "\${PATH/utiliscripts/}" ] && export PATH="\$UTILISCRIPTS:\$PATH"
+[ "\$PATH" == "\${PATH/vendor/}" ] && export PATH="./vendor/bin:\$HOME/.composer/vendor/bin:\$PATH"
+
 # End Bash Customizations
 __END__
+
+# Insert bash customizations at the beginning of the bashrc file
+sed '1r /tmp/bashwork' < "$HOME/.bashrc" > /tmp/bashrc
+mv -f /tmp/bashrc $HOME/.bashrc
+rm /tmp/bashwork
+
+# Make sure that the .profile file includes .bashrc
+if [ ! -f "$HOME/.profile" ] ; then
+  echo "# Initial .profile created by move-in script." > "$HOME/.profile"
+fi
+chkprofileforbashrc="$(grep 'bashrc' "$HOME/.profile")"
+if [ "X$chkprofileforbashrc" = "X" ] ; then
+  echo 'source .bashrc' >> ~/.profile
+fi
+
 
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #
@@ -845,10 +832,10 @@ if [ ! -d "$SUBLIME_CONFIG_DIR/Packages/PhpDoc" ] ; then
   git clone git://github.com/SublimeText/PhpDoc.git "$SUBLIME_CONFIG_DIR/Packages/PhpDoc"
 fi
 
-# Install Sublime Drupal snippets
-if [ ! -d "$SUBLIME_CONFIG_DIR/Packages/DrupalSnippets" ] ; then
-  git clone git://gitorious.org/sublime-text-snippets/drupal.git "$SUBLIME_CONFIG_DIR/Packages/DrupalSnippets"
-fi
+# Install Sublime Drupal snippets (these are gone now)
+#if [ ! -d "$SUBLIME_CONFIG_DIR/Packages/DrupalSnippets" ] ; then
+#  git clone git://gitorious.org/sublime-text-snippets/drupal.git "$SUBLIME_CONFIG_DIR/Packages/DrupalSnippets"
+#fi
 
 # Install Suplime php lint
 if [ ! -d "$SUBLIME_CONFIG_DIR/Packages/sublimelint" ] ; then
