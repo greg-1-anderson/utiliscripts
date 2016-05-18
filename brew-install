@@ -2,10 +2,23 @@
 
 OS="$(uname -s)"
 
+if [ "$(whoami)" == "root" ]
+then
+  echo "Do not run brew as root."
+  exit 1
+fi
+
 if [ "$OS" != "Darwin" ] ; then
   echo "This script is only for Macintosh systems."
   exit 1
 fi
+
+if [ -z "$(which brew)" ]
+then
+  echo "You must install brew before running this script.  Visit http://brew.sh/ and see http://blog.strug.de/2012/06/my-homebrew-multi-user-setup/"
+  exit 1
+fi
+
 
 #
 # Get brew set up.
@@ -14,6 +27,10 @@ brew update
 brew doctor
 brew upgrade
 
+
+#
+# Tap some things
+#
 brew tap homebrew/dupes
 brew tap homebrew/versions
 brew tap homebrew/homebrew-php
@@ -32,10 +49,7 @@ brew install hub
 
 # https://github.com/Homebrew/homebrew-php
 
-#
-# I install 5.6 from sources now.
-#
-#brew install php55-xdebug
+brew install php55-xdebug
 
 
 #
@@ -45,6 +59,4 @@ brew install nodejs
 
 brew install chruby ruby-install
 ruby-install ruby 2.0
-
-brew install node010
 
