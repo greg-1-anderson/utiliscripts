@@ -40,6 +40,7 @@ brew tap homebrew/homebrew-php
 #
 brew install tree
 brew install hub
+brew install wget
 
 
 # I think this is pre-installed
