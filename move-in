@@ -56,7 +56,7 @@ fi
 
 [ -z "$INSTALLATION_DATA" ] && export INSTALLATION_DATA="$HOME/local/installdata"
 if [ -z "$INSTALLATION_DATA_REPO" ] ; then
-  if [ "$USER" == "ga" ]
+  if [ "$USER" == "ga" ] || [ "$USER" == "ganderson" ]
   then
     export INSTALLATION_DATA_REPO=ga@hydrogen.greenknowe.org:installdata.git
   fi
@@ -103,7 +103,7 @@ fi
 
 # Location of per-user repositories
 if [ -z "$CONFIG_REPO" ] ; then
-  if [ "$USER" == "ga" ]
+  if [ "$USER" == "ga" ] || [ "$USER" == "ganderson" ]
   then
     export CONFIG_REPO=git@hydrogen.greenknowe.org:config.git
   fi
