@@ -233,7 +233,6 @@ if [ -z "$(which composer)" ] && [ -n "$(which php)" ] ; then
   mv composer.phar "$HOME/bin/composer"
 
   if [ -z "$(which composer)" ] ; then
-    sed -i '1i export PATH=$PATH:$HOME/bin' ~/.bashrc
     export PATH="$PATH:$HOME/bin"
   fi
 fi
@@ -346,12 +345,6 @@ echo "# Check drush..."
 
 DRUSH="$(which drush)"
 
-# Install Drush via composer
-composer global require drush/drush:dev-master --prefer-source
-
-DRUSH="$(which drush)"
-
-# The old way to install
 if [ -z "$DRUSH" ] && [ ! -d  "$HOME/local/drupal/drush" ] ; then
 
   (
@@ -395,6 +388,14 @@ then
   DRUSH="$HOME/local/drupal/drush/drush"
 fi
 
+if [ ! -f "$DRUSH/vendor/autoload.php" ]
+then
+  (
+    cd "$(dirname $DRUSH)"
+    composer install
+  )
+fi
+
 echo "# Check drush extensions..."
 
 DRUSH_EXTENSIONS="$HOME/local/drupal/drush_extensions"
@@ -402,16 +403,16 @@ mkdir -p "$DRUSH_EXTENSIONS"
 
 #   drupalcs \
 for drush_extension in \
-    drush_sup \
-    drush_iq \
-    drush_extras \
-    dbtng_migrator \
-    registry_rebuild \
-    sublime_completion \
+    drush_sup-7.x \
+    drush_iq-7.x \
+    drush_extras-7.x \
+    dbtng_migrator-7.x \
+    registry_rebuild-7.x \
+    sublime_completion-7.x \
     grn-6.x \
-    module_builder \
-    drush_deploy \
-    cacheaudit \
+    module_builder-7.x \
+    drush_deploy-7.x \
+    cacheaudit-7.x \
   ; do
 
 	extension_shortname=$(echo $drush_extension | sed -e 's|-[0-9]*\.x-*[0-9]*\.*[0-9x]*$||');
@@ -657,6 +658,7 @@ if [ -f "\$HISTORYRECALL/historyrc" ]; then
 fi
 
 [ "\$PATH" == "\${PATH/\$HOME/}" ] && export PATH="\$HOME/bin:\$PATH"
+[ "\$PATH" == "\${PATH/drush/}" ] && export PATH="\$HOME/local/drupal/drush:\$PATH"
 [ "\$PATH" == "\${PATH/utiliscripts/}" ] && export PATH="\$UTILISCRIPTS:\$PATH"
 [ "\$PATH" == "\${PATH/vendor/}" ] && export PATH="./vendor/bin:\$HOME/.composer/vendor/bin:\$PATH"
 
