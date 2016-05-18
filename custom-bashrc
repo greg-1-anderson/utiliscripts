@@ -50,6 +50,7 @@ alias pull-all='for x in * ; do if [ -d $x/.git ] ; then ( cd $x ; s=$(git statu
 alias dr=drush
 alias ..='cd ..'
 alias tnq='tag-next -q && git push --tags'
+alias composer-install-all='for x in $(ls */composer.json) ; do ( cd $(dirname $x) ; echo "====== $x ======" ; composer install ); done'
 
 if [ "$OS" == "Darwin" ] ; then
   alias ssh-copy-id='ssh-copy-id.sh'
