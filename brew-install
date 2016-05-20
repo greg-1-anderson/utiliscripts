@@ -42,6 +42,11 @@ brew install tree
 brew install hub
 brew install wget
 
+#
+# Pantheon security
+#
+brew install yubico-piv-tool ykpers opensc
+
 
 # I think this is pre-installed
 # brew install mysql
