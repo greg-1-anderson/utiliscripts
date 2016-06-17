@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# After running this script, we are also going to want:
+# https://github.com/docker/toolbox/releases/download/v1.8.2c/DockerToolbox-1.8.2c.pkg
+
+# For other configuration instructions, see:
+# https://github.com/pantheon-systems/infrastructure
+
+
 OS="$(uname -s)"
 
 if [ "$(whoami)" == "root" ]
@@ -41,6 +48,7 @@ brew tap homebrew/homebrew-php
 brew install tree
 brew install hub
 brew install wget
+brew install jq
 
 #
 # Pantheon security
@@ -65,4 +73,58 @@ brew install nodejs
 
 brew install chruby ruby-install
 ruby-install ruby 2.0
+brew install Caskroom/cask/chefdk
 
+# Some chef gems
+chef gem install rest-client -v 1.7.2
+chef gem install kitchen-docker -v 2.1.0
+
+#
+# Some applicatios
+#
+brew install Caskroom/cask/cyberduck
+
+#
+# Postgres
+#
+# See: https://gist.github.com/kevinelliott/e12aa642a8388baf2499
+# Also: http://exponential.io/blog/2015/02/21/install-postgresql-on-mac-os-x-via-brew/
+#
+brew install postgres --no-ossp-uuid
+brew pin postgres
+
+# Get postgres version
+postgres_version=$(postgres --version | sed -e 's#[^0-9]*##')
+
+# Re-initialize db if none exists already (this is provided at install)
+# initdb /usr/local/var/postgres
+
+# n.b.: extra instructions below could probably be replaced with:
+# brew services start postgres
+
+# Create launchctl script. Use 'sed' to set
+# 'KeepAlive' and 'RunAtLoad' to 'false'.
+mkdir -p ~/Library/LaunchAgents
+sed -e '/KeepAlive/{n;s#.*#  <false/>#;}' -e '/RunAtLoad/{n;s#.*#  <false/>#;}' /usr/local/Cellar/postgresql/$postgres_version/homebrew.mxcl.postgresql.plist > ~/Library/LaunchAgents/homebrew.mxcl.postgresql.plist
+
+# Inject launchctl script
+launchctl load -w ~/Library/LaunchAgents/homebrew.mxcl.postgresql.plist
+
+# Start PostgreSQL
+# postgres -D /usr/local/var/postgres
+
+
+#
+# Mysql
+#
+# See: https://coderwall.com/p/os6woq/uninstall-all-those-broken-versions-of-mysql-and-re-install-it-with-brew-on-mac-mavericks
+#
+# Although the extra instructions in that article do not seem to be necessary
+#
+brew install mysql
+
+# Start mysql, and have it run on restart as well:
+# brew services start mysql
+
+# Start mysql, but do not run it on restart:
+# mysql.server start
