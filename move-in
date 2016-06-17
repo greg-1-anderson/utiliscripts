@@ -690,11 +690,26 @@ if $HAS_DISPLAY ; then
 
 echo "# Check preferences and configuration..."
 
-# Make CyberDuck work correctly on MacOS
 if [ "$OS" == "Darwin" ] ; then
+# Make CyberDuck work correctly on MacOS
   defaults write ch.sudo.cyberduck ssh.authentication.publickey.default.enable true
-fi
 
+  #Set a blazingly fast keyboard repeat rate
+  defaults write NSGlobalDomain KeyRepeat -int 0.02
+
+  #Set a shorter Delay until key repeat
+  defaults write NSGlobalDomain InitialKeyRepeat -int 12
+
+  #Add a context menu item for showing the Web Inspector in web views
+  defaults write NSGlobalDomain WebKitDeveloperExtras -bool true
+
+  #Show the ~/Library folder
+  chflags nohidden ~/Library
+
+  #Set screenshots location
+  mkdir ~/Desktop/Screenshots
+  defaults write com.apple.screencapture location ~/Pictures/Screenshots
+fi
 
 # Determine the sublime configuration directory location based on platform
 SUBLIME_CONFIG_DIR="$HOME/.config/sublime-text-3"
