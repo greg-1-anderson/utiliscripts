@@ -69,11 +69,15 @@ brew install php55-xdebug
 #
 # Some front-end tools
 #
-brew install nodejs
+brew install node nodejs
+gem install bundler
+gem install foreman
 
 brew install chruby ruby-install
 ruby-install ruby 2.0
-brew install Caskroom/cask/chefdk
+
+# Must install chefdk 0.9.0
+#brew install Caskroom/cask/chefdk
 
 # Some chef gems
 chef gem install rest-client -v 1.7.2
