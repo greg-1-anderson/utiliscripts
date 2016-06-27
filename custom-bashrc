@@ -53,7 +53,8 @@ alias tnq='tag-next -q && git push --tags'
 alias composer-install-all='for x in $(ls */composer.json) ; do ( cd $(dirname $x) ; echo "====== $x ======" ; composer install ); done'
 
 # Run a web server with Python. See: http://www.linuxjournal.com/content/tech-tip-really-simple-http-server-python
-alias pyserver='python -m SimpleHTTPServer'
+alias pyserve='python -m SimpleHTTPServer'
+alias pyserver=pyserve
 
 if [ "$OS" == "Darwin" ] ; then
   alias ssh-copy-id='ssh-copy-id.sh'
