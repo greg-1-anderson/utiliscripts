@@ -52,6 +52,9 @@ alias ..='cd ..'
 alias tnq='tag-next -q && git push --tags'
 alias composer-install-all='for x in $(ls */composer.json) ; do ( cd $(dirname $x) ; echo "====== $x ======" ; composer install ); done'
 
+# Run a web server with Python. See: http://www.linuxjournal.com/content/tech-tip-really-simple-http-server-python
+alias pyserver='python -m SimpleHTTPServer'
+
 if [ "$OS" == "Darwin" ] ; then
   alias ssh-copy-id='ssh-copy-id.sh'
   alias sublime_text='/Applications/Sublime\ Text.app/Contents/MacOS/Sublime\ Text'
