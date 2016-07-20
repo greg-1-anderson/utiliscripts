@@ -49,6 +49,7 @@ brew install tree
 brew install hub
 brew install wget
 brew install jq
+brew install mkdocs
 
 #
 # Pantheon security
@@ -87,6 +88,12 @@ chef gem install kitchen-docker -v 2.1.0
 # Some applicatios
 #
 brew install Caskroom/cask/cyberduck
+
+# Danger -- don't leave this running too long, it will run away
+# with your cpu and all of your memory.  I can't stand the other
+# clients, though, so oh well.
+brew install Caskroom/cask/colloquy
+
 
 #
 # Postgres
