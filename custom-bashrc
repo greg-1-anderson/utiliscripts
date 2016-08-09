@@ -230,6 +230,26 @@ function fd {
   done
 }
 
+# List all of the projects (directories) in FDPATH
+FD_PROJECTS="$((cd && find $(echo $FDPATH | tr ':' ' ') -maxdepth 1 -type d 2>/dev/null) | sed -e 's#.*/##' | sort | uniq)"
+
+# typeahed / complete function for the 'fd' command
+_fd_complete ()   #  By convention, the function name
+{                 #+ starts with an underscore.
+  local cur
+  # Pointer to current completion word.
+  # By convention, it's named "cur" but this isn't strictly necessary.
+
+  COMPREPLY=()   # Array variable storing the possible completions.
+  cur=${COMP_WORDS[COMP_CWORD]}
+
+  COMPREPLY=( $( compgen -W "$FD_PROJECTS" -- $cur ) )
+
+  return 0
+}
+
+complete -F _fd_complete fd
+
 # Find repositories in the fd path that have uncommitted changes
 function uncommitted {
   s="$1"
