@@ -56,6 +56,10 @@ alias composer-install-all='for x in $(ls */composer.json) ; do ( cd $(dirname $
 alias pyserve='python -m SimpleHTTPServer'
 alias pyserver=pyserve
 
+# Run a web server with php
+alias phpserve='php -S 127.0.0.1:8001'
+alias phpserver=phpserve
+
 if [ "$OS" == "Darwin" ] ; then
   alias ssh-copy-id='ssh-copy-id.sh'
   alias sublime_text='/Applications/Sublime\ Text.app/Contents/MacOS/Sublime\ Text'
