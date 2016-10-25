@@ -30,10 +30,14 @@ export RUBYOPTS="-E utf-8"
 OS="$(uname -s)"
 
 # Bash completion. Requires bash-completion. c.f. brew-install script.
-# Unfortunately, this does not work. Many completion scripts have syntax errors.
-#if [ "$OS" == "Darwin" ] && [ -f $(brew --prefix)/etc/bash_completion ]; then
-#  . $(brew --prefix)/etc/bash_completion
-#fi
+# Many of these scripts fail with syntax errors, even after upgrading
+# bash; however, others work well, so we will just ignore errors.
+if [ "$OS" == "Darwin" ] && [ -f $(brew --prefix)/etc/bash_completion ]; then
+  . $(brew --prefix)/etc/bash_completion 2>/dev/null
+fi
+if [ -f /etc/bash_completion ]; then
+  . /etc/bash_completion 2>/dev/null
+fi
 
 #
 # Some aliases and functions that Greg likes:
