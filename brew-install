@@ -64,7 +64,7 @@ brew install yubico-piv-tool ykpers opensc
 
 # https://github.com/Homebrew/homebrew-php
 
-brew install php55-xdebug
+brew install php70-xdebug
 
 
 #
