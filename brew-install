@@ -41,15 +41,18 @@ brew upgrade
 brew tap homebrew/dupes
 brew tap homebrew/versions
 brew tap homebrew/homebrew-php
+brew tap homebrew/completions
 
 #
 # Useful CLI tools
 #
+brew install bash
 brew install tree
 brew install hub
 brew install wget
 brew install jq
 brew install mkdocs
+brew install bash-completion
 
 #
 # Pantheon security

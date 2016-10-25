@@ -29,6 +29,12 @@ export RUBYOPTS="-E utf-8"
 
 OS="$(uname -s)"
 
+# Bash completion. Requires bash-completion. c.f. brew-install script.
+# Unfortunately, this does not work. Many completion scripts have syntax errors.
+#if [ "$OS" == "Darwin" ] && [ -f $(brew --prefix)/etc/bash_completion ]; then
+#  . $(brew --prefix)/etc/bash_completion
+#fi
+
 #
 # Some aliases and functions that Greg likes:
 #
