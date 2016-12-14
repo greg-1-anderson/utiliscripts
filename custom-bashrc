@@ -62,6 +62,7 @@ alias ..='cd ..'
 alias tnq='tag-next -q && git push --tags'
 alias composer-install-all='for x in $(ls */composer.json) ; do ( cd $(dirname $x) ; echo "====== $x ======" ; composer install ); done'
 alias t1='php $HOME/pantheon/t1/bin/terminus'
+alias cimt='ssh -A cimt.getpantheon.com'
 
 # Run a web server with Python. See: http://www.linuxjournal.com/content/tech-tip-really-simple-http-server-python
 alias pyserve='python -m SimpleHTTPServer'
