@@ -246,7 +246,7 @@ fi
 # Insure that the vendor/bin directory is on our PATH as well
 
 if [ "$PATH" == "${PATH/.composer/}" ] ; then
-  export PATH="$HOME/.composer/vendor/bin:$PATH"
+  export PATH="$PATH:$HOME/.composer/vendor/bin"
 fi
 
 
@@ -660,7 +660,7 @@ fi
 [ "\$PATH" == "\${PATH/\$HOME/}" ] && export PATH="\$HOME/bin:\$PATH"
 [ "\$PATH" == "\${PATH/drush/}" ] && export PATH="\$HOME/local/drupal/drush:\$PATH"
 [ "\$PATH" == "\${PATH/utiliscripts/}" ] && export PATH="\$UTILISCRIPTS:\$PATH"
-[ "\$PATH" == "\${PATH/vendor/}" ] && export PATH="./vendor/bin:\$HOME/.composer/vendor/bin:\$PATH"
+[ "\$PATH" == "\${PATH/vendor/}" ] && export PATH="\$PATH:./vendor/bin:\$HOME/.composer/vendor/bin"
 
 # End Bash Customizations
 __END__
