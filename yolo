@@ -1,0 +1,94 @@
+#!/bin/bash
+
+STAGE=$HOME/stage
+if [ "$HOME" == "/root" ] ; then
+  STAGE="$(pwd | sed 's#/home/\([^/]*\).*#/home/\1/stage#')"
+fi
+
+LIVE=/opt/pantheon/infrastructure/cookbooks
+#LIVE=$HOME/test
+
+echo "YOLO from $STAGE to $LIVE"
+DO=echo
+operation=yolo_rollout
+
+if [ "x$1" == "xrollback" ]
+then
+  operation=yolo_rollback
+fi
+
+projects=$(ls -1 $STAGE)
+echo "projects: $projects"
+
+#
+# Roll out the 'stage' directory
+#
+function yolo_rollout() {
+
+  mkdir -p $LIVE
+
+  for cb in $projects ; do
+    echo "------------------------------------"
+    echo "# $cb cookbook:"
+    src=$STAGE/$cb
+    dst=$LIVE/$cb
+    bak=$dst.bak
+    if [ -h $dst ]
+    then
+      $DO rm -f $dst
+    else
+      $DO mv -f $dst $bak
+    fi
+    $DO ln -s $src $dst
+  done
+}
+
+#
+# Forget about the 'stage' directory, put things back
+# the way they were
+#
+function yolo_rollback() {
+
+  for cb in $projects ; do
+    echo "------------------------------------"
+    echo "# $cb cookbook:"
+    src=$STAGE/$cb
+    dst=$LIVE/$cb
+    bak=$dst.bak
+    if [ -h $dst ] && [ -d $bak ]
+    then
+      $DO rm -f $dst
+      $DO mv -f $bak $dst
+    else
+      [ -d $bak ] && $DO rm -rf $bak
+    fi
+  done
+}
+
+#
+# Show the user what is about to happen
+#
+$operation
+
+#
+# Prompt and confirm before continuing
+#
+echo
+echo -n "Does that look right? (y/n)? "
+read confirm
+
+if [ "x$confirm" != "xy" ]
+then
+  if [ "x$confirm" != "xn" ]
+  then
+    echo "Please enter 'y' or 'n'."
+  fi
+  exit 0
+fi
+
+#
+# If the user said go, then do it
+#
+DO=sudo
+$operation
+
