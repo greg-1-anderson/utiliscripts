@@ -20,6 +20,10 @@ export IGNOREEOF=2
 # Prevent Control-S from freezing terminal output
 stty stop undef
 
+export UNISH_TMP=$HOME/tmp/drush-tmp
+mkdir -p $UNISH_TMP
+export UNISH_NO_TIMEOUTS=1
+
 # Locale settings For chef:
 # https://github.com/berkshelf/berkshelf-api/issues/112#issuecomment-71907310
 export LANG=en_US.UTF-8
