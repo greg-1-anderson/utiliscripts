@@ -662,6 +662,13 @@ fi
 [ "\$PATH" == "\${PATH/utiliscripts/}" ] && export PATH="\$UTILISCRIPTS:\$PATH"
 [ "\$PATH" == "\${PATH/vendor/}" ] && export PATH="\$PATH:./vendor/bin:\$HOME/.composer/vendor/bin"
 
+if [ -d "\$HOME/.phpenv" ] ; then
+  [ "\$PATH" == "\${PATH/phpenv/}" ] && export PATH="\$HOME/.phpenv/bin:\$PATH"
+
+  # Enable phpenv shims
+  eval "\$(phpenv init -)"
+fi
+
 # End Bash Customizations
 __END__
 
@@ -695,10 +702,10 @@ if [ "$OS" == "Darwin" ] ; then
   defaults write ch.sudo.cyberduck ssh.authentication.publickey.default.enable true
 
   #Set a blazingly fast keyboard repeat rate
-  defaults write NSGlobalDomain KeyRepeat -int 0.02
+#  defaults write NSGlobalDomain KeyRepeat -int 1
 
   #Set a shorter Delay until key repeat
-  defaults write NSGlobalDomain InitialKeyRepeat -int 12
+#  defaults write NSGlobalDomain InitialKeyRepeat -int 12
 
   #Add a context menu item for showing the Web Inspector in web views
   defaults write NSGlobalDomain WebKitDeveloperExtras -bool true
@@ -707,8 +714,12 @@ if [ "$OS" == "Darwin" ] ; then
   chflags nohidden ~/Library
 
   #Set screenshots location
-  mkdir ~/Desktop/Screenshots
-  defaults write com.apple.screencapture location ~/Pictures/Screenshots
+  mkdir -p ~/Google\ Drive/Pictures/Screenshots/
+  defaults write com.apple.screencapture location ~/Google\ Drive/Pictures/Screenshots/
+
+  # Don't let mouse-scrolling-twiches get converted into forward/back in Chrome
+  defaults write com.google.Chrome AppleEnableSwipeNavigateWithScrolls -bool FALSE
+
 fi
 
 # Determine the sublime configuration directory location based on platform
@@ -866,18 +877,6 @@ fi
 #  hg clone https://bitbucket.org/sublimator/sublime-2-zencoding "$SUBLIME_CONFIG_DIR/Packages/sublime-2-zencoding"
 #fi
 
-
-#
-# Mac-specific settings
-#
-if [ "$OS" == "Darwin" ] ; then
-  # Don't let mouse-scrolling-twiches get converted into forward/back in Chrome
-  defaults write com.google.Chrome AppleEnableSwipeNavigateWithScrolls -bool FALSE
-
-  # Set the location where screenshots are saved
-  defaults write com.apple.screencapture location ~/Pictures/Screenshots/
-
-fi
 
 
 #
