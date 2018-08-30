@@ -562,15 +562,15 @@ then
 else
 
   # For yubikey:
-  eval $(ssh-agent)
-  ssh-add
+#  eval $(ssh-agent)
+#  ssh-add
 
   function cleanup {
     echo "Killing SSH-Agent"
     kill -9 $SSH_AGENT_PID
   }
 
-  trap cleanup EXIT
+#  trap cleanup EXIT
 
 fi
 
