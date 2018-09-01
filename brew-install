@@ -53,6 +53,7 @@ brew install wget
 brew install jq
 brew install mkdocs
 brew install bash-completion
+brew install bat
 
 #
 # Pantheon security
