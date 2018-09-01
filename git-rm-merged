@@ -1,0 +1,127 @@
+#!/usr/bin/env php
+<?php
+
+function find_pull_requests($project, $state)
+{
+    exec("curl 'https://api.github.com/repos/$project/pulls?state=$state&per_page=100 2>/dev/null'", $pr_json, $status);
+    $prs = json_decode(implode("\n", $pr_json), true);
+    return $prs;
+}
+
+function find_specific_pull_request($project, $branch, $state = 'all')
+{
+    $org = preg_replace('#/.*#', '', $project);
+    $search = "repos/$project/pulls?state=$state&head=$org:$branch";
+    print "search: $search\n";
+    exec("curl 'https://api.github.com/$search 2>/dev/null'", $pr_json, $status);
+    $prs = json_decode(implode("\n", $pr_json), true);
+
+    if (!$prs) {
+         print "boom\n";
+         print implode("\n", $pr_json);
+         exit(1);
+    }
+    $pr = reset($prs);
+
+    if ($pr['head']['ref'] != $branch) {
+        print "there was a match for the wrong branch\n";
+        return false;
+    }
+
+    if ($pr['state'] == 'open') {
+        print "found it but it is still open\n";
+        return false;
+    }
+
+    print "found one!\n";
+
+    return $pr;
+}
+
+function find_remote_branches($dir, $remote = 'origin')
+{
+    // Get remote branches
+    exec("git -C $dir ls-remote --heads $remote | awk '{ print $2; }' | sed -e 's#refs/heads/##'", $branches, $status);
+    return $branches;
+}
+
+function find_local_branches($dir)
+{
+    exec("git -C $dir branch -l", $branches, $status);
+    return array_map(
+        function ($item) {
+            return substr($item, 2);
+        },
+        $branches
+    );
+}
+
+function is_merged($pr)
+{
+    return $pr['state'] != 'open';
+}
+
+function filter_branches($branches)
+{
+    return array_filter(
+        $branches,
+        function ($item) {
+            return ($item != 'master') && !preg_match('#\.x$#', $item);
+        }
+    );
+}
+
+$project = 'drush-ops/drush';
+
+$remote_branches = filter_branches(find_remote_branches('.'));
+print "Remote branches:\n";
+var_export($remote_branches);
+print "\n";
+
+$local_branches = filter_branches(find_local_branches('.'));
+print "Local branches:\n";
+var_export($local_branches);
+print "\n";
+
+$local_and_remote_branches = array_merge($local_branches, $remote_branches);
+
+// We want to remove any local or remote branch that has
+// an existing pull request that has been closed.
+$branches_to_remove = array_filter(
+    $local_and_remote_branches,
+    function ($branch) use ($project) {
+        $pr = find_specific_pull_request($project, $branch);
+        return $pr !== false;
+    }
+);
+
+print "Branches to remove:\n";
+var_export($branches_to_remove);
+
+exit(0);
+
+$prs = find_pull_requests($project, 'closed');
+$merged_branches = [];
+$open_branches = [];
+foreach ($prs as $n => $pr) {
+    $branch = $pr['head']['ref'];
+    $merged_branches[] = $branch;
+}
+
+print "merged branches:\n";
+var_export($merged_branches);
+print "\n";
+
+$remote_to_remove = array_intersect($remote_branches, $merged_branches);
+print "remote branches to remove:\n";
+var_export($remote_to_remove);
+print "\n";
+
+$local_to_remove = array_intersect($local_branches, $merged_branches);
+print "local branches to remove:\n";
+var_export($local_to_remove);
+print "\n";
+
+// TODO: Remove any branch named 'master' or '8.x' or similar
+
+// TODO: This does not detect many branches.
