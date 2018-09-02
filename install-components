@@ -51,7 +51,7 @@ groups["kde"]="kde-utils"
 packages[reader-editor]="nedit"
 # acroread is not part of default package sources; put in w/ codecs?
 
-packages[kde-utils]="konqueror kcalc"
+packages[kde-utils]="kcalc"
 
 #
 # Graphic manipulation packages
@@ -72,9 +72,9 @@ groups["system"]="admin intl network system-gui repository compress"
 #
 # apt-file allows searching for files in packages
 # dpgk-dev is needed for certain local apt operations
-# sysv-rc-conf controls which services start at boot (like Redhat's chkconfig)
+# sysv-rc-conf / chkconfig are not in ubuntu; update-rc.d (pre-installed) is used instead
 #
-packages["admin"]="apt-file dpkg-dev sysv-rc-conf mcrypt"
+packages["admin"]="apt-file dpkg-dev mcrypt"
 
 # TODO: this is only for Dell laptops
 #packages["intl"]="i8kutils"
@@ -94,40 +94,25 @@ packages["compress"]="sharutils zip p7zip "
 
 groups["database"]="postgres mysql sqlite"
 
-# Selecting oracle-java will deselect open-java.  We list both here so that --no-programming will remove both Java flavors.
-groups["programming"]="compile-build dev-docs webservices debug ide repository compress oracle-java open-java python ${groups[database]}"
+groups["programming"]="compile-build dev-docs webservices debug ide repository compress python ${groups[database]}"
 
-# Again, to allow --no-java
-groups["java"]="oracle-java open-java"
+packages["compile-build"]="g++ autoconf automake libtool libc6 flex bison libncurses5-dev"
 
-packages["compile-build"]="g++ autoconf automake1.9 libtool libc6 flex bison libncurses5-dev"
-
-# php-doc not available on lucid.
-# http://tronprog.blogspot.com/2010/05/package-php-doc-missing-in-ubuntu-lucid.html
-if [ "$ubuntuRevision" != "lucid" ] ; then
-  packages["dev-docs"]="manpages-dev php-doc"
-else
-  packages["dev-docs"]="manpages-dev"
-fi
+packages["dev-docs"]="manpages-dev"
 
 packages["kernel"]="build-essential linux-headers-generic"
 # linux-kernel-devel
 
 packages["internet"]="chromium-browser"
 
-packages["webservices"]="apache2 php5 libssl-dev php-pear libapache2-mod-php5 phpsysinfo php5-cli php5-pgsql php5-gd php5-xsl php5-tidy apache2-doc php5-cgi"
+packages["webservices"]="apache2 php-xml libssl-dev libapache2-mod-php php-pgsql php-gd php-xsl php-tidy apache2-doc php-cgi"
 
 packages["postgres"]="postgresql libdbi-perl libdbd-pg-perl"
 
-packages["sqlite"]="sqlite php5-sqlite"
+packages["sqlite"]="sqlite3 php-sqlite3"
 
-packages["mysql"]="libdbd-mysql-perl libdbd-mysql mysql-client mysql-server php5-mysql"
+packages["mysql"]="libdbd-mysql-perl libdbd-mysql mysql-client mysql-server php-mysql"
 # mysql-doc
-
-# http://www.canato.org/2012/06/install-oracle-jdk-7-on-linux-mint-13-ubuntu-12-04/
-packages["oracle-java"]="oracle-java7-installer ant java2html"
-
-packages["open-java"]="openjdk-7-jdk ant java2html"
 
 # For phpsh, we need easy_install (python-pip), Python.h (python-dev) and ncurses (libncurses5-dev).
 packages["python"]="python-pip python-dev"
@@ -135,7 +120,7 @@ packages["python"]="python-pip python-dev"
 #
 # valgrind will find memory leaks, etc.
 #
-packages["debug"]="valgrind php5-xdebug"
+packages["debug"]="valgrind php-xdebug"
 
 packages["ide"]="eclipse" # and netbeans
 
@@ -304,25 +289,7 @@ for add in $yes_list ; do
 		$verbose && echo "Select $add: ${packages[$add]}" >&2
 		install_list[$add]=${packages[$add]}
 	fi
-	# If 'open-java' is explicitly added, then remove oracle-java
-	if [ "$add" == "open-java" ] ; then
-		unset install_list[oracle-java]
-	fi
 done
-
-# If the selected sections include 'java', then add the
-# repository that contains Oracle Java.  Skip this step
-# if Java is already installed
-selected="${!install_list[@]}"
-if [ "${selected}" != "${selected/oracle-java}" ] ; then
-	if [ -z "$(which java)" ] ; then
-		add-apt-repository ppa:webupd8team/java
-		apt-get update
-	else
-		unset install_list[oracle-java]
-	fi
-	unset install_list[open-java]
-fi
 
 echo "Package sets selected for installation: ${!install_list[@]}"
 echo ${install_list[@]}
