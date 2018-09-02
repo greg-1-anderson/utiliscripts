@@ -522,8 +522,11 @@ function _update_ps1() {
     PS1="$(~/go/bin/powerline-go -error $?)"
 }
 
-if [ "$TERM" != "linux" ]; then
-    PROMPT_COMMAND="_update_ps1;"
+s=`which powerline-go 2>/dev/null`
+if [ -n "$s" ] ; then
+	if [ "$TERM" != "linux" ]; then
+	    PROMPT_COMMAND="_update_ps1;"
+	fi
 fi
 
 # Assume that we will use vi
