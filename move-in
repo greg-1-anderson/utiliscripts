@@ -58,7 +58,7 @@ fi
 if [ -z "$INSTALLATION_DATA_REPO" ] ; then
   if [ "$USER" == "ga" ] || [ "$USER" == "ganderson" ]
   then
-    export INSTALLATION_DATA_REPO=ga@hydrogen.greenknowe.org:installdata.git
+    export INSTALLATION_DATA_REPO=ga@radium.greenknowe.org:installdata.git
   fi
 fi
 
@@ -105,7 +105,7 @@ fi
 if [ -z "$CONFIG_REPO" ] ; then
   if [ "$USER" == "ga" ] || [ "$USER" == "ganderson" ]
   then
-    export CONFIG_REPO=git@hydrogen.greenknowe.org:config.git
+    export CONFIG_REPO=git@radium.greenknowe.org:config.git
   fi
 fi
 
@@ -475,7 +475,7 @@ if $HAS_DISPLAY && [ "$OS" != "Darwin" ] ; then
     architecture=64
   fi
 
-  sublime_url=`curl http://www.sublimetext.com/3 2>/dev/null | grep "a href.*_x$architecture.tar.bz2" | sed -e 's/.*href="\([^"]*\).*/\1/'`
+  sublime_url=`curl http://www.sublimetext.com/3 2>/dev/null | grep "a href.*_x$architecture.tar.bz2" | sed -e "s#.*href=\"\([^:]*://[^/]*/sublime_text_[0-9]*_build_[0-9]*_x$architecture.tar.bz2\).*#\1#"`
   if [ -z "$sublime_url" ] ; then
     sublime_url="http://c758482.r82.cf2.rackcdn.com/sublime_text_3_build_3047_x$architecture.tar.bz2"
   fi
