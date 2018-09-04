@@ -654,7 +654,7 @@ if [ -f "\$UTILISCRIPTS/custom-bashrc" ]; then
 fi
 export HISTORYRECALL="\$HOME/$HISTORYRECALL_RELATIVE"
 if [ -f "\$HISTORYRECALL/historyrc" ]; then
-  . "\$HISTORYRECALL/historyrc"
+  tty -s && . "\$HISTORYRECALL/historyrc"
 fi
 
 [ "\$PATH" == "\${PATH/\$HOME/}" ] && export PATH="\$HOME/bin:\$PATH"

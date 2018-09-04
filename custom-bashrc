@@ -18,7 +18,7 @@ fi
 export IGNOREEOF=2
 
 # Prevent Control-S from freezing terminal output
-stty stop undef
+tty -s && stty stop undef
 
 export UNISH_TMP=$HOME/tmp/drush-tmp
 mkdir -p $UNISH_TMP
