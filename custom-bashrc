@@ -87,7 +87,10 @@ fi
 #
 # Git aliases
 #
-git config --global alias.unstage 'reset HEAD --'
+chkunstage=$(git config --global alias.unstage)
+if [ -z "$chkunstage" ] ; then
+  git config --global alias.unstage 'reset HEAD --'
+fi
 alias gl='git log --date=short --pretty=format:"%Cred%h %Cblue%cd %Cgreen%an%Creset %s" -12'
 alias gls='git log --pretty=format:"%Cred%h %Cgreen%an%Creset %s" -12'
 alias gs='git status'
@@ -524,7 +527,8 @@ fi
 # The powerline-go prompt
 
 function _update_ps1() {
-    PS1="$(~/go/bin/powerline-go -error $?)"
+    # Removed the modules "user" and "host"
+    PS1="$(~/go/bin/powerline-go -modules "venv,ssh,cwd,perms,git,hg,jobs,exit,root" -theme low-contrast -error $?)"
 }
 
 s=`which powerline-go 2>/dev/null`
