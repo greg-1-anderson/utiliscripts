@@ -145,6 +145,11 @@ alias kud='kubectl describe'
 alias kube-whereami='kubectl config current-context'
 alias kuw='kubectl config current-context'
 
+alias pk1='kubectl --namespace=production --context c1'
+alias pk2='kubectl --namespace=production --context c2'
+# Remember to sync sandbox name with ~/.kube/config and ~/.pants.yml
+alias sbk1='kubectl --namespace=sandbox-greg1a --context g1a'
+
 # show all clusters
 function list-kube-clusters {
    kubectl config view -o template --template='{{range .users}}{{.name}}{{println " "}}{{end}}'
