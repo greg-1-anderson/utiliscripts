@@ -42,6 +42,7 @@ brew tap homebrew/dupes
 brew tap homebrew/versions
 brew tap homebrew/homebrew-php
 brew tap homebrew/completions
+brew tap homebrew/cask
 
 #
 # Useful CLI tools
@@ -60,17 +61,6 @@ brew install bat
 #
 brew install yubico-piv-tool ykpers opensc
 
-
-# I think this is pre-installed
-# brew install mysql
-# TODO: Should we also configure software, e.g. mysql, per:
-# http://blog.joefallon.net/2013/10/install-mysql-on-mac-osx-using-homebrew/
-
-# https://github.com/Homebrew/homebrew-php
-
-brew install php70-xdebug
-
-
 #
 # Some front-end tools
 #
@@ -78,25 +68,26 @@ brew install node nodejs
 gem install bundler
 gem install foreman
 
-brew install chruby ruby-install
-ruby-install ruby 2.0
+# brew install chruby ruby-install
+# ruby-install ruby 2.0
 
 # Must install chefdk 0.9.0
 #brew install Caskroom/cask/chefdk
 
 # Some chef gems
-chef gem install rest-client -v 1.7.2
-chef gem install kitchen-docker -v 2.1.0
+# chef gem install rest-client -v 1.7.2
+# chef gem install kitchen-docker -v 2.1.0
 
 #
 # Some applicatios
 #
 brew install Caskroom/cask/cyberduck
+brew cask install gimp
 
 # Danger -- don't leave this running too long, it will run away
 # with your cpu and all of your memory.  I can't stand the other
 # clients, though, so oh well.
-brew install Caskroom/cask/colloquy
+# brew install Caskroom/cask/colloquy
 
 
 #
@@ -105,11 +96,11 @@ brew install Caskroom/cask/colloquy
 # See: https://gist.github.com/kevinelliott/e12aa642a8388baf2499
 # Also: http://exponential.io/blog/2015/02/21/install-postgresql-on-mac-os-x-via-brew/
 #
-brew install postgres --no-ossp-uuid
-brew pin postgres
+# brew install postgres --no-ossp-uuid
+# brew pin postgres
 
 # Get postgres version
-postgres_version=$(postgres --version | sed -e 's#[^0-9]*##')
+# postgres_version=$(postgres --version | sed -e 's#[^0-9]*##')
 
 # Re-initialize db if none exists already (this is provided at install)
 # initdb /usr/local/var/postgres
@@ -119,11 +110,11 @@ postgres_version=$(postgres --version | sed -e 's#[^0-9]*##')
 
 # Create launchctl script. Use 'sed' to set
 # 'KeepAlive' and 'RunAtLoad' to 'false'.
-mkdir -p ~/Library/LaunchAgents
-sed -e '/KeepAlive/{n;s#.*#  <false/>#;}' -e '/RunAtLoad/{n;s#.*#  <false/>#;}' /usr/local/Cellar/postgresql/$postgres_version/homebrew.mxcl.postgresql.plist > ~/Library/LaunchAgents/homebrew.mxcl.postgresql.plist
+# mkdir -p ~/Library/LaunchAgents
+# sed -e '/KeepAlive/{n;s#.*#  <false/>#;}' -e '/RunAtLoad/{n;s#.*#  <false/>#;}' /usr/local/Cellar/postgresql/$postgres_version/homebrew.mxcl.postgresql.plist > ~/Library/LaunchAgents/homebrew.mxcl.postgresql.plist
 
 # Inject launchctl script
-launchctl load -w ~/Library/LaunchAgents/homebrew.mxcl.postgresql.plist
+# launchctl load -w ~/Library/LaunchAgents/homebrew.mxcl.postgresql.plist
 
 # Start PostgreSQL
 # postgres -D /usr/local/var/postgres
