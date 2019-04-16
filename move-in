@@ -54,9 +54,9 @@ fi
 #
 #     export INSTALLATION_DATA_REPO=user@my.server.com:my_installdata.git
 
-[ -z "$INSTALLATION_DATA" ] && export INSTALLATION_DATA="$HOME/local/installdata"
+[ -z "$INSTALLATION_DATA" ] && export INSTALLATION_DATA="$HOME/Code/personal/installdata"
 if [ -z "$INSTALLATION_DATA_REPO" ] ; then
-  if [ "$USER" == "ga" ] || [ "$USER" == "ganderson" ]
+  if [ "$USER" == "ga" ] || [ "$USER" == "ganderson" ] || [ "$USER" == "greganderson" ]
   then
     export INSTALLATION_DATA_REPO=ga@radium.greenknowe.org:installdata.git
   fi
@@ -95,9 +95,9 @@ fi
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 # Set up some default locations
-[ -z "$UTILISCRIPTS" ]            && export UTILISCRIPTS="$HOME/local/utiliscripts"
-[ -z "$HISTORYRECALL" ]           && export HISTORYRECALL="$HOME/local/history-recall"
-[ -z "$CONFIG" ]                  && export CONFIG="$HOME/local/config"
+[ -z "$UTILISCRIPTS" ]            && export UTILISCRIPTS="$HOME/Code/personal/utiliscripts"
+[ -z "$HISTORYRECALL" ]           && export HISTORYRECALL="$HOME/Code/personal/history-recall"
+[ -z "$CONFIG" ]                  && export CONFIG="$HOME/Code/personal/config"
 [ -z "$SSH_KEY_ARCHIVE" ]         && export SSH_KEY_ARCHIVE="$INSTALLATION_DATA/ssh_key_archive"
 [ -z "$DESKTOP_BACKGROUND_DIR" ]  && export DESKTOP_BACKGROUND_DIR="$INSTALLATION_DATA/DesktopBackgrounds"
 
@@ -341,32 +341,39 @@ if [ -n "$(which php)" ] && [ -n "($which composer)" ] ; then
 
 echo "# Check drush..."
 
-# If we do not already have drush, then get the master branch with git
-
 DRUSH="$(which drush)"
 
-if [ -z "$DRUSH" ] && [ ! -d  "$HOME/local/drupal/drush" ] ; then
+if [ ! -d  "$HOME/Code/open-source/drupal/drush8" ] ; then
 
   (
-    mkdir -p "$HOME/local/drupal"
+    mkdir -p "$HOME/Code/open-source/drupal"
     pr_remote=drush-ops
-    cd "$HOME/local/drupal"
+    cd "$HOME/Code/open-source/drupal"
     # read+write if "drush" is in $MAINTAINER, read-only otherwise
     if [ "${MAINTAINER}" != "${MAINTAINER/drush/}" ]
     then
-      git clone git@github.com:greg-1-anderson/drush.git
-      if [ ! -d drush ]
+      git clone git@github.com:drush-ops/drush.git drush8
+      if [ ! -d drush8 ]
       then
       	echo "Could not clone a r/w copy of drush; cloning a r/o copy instead."
       else
         (
-          cd drush
-          git remote add drush-ops git@github.com:drush-ops/drush.git
+          cd drush8
+          git remote add greg git@github.com:greg-1-anderson/drush.git
+          git checkout 8.x
+          git pull origin 8.x
+        )
+
+        # Make a 'drush9' too
+        git clone git@github.com:drush-ops/drush.git drush9
+        (
+          cd drush9
+          git remote add greg git@github.com:greg-1-anderson/drush.git
         )
       fi
     fi
 
-    if [ ! -d drush ] ; then
+    if [ ! -d drush8 ] ; then
       git clone git://github.com/drush-ops/drush.git
       pr_remote=origin
     fi
@@ -383,22 +390,30 @@ if [ -z "$DRUSH" ] && [ ! -d  "$HOME/local/drupal/drush" ] ; then
 
 fi
 
-if [ -z "$DRUSH" ] && [ -d  "$HOME/local/drupal/drush" ]
+if [ -z "$DRUSH" ] && [ -d  "$HOME/Code/open-source/drupal/drush8" ]
 then
-  DRUSH="$HOME/local/drupal/drush/drush"
+  DRUSH="$HOME/Code/open-source/drupal/drush8/drush"
 fi
 
-if [ ! -f "$DRUSH/vendor/autoload.php" ]
+if [ -d "$HOME/Code/open-source/drupal/drush8" ] && [ ! -f "$HOME/Code/open-source/drupal/drush8/vendor/autoload.php" ]
 then
   (
-    cd "$(dirname $DRUSH)"
+    cd "$HOME/Code/open-source/drupal/drush8"
+    composer install
+  )
+fi
+
+if [ -d "$HOME/Code/open-source/drupal/drush9" ] && [ ! -f "$HOME/Code/open-source/drupal/drush9/vendor/autoload.php" ]
+then
+  (
+    cd "$HOME/Code/open-source/drupal/drush9"
     composer install
   )
 fi
 
 echo "# Check drush extensions..."
 
-DRUSH_EXTENSIONS="$HOME/local/drupal/drush_extensions"
+DRUSH_EXTENSIONS="$HOME/Code/open-source/drupal/drush_extensions"
 mkdir -p "$DRUSH_EXTENSIONS"
 
 #   drupalcs \
@@ -406,13 +421,9 @@ for drush_extension in \
     drush_sup-7.x \
     drush_iq-7.x \
     drush_extras-7.x \
-    dbtng_migrator-7.x \
     registry_rebuild-7.x \
     sublime_completion-7.x \
     grn-6.x \
-    module_builder-7.x \
-    drush_deploy-7.x \
-    cacheaudit-7.x \
   ; do
 
 	extension_shortname=$(echo $drush_extension | sed -e 's|-[0-9]*\.x-*[0-9]*\.*[0-9x]*$||');
@@ -442,20 +453,6 @@ for drush_extension in \
 		)
 	fi
 
-done
-
-# Also copy in some of the example drush extensions from the drush/examples folder
-
-DRUSH_LINKDIR="$(dirname $DRUSH)"
-DRUSH_EXAMPLES="$DRUSH_LINKDIR/$(dirname $(readlink $DRUSH))/examples"
-
-for example_extensions in sync_enable.drush.inc sync_via_http.drush.inc ; do
-
-	if [ ! -f "$HOME/local/drupal/drush_extensions/$example_extensions" ] ; then
-
-		cp "$DRUSH_EXAMPLES/$example_extensions" "$HOME/local/drupal/drush_extensions"
-
-	fi
 done
 
 fi
@@ -658,7 +655,7 @@ if [ -f "\$HISTORYRECALL/historyrc" ]; then
 fi
 
 [ "\$PATH" == "\${PATH/\$HOME/}" ] && export PATH="\$HOME/bin:\$PATH"
-[ "\$PATH" == "\${PATH/drush/}" ] && export PATH="\$HOME/local/drupal/drush:\$PATH"
+[ "\$PATH" == "\${PATH/drush/}" ] && export PATH="\$HOME/Code/open-source/drupal/drush8:\$PATH"
 [ "\$PATH" == "\${PATH/utiliscripts/}" ] && export PATH="\$UTILISCRIPTS:\$PATH"
 [ "\$PATH" == "\${PATH/vendor/}" ] && export PATH="\$PATH:./vendor/bin:\$HOME/.composer/vendor/bin"
 
@@ -668,6 +665,9 @@ if [ -d "\$HOME/.phpenv" ] ; then
   # Enable phpenv shims
   eval "\$(phpenv init -)"
 fi
+
+alias drush8="$HOME/Code/open-source/drupal/drush8/drush"
+alias drush9="$HOME/Code/open-source/drupal/drush9/drush"
 
 # End Bash Customizations
 __END__
@@ -700,12 +700,6 @@ echo "# Check preferences and configuration..."
 if [ "$OS" == "Darwin" ] ; then
 # Make CyberDuck work correctly on MacOS
   defaults write ch.sudo.cyberduck ssh.authentication.publickey.default.enable true
-
-  #Set a blazingly fast keyboard repeat rate
-#  defaults write NSGlobalDomain KeyRepeat -int 1
-
-  #Set a shorter Delay until key repeat
-#  defaults write NSGlobalDomain InitialKeyRepeat -int 12
 
   #Add a context menu item for showing the Web Inspector in web views
   defaults write NSGlobalDomain WebKitDeveloperExtras -bool true
