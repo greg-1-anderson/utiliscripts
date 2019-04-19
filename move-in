@@ -152,6 +152,7 @@ if [ -f "$HOME/.ssh/id_$keytype.pub" ] ; then
 	ssh-keygen -lf "$HOME/.ssh/id_$keytype.pub"
 fi
 
+
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #
 #  A R C H I V E   K E Y   P A I R S
@@ -218,6 +219,7 @@ then
   )
 fi
 
+
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #
 #  G E T   C O M P O S E R
@@ -268,6 +270,12 @@ if [ ! -d "$CONFIG" ] && [ -n "$CONFIG_REPO" ] ; then
     git clone "$CONFIG_REPO"
   )
 
+fi
+
+# Copy ssh-config file from config repo over
+if [ ! -f "$HOME/.ssh/config" ] && [ -f "$CONFIG/ssh-config" ]
+then
+  cp "$CONFIG/ssh-config" "$HOME/.ssh/config"
 fi
 
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
