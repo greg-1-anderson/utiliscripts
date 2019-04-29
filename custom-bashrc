@@ -528,7 +528,7 @@ fi
 
 function _update_ps1() {
     # Removed the modules "user" and "host"
-    PS1="$(~/go/bin/powerline-go -modules "venv,ssh,cwd,perms,git,hg,jobs,exit,root" -theme low-contrast -error $?)"
+    PS1="$(~/go/bin/powerline-go -modules "venv,ssh,cwd,perms,git,hg,jobs,exit,root" -theme low-contrast -path-aliases \~/local/consolidation=@con\,\~/pantheon=@pan -error $?)"
 }
 
 s=`which powerline-go 2>/dev/null`
