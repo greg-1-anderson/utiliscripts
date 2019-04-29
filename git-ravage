@@ -22,10 +22,11 @@ default_remote=$(git remote show | head -n 1)
 remote=${1-$default_remote}
 
 # Get remote branches
-branches=$(git ls-remote --heads $remote | grep -v master | awk '{ print $2; }' | sed -e 's#refs/heads/##')
+branches=$(git ls-remote --heads $remote | grep -v master | grep -v '^[0-9.]*$' | grep -v default | awk '{ print $2; }' | sed -e 's#refs/heads/##')
 
 # Get remote tags
-tags=$(git ls-remote --tags $remote | grep '[a-zA-Z0-9]$' | awk '{ print $2; }' | sed -e 's#refs/tags/##')
+#tags=$(git ls-remote --tags $remote | grep '[a-zA-Z0-9]$' | awk '{ print $2; }' | sed -e 's#refs/tags/##')
+tags=
 
 cat << __EOF__
 
