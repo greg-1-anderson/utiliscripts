@@ -20,13 +20,13 @@
 #
 default_remote=$(git remote show | head -n 1)
 remote=${1-$default_remote}
+remote_url=$(git remote get-url origin)
 
 # Get remote branches
 branches=$(git ls-remote --heads $remote | grep -v master | grep -v '^[0-9.]*$' | grep -v default | awk '{ print $2; }' | sed -e 's#refs/heads/##')
 
 # Get remote tags
-#tags=$(git ls-remote --tags $remote | grep '[a-zA-Z0-9]$' | awk '{ print $2; }' | sed -e 's#refs/tags/##')
-tags=
+tags=$(git ls-remote --tags $remote | grep '[a-zA-Z0-9]$' | awk '{ print $2; }' | sed -e 's#refs/tags/##')
 
 cat << __EOF__
 
@@ -42,6 +42,8 @@ $tags
 
 These will be PERMANENTLY removed from the local repository
 AND WILL ALSO BE DELETED FROM THE REMOTE "$remote".
+
+   Remote repository URL: $remote_url
 
 Are you sure you want to do this (y/n)?
 __EOF__
