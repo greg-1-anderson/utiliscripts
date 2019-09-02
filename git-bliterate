@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# Permanently delete all of the branches (except master) and
+# Permanently delete all of the branches (except the current branch) and
 # all of the tags from a local and remote repository.
 #
 # A few notes:
@@ -22,8 +22,10 @@ default_remote=$(git remote show | head -n 1)
 remote=${1-$default_remote}
 remote_url=$(git remote get-url origin)
 
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+
 # Get remote branches
-branches=$(git ls-remote --heads $remote | grep -v master | grep -v '^[0-9.]*$' | grep -v default | awk '{ print $2; }' | sed -e 's#refs/heads/##')
+branches=$(git ls-remote --heads $remote | grep -v "$current_branch" | grep -v '^[0-9.]*$' | grep -v default | awk '{ print $2; }' | sed -e 's#refs/heads/##')
 
 # Get remote tags
 tags=$(git ls-remote --tags $remote | grep '[a-zA-Z0-9]$' | awk '{ print $2; }' | sed -e 's#refs/tags/##')
@@ -44,6 +46,8 @@ These will be PERMANENTLY removed from the local repository
 AND WILL ALSO BE DELETED FROM THE REMOTE "$remote".
 
    Remote repository URL: $remote_url
+
+The only branch that will be preserved is "$current_branch".
 
 Are you sure you want to do this (y/n)?
 __EOF__
