@@ -36,6 +36,9 @@ export RUBYOPTS="-E utf-8"
 
 OS="$(uname -s)"
 
+# Go
+export GOPATH=$HOME/go
+
 # Bash completion. Requires bash-completion. c.f. brew-install script.
 # Many of these scripts fail with syntax errors, even after upgrading
 # bash; however, others work well, so we will just ignore errors.
@@ -139,9 +142,14 @@ function recent() {
 
 
 
+
 # Kube stuff
-alias kube=kubectl
-alias ku='kubectl'
+source <(kubectl completion bash)
+alias k=kubectl
+complete -F __start_kubectl k
+
+alias cx=kubectx
+
 alias kug='kubectl get'
 alias kud='kubectl describe'
 # cluster swap aliases
@@ -152,6 +160,8 @@ alias pk1='kubectl --namespace=production --context c1'
 alias pk2='kubectl --namespace=production --context c2'
 # Remember to sync sandbox name with ~/.kube/config and ~/.pants.yml
 alias sbk1='kubectl --namespace=sandbox-greg1a --context g1a'
+
+alias sk4='kubectl --namespace=sandbox-core --context s4'
 
 # show all clusters
 function list-kube-clusters {
