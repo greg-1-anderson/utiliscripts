@@ -24,7 +24,7 @@ FILTER=${1-.}
 echo "FILTER is $FILTER"
 
 echo "==> Cloning all repos from '$ORG'"
-repos=$(curl -u "$GITHUBTOKEN:x-oauth-basic" -s https://api.github.com/orgs/$ORG/repos\?per_page\=500 | grep '"ssh_url":' | sed -e 's/[^:]*: "//' -e 's/",*$//' | grep -i "$FILTER")
+repos=$(curl -u "$GITHUBTOKEN:x-oauth-basic" -s https://api.github.com/orgs/$ORG/repos\?per_page\=100 | grep '"ssh_url":' | sed -e 's/[^:]*: "//' -e 's/",*$//' | grep -i "$FILTER")
 
 # cat <<< $repos
 # exit 0
