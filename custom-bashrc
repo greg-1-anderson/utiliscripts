@@ -88,6 +88,9 @@ if [ "$OS" == "Darwin" ] ; then
   alias sublime_text='/Applications/Sublime\ Text.app/Contents/MacOS/Sublime\ Text'
 fi
 
+alias goodmorning='ssh -t ga@10.100.100.1 sudo /usr/local/sbin/goodmorning'
+alias goodnight='ssh -t ga@10.100.100.1 sudo /usr/local/sbin/goodnight'
+
 #
 # Git aliases
 #
