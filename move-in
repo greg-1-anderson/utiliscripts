@@ -726,6 +726,9 @@ if [ "$OS" == "Darwin" ] ; then
   # Don't let mouse-scrolling-twiches get converted into forward/back in Chrome
   defaults write com.google.Chrome AppleEnableSwipeNavigateWithScrolls -bool FALSE
 
+  # TODO: define our keyboard shortcut settings
+  #defaults write -g NSUserDictionaryReplacementItems -array-add '{on=1;replace=detm;with=entity_type.manager;}'
+
 fi
 
 # Determine the sublime configuration directory location based on platform
