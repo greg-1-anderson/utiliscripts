@@ -24,6 +24,9 @@ export UNISH_TMP=$HOME/tmp/drush-tmp
 mkdir -p $UNISH_TMP
 export UNISH_NO_TIMEOUTS=1
 
+# Color grep output by default
+export GREP_OPTIONS='--color=always' 
+
 # Make 'bat' (like 'cat' with syntax hilitig) look right on light terminals
 export BAT_THEME=GitHub
 
@@ -74,6 +77,7 @@ alias composer-install-all='for x in $(ls */composer.json) ; do ( cd $(dirname $
 alias t1='php $HOME/pantheon/t1/bin/terminus'
 alias cimt='ssh -A cimt.getpantheon.com'
 alias randstr='LC_ALL=C tr -dc "AHJ-NP-Za-km-np-z2-9" </dev/urandom | head -c 64 ; echo'
+alias short='LC_ALL=C tr -dc "a-km-np-z" </dev/urandom | head -c 8 ; echo'
 
 # Run a web server with Python. See: http://www.linuxjournal.com/content/tech-tip-really-simple-http-server-python
 alias pyserve='python -m SimpleHTTPServer'
@@ -104,6 +108,11 @@ alias gs='git status'
 # Todo: make a git alias so this is `git cleanup`
 alias git-cleanup='git branch --merged | grep -v "\*" | xargs -n 1 git branch -d'
 
+# Search the HEAD of every local branch for a pattern
+function grep-branches()
+{ 
+  git grep $1 $(git show-ref --heads) | grep "refs/heads" | grep $1 
+}
 
 #
 # Show recent commits.  Can be used on a single repository,
