@@ -24,6 +24,9 @@ export UNISH_TMP=$HOME/tmp/drush-tmp
 mkdir -p $UNISH_TMP
 export UNISH_NO_TIMEOUTS=1
 
+# Color grep output by default
+export GREP_OPTIONS='--color=auto' 
+
 # Make 'bat' (like 'cat' with syntax hilitig) look right on light terminals
 export BAT_THEME=GitHub
 
