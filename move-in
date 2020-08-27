@@ -667,7 +667,7 @@ fi
 [ "\$PATH" == "\${PATH/wp-cli/}" ] && export PATH="\$HOME/Code/open-source/wp/wp-cli/bin:\$PATH"
 [ "\$PATH" == "\${PATH/drupalorg/}" ] && export PATH="\$HOME/Code/open-source/drupal/drupalorg-cli:\$PATH"
 [ "\$PATH" == "\${PATH/composer-lock-updater/}" ] && export PATH="\$HOME/Code/open-source/composer-lock-updater/bin:\$PATH"
-[ "\$PATH" == "\${PATH/terminus/}" ] && export PATH="\$HOME/Code/pantheon/Alchemy/terminus/bin:\$PATH"
+[ "\$PATH" == "\${PATH/terminus/}" ] && export PATH="\$HOME/Code/pantheon/Otto/terminus/bin:\$PATH"
 [ "\$PATH" == "\${PATH/utiliscripts/}" ] && export PATH="\$UTILISCRIPTS:\$PATH"
 [ "\$PATH" == "\${PATH/vendor/}" ] && export PATH="\$PATH:./vendor/bin:\$HOME/.composer/vendor/bin"
 
