@@ -157,9 +157,11 @@ function recent() {
 
 
 # Kube stuff
-source <(kubectl completion bash)
-alias k=kubectl
-complete -F __start_kubectl k
+if type "kubectl" > /dev/null 2>&1; then
+  source <(kubectl completion bash)
+  alias k=kubectl
+  complete -F __start_kubectl k
+fi
 
 alias cx=kubectx
 
