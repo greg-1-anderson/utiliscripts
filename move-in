@@ -644,6 +644,15 @@ cat <<- __END__ > /tmp/bashwork
 export UTILISCRIPTS="\$HOME/$UTILISCRIPTS_RELATIVE"
 export SSH_KEY_ARCHIVE="\$HOME/$SSH_KEY_ARCHIVE_RELATIVE"
 
+[ "\$PATH" == "\${PATH/\$HOME/}" ] && export PATH="\$HOME/bin:\$PATH"
+[ "\$PATH" == "\${PATH/drush/}" ] && export PATH="\$HOME/Code/open-source/drupal/drush8:\$PATH"
+[ "\$PATH" == "\${PATH/wp-cli/}" ] && export PATH="\$HOME/Code/open-source/wp/wp-cli/bin:\$PATH"
+[ "\$PATH" == "\${PATH/drupalorg/}" ] && export PATH="\$HOME/Code/open-source/drupal/drupalorg-cli:\$PATH"
+[ "\$PATH" == "\${PATH/composer-lock-updater/}" ] && export PATH="\$HOME/Code/open-source/composer-lock-updater/bin:\$PATH"
+[ "\$PATH" == "\${PATH/terminus/}" ] && export PATH="\$HOME/Code/pantheon/Alchemy/terminus/bin:\$PATH"
+[ "\$PATH" == "\${PATH/utiliscripts/}" ] && export PATH="\$UTILISCRIPTS:\$PATH"
+[ "\$PATH" == "\${PATH/vendor/}" ] && export PATH="\$PATH:./vendor/bin:\$HOME/.composer/vendor/bin"
+
 if [ -n "$(which locale)" ] ; then
   if [ -n "\$(locale -a | grep -i 'en_US.utf8')" ] ; then
     export LC_ALL=en_US.utf8
@@ -661,15 +670,6 @@ export HISTORYRECALL="\$HOME/$HISTORYRECALL_RELATIVE"
 if [ -f "\$HISTORYRECALL/historyrc" ]; then
   tty -s && . "\$HISTORYRECALL/historyrc"
 fi
-
-[ "\$PATH" == "\${PATH/\$HOME/}" ] && export PATH="\$HOME/bin:\$PATH"
-[ "\$PATH" == "\${PATH/drush/}" ] && export PATH="\$HOME/Code/open-source/drupal/drush8:\$PATH"
-[ "\$PATH" == "\${PATH/wp-cli/}" ] && export PATH="\$HOME/Code/open-source/wp/wp-cli/bin:\$PATH"
-[ "\$PATH" == "\${PATH/drupalorg/}" ] && export PATH="\$HOME/Code/open-source/drupal/drupalorg-cli:\$PATH"
-[ "\$PATH" == "\${PATH/composer-lock-updater/}" ] && export PATH="\$HOME/Code/open-source/composer-lock-updater/bin:\$PATH"
-[ "\$PATH" == "\${PATH/terminus/}" ] && export PATH="\$HOME/Code/pantheon/Alchemy/terminus/bin:\$PATH"
-[ "\$PATH" == "\${PATH/utiliscripts/}" ] && export PATH="\$UTILISCRIPTS:\$PATH"
-[ "\$PATH" == "\${PATH/vendor/}" ] && export PATH="\$PATH:./vendor/bin:\$HOME/.composer/vendor/bin"
 
 if [ -d "\$HOME/.phpenv" ] ; then
   [ "\$PATH" == "\${PATH/phpenv/}" ] && export PATH="\$HOME/.phpenv/bin:\$PATH"
