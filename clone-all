@@ -24,10 +24,18 @@ FILTER=${1-.}
 echo "FILTER is $FILTER"
 
 echo "==> Cloning all repos from '$ORG'"
-repos=$(curl -u "$GITHUBTOKEN:x-oauth-basic" -s https://api.github.com/orgs/$ORG/repos\?per_page\=100 | grep '"ssh_url":' | sed -e 's/[^:]*: "//' -e 's/",*$//' | grep -i "$FILTER")
 
-# cat <<< $repos
-# exit 0
+next="https://api.github.com/orgs/$ORG/repos?per_page=100"
+while [ -n "$next" ] ; do
+  #echo "Next is: $next"
+  r=$(curl -u "$GITHUBTOKEN:x-oauth-basic" -s $next | grep --color=never '"ssh_url":' | sed -e 's/[^:]*: "//' -e 's/",*$//' | grep --color=never -i "$FILTER")
+  repos="$repos
+$r"
+  next="$(curl -u "$GITHUBTOKEN:x-oauth-basic" -I -s "$next" | grep --color=never '^Link:' | grep --color=never 'rel="next"' | sed -e 's#.*\(http[^>]*\)>; rel="next".*#\1#')"
+done
+
+#cat <<< $repos
+#exit 0
 
 for repo in $repos
 do
