@@ -24,9 +24,6 @@ export UNISH_TMP=$HOME/tmp/drush-tmp
 mkdir -p $UNISH_TMP
 export UNISH_NO_TIMEOUTS=1
 
-# Color grep output by default
-export GREP_OPTIONS='--color=always' 
-
 # Make 'bat' (like 'cat' with syntax hilitig) look right on light terminals
 export BAT_THEME=GitHub
 
@@ -40,7 +37,7 @@ export RUBYOPTS="-E utf-8"
 OS="$(uname -s)"
 
 # Go
-export GOPATH=$HOME/go
+# export GOPATH=$HOME/go
 
 # Bash completion. Requires bash-completion. c.f. brew-install script.
 # Many of these scripts fail with syntax errors, even after upgrading
@@ -110,8 +107,8 @@ alias git-cleanup='git branch --merged | grep -v "\*" | xargs -n 1 git branch -d
 
 # Search the HEAD of every local branch for a pattern
 function grep-branches()
-{ 
-  git grep $1 $(git show-ref --heads) | grep "refs/heads" | grep $1 
+{
+  git grep $1 $(git show-ref --heads) | grep "refs/heads" | grep $1
 }
 
 #
