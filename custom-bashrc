@@ -24,9 +24,6 @@ export UNISH_TMP=$HOME/tmp/drush-tmp
 mkdir -p $UNISH_TMP
 export UNISH_NO_TIMEOUTS=1
 
-# Color grep output by default
-export GREP_OPTIONS='--color=auto' 
-
 # Make 'bat' (like 'cat' with syntax hilitig) look right on light terminals
 export BAT_THEME=GitHub
 
@@ -40,7 +37,7 @@ export RUBYOPTS="-E utf-8"
 OS="$(uname -s)"
 
 # Go
-export GOPATH=$HOME/go
+# export GOPATH=$HOME/go
 
 # Bash completion. Requires bash-completion. c.f. brew-install script.
 # Many of these scripts fail with syntax errors, even after upgrading
@@ -70,6 +67,7 @@ alias rmrej='rm `find . -name "*.rej"` `find -name "*.orig"`'
 alias rot13='tr a-zA-Z n-za-mN-ZA-M'
 alias findtabs="find -not -regex '..*/\..*' -exec grep -HP '\t' {} \;"
 alias pull-all='for x in * ; do if [ -d $x/.git ] ; then ( cd $x ; s=$(git status -s); if [ -z "$s" ] ; then echo "Update $x." ; git pull ; else echo "$x is modified; skipping update." ; fi ) fi done'
+alias gbs="git branch --sort=-committerdate"
 alias dr=drush
 alias ..='cd ..'
 alias tnq='tag-next -q && git push --tags'
@@ -110,8 +108,8 @@ alias git-cleanup='git branch --merged | grep -v "\*" | xargs -n 1 git branch -d
 
 # Search the HEAD of every local branch for a pattern
 function grep-branches()
-{ 
-  git grep $1 $(git show-ref --heads) | grep "refs/heads" | grep $1 
+{
+  git grep $1 $(git show-ref --heads) | grep "refs/heads" | grep $1
 }
 
 #
